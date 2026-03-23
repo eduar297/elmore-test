@@ -42,6 +42,12 @@ export default function RootLayout() {
             options={{ headerShown: true, title: "Panel Visualización" }}
           />
 
+          {/* Grupo Test */}
+          <Stack.Screen
+            name="(test)"
+            options={{ headerShown: true, title: "Panel Test" }}
+          />
+
           {/* Modal global */}
           <Stack.Screen
             name="modal"

@@ -48,6 +48,18 @@ export default function HomeScreen() {
           🖥️ Display
         </ThemedText>
       </Pressable>
+
+      <Pressable
+        style={({ pressed }) => [
+          styles.button,
+          pressed && styles.buttonPressed,
+        ]}
+        onPress={() => router.push("/(test)")}
+      >
+        <ThemedText type="subtitle" style={styles.buttonText}>
+          🧪 Test
+        </ThemedText>
+      </Pressable>
     </ThemedView>
   );
 }
