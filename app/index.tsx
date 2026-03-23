@@ -18,7 +18,7 @@ export default function HomeScreen() {
           styles.button,
           pressed && styles.buttonPressed,
         ]}
-        onPress={() => router.push("/admin")}
+        onPress={() => router.push("/(admin)")}
       >
         <ThemedText type="subtitle" style={styles.buttonText}>
           👤 Administrador
@@ -30,10 +30,22 @@ export default function HomeScreen() {
           styles.button,
           pressed && styles.buttonPressed,
         ]}
-        onPress={() => router.push("/worker")}
+        onPress={() => router.push("/(worker)")}
       >
         <ThemedText type="subtitle" style={styles.buttonText}>
           🧾 Trabajador / Vendedor
+        </ThemedText>
+      </Pressable>
+
+      <Pressable
+        style={({ pressed }) => [
+          styles.button,
+          pressed && styles.buttonPressed,
+        ]}
+        onPress={() => router.push("/(display)")}
+      >
+        <ThemedText type="subtitle" style={styles.buttonText}>
+          🖥️ Display
         </ThemedText>
       </Pressable>
     </ThemedView>

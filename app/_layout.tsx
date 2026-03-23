@@ -11,10 +11,6 @@ import "react-native-reanimated";
 import { migrateDbIfNeeded } from "@/database/migrate";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 
-export const unstable_settings = {
-  anchor: "(tabs)",
-};
-
 export default function RootLayout() {
   const colorScheme = useColorScheme();
 
@@ -22,12 +18,40 @@ export default function RootLayout() {
     <SQLiteProvider databaseName="elmore.db" onInit={migrateDbIfNeeded}>
       <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
         <Stack>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          {/* Pantalla principal */}
+          <Stack.Screen
+            name="index"
+            options={{ headerShown: false, title: "ElMore" }}
+          />
+
+          {/* Grupo Admin */}
+          <Stack.Screen
+            name="(admin)"
+            options={{ headerShown: true, title: "Panel Administrador" }}
+          />
+
+          {/* Grupo Worker */}
+          <Stack.Screen
+            name="(worker)"
+            options={{ headerShown: true, title: "Panel Trabajador" }}
+          />
+
+          {/* Grupo Display */}
+          <Stack.Screen
+            name="(display)"
+            options={{ headerShown: true, title: "Panel Visualización" }}
+          />
+
+          {/* Modal global */}
           <Stack.Screen
             name="modal"
-            options={{ presentation: "modal", title: "Modal" }}
+            options={{
+              presentation: "modal",
+              title: "Modal",
+            }}
           />
         </Stack>
+
         <StatusBar style="auto" />
       </ThemeProvider>
     </SQLiteProvider>
