@@ -1,12 +1,11 @@
 import { ChevronDown, Plus, Receipt, Trash2 } from "@tamagui/lucide-icons";
 import { useCallback, useEffect, useId, useState } from "react";
-import { Alert, FlatList } from "react-native";
+import { Alert, FlatList, ScrollView } from "react-native";
 import {
     Button,
     Card,
     Input,
     Label,
-    Select,
     Sheet,
     Spinner,
     Text,
@@ -61,6 +60,79 @@ function todayISO(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+// ── CategoryPicker ────────────────────────────────────────────────────────────
+
+function CategoryPicker({
+  value,
+  onChange,
+}: {
+  value: ExpenseCategory;
+  onChange: (cat: ExpenseCategory) => void;
+}) {
+  const colorScheme = useColorScheme();
+  const themeName = colorScheme === "dark" ? "dark" : "light";
+  const [open, setOpen] = useState(false);
+
+  return (
+    <>
+      <Button
+        size="$4"
+        iconAfter={ChevronDown}
+        onPress={() => setOpen(true)}
+        bg={CATEGORY_BG[value] as any}
+      >
+        <Text fontWeight="600" color={CATEGORY_COLORS[value] as any}>
+          {EXPENSE_CATEGORIES[value]}
+        </Text>
+      </Button>
+
+      <Sheet
+        open={open}
+        onOpenChange={setOpen}
+        modal
+        snapPoints={[50]}
+        dismissOnSnapToBottom
+      >
+        <Sheet.Overlay
+          enterStyle={{ opacity: 0 }}
+          exitStyle={{ opacity: 0 }}
+          backgroundColor="rgba(0,0,0,0.5)"
+        />
+        <Sheet.Frame p="$4" theme={themeName as any}>
+          <Sheet.Handle />
+          <Text fontWeight="bold" fontSize="$5" color="$color" mb="$3">
+            Categoría de gasto
+          </Text>
+          <ScrollView>
+            <YStack gap="$2" pb="$6">
+              {categoryKeys.map((key) => (
+                <Button
+                  key={key}
+                  theme={key === value ? "blue" : undefined}
+                  bg={key === value ? (CATEGORY_BG[key] as any) : "$color2"}
+                  onPress={() => {
+                    onChange(key);
+                    setOpen(false);
+                  }}
+                >
+                  <Text
+                    fontWeight="600"
+                    color={
+                      key === value ? (CATEGORY_COLORS[key] as any) : "$color"
+                    }
+                  >
+                    {EXPENSE_CATEGORIES[key]}
+                  </Text>
+                </Button>
+              ))}
+            </YStack>
+          </ScrollView>
+        </Sheet.Frame>
+      </Sheet>
+    </>
+  );
+}
+
 // ── ExpenseForm ───────────────────────────────────────────────────────────────
 
 function ExpenseForm({
@@ -98,26 +170,7 @@ function ExpenseForm({
         <Label htmlFor={`${uid}-cat`} color="$color10" fontSize="$3">
           Categoría
         </Label>
-        <Select
-          id={`${uid}-cat`}
-          value={category}
-          onValueChange={(v) => setCategory(v as ExpenseCategory)}
-        >
-          <Select.Trigger size="$4" iconAfter={ChevronDown}>
-            <Select.Value placeholder="Selecciona categoría" />
-          </Select.Trigger>
-          <Select.Content>
-            <Select.ScrollUpButton />
-            <Select.Viewport>
-              {categoryKeys.map((key, idx) => (
-                <Select.Item key={key} value={key} index={idx}>
-                  <Select.ItemText>{EXPENSE_CATEGORIES[key]}</Select.ItemText>
-                </Select.Item>
-              ))}
-            </Select.Viewport>
-            <Select.ScrollDownButton />
-          </Select.Content>
-        </Select>
+        <CategoryPicker value={category} onChange={setCategory} />
       </YStack>
 
       {/* Description */}
@@ -387,7 +440,10 @@ export default function ExpensesScreen() {
         />
         <Sheet.Frame theme={themeName as any} bg="$background">
           <Sheet.Handle />
-          <Sheet.ScrollView keyboardShouldPersistTaps="handled">
+          <Sheet.ScrollView
+            keyboardShouldPersistTaps="handled"
+            automaticallyAdjustKeyboardInsets
+          >
             <ExpenseForm onSubmit={handleCreate} loading={saving} />
           </Sheet.ScrollView>
         </Sheet.Frame>

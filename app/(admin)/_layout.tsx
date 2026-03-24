@@ -32,18 +32,18 @@ export default function AdminLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Productos",
+          title: "Estadísticas",
           tabBarIcon: ({ color }) => (
-            <PackageSearch size={26} color={color as any} />
+            <LayoutDashboard size={26} color={color as any} />
           ),
         }}
       />
       <Tabs.Screen
-        name="dashboard"
+        name="products"
         options={{
-          title: "Estadísticas",
+          title: "Productos",
           tabBarIcon: ({ color }) => (
-            <LayoutDashboard size={26} color={color as any} />
+            <PackageSearch size={26} color={color as any} />
           ),
         }}
       />

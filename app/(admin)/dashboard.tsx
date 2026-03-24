@@ -8,31 +8,32 @@ import { EXPENSE_CATEGORIES } from "@/models/expense";
 import type { Product } from "@/models/product";
 import type { Unit, UnitCategory } from "@/models/unit";
 import {
-    AlertTriangle,
-    BarChart3,
-    ChevronLeft,
-    ChevronRight,
-    DollarSign,
-    LayoutDashboard,
-    Package,
-    PackageX,
-    Ruler,
-    ShoppingBag,
-    Tag,
-    TrendingDown,
-    TrendingUp,
+  AlertTriangle,
+  BarChart3,
+  ChevronLeft,
+  ChevronRight,
+  DollarSign,
+  LayoutDashboard,
+  Package,
+  PackageX,
+  Ruler,
+  ShoppingBag,
+  Tag,
+  TrendingDown,
+  TrendingUp,
 } from "@tamagui/lucide-icons";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
-import { ScrollView } from "react-native";
+import { Dimensions, ScrollView } from "react-native";
+import { BarChart, PieChart } from "react-native-gifted-charts";
 import {
-    Button,
-    Card,
-    Separator,
-    Spinner,
-    Text,
-    XStack,
-    YStack,
+  Button,
+  Card,
+  Separator,
+  Spinner,
+  Text,
+  XStack,
+  YStack,
 } from "tamagui";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -89,6 +90,8 @@ function fmtMoney(val: number): string {
 
 // ── Mini Bar Chart (daily sales) ──────────────────────────────────────────────
 
+const SCREEN_W = Dimensions.get("window").width;
+
 function DailySalesChart({
   data,
   days,
@@ -97,48 +100,36 @@ function DailySalesChart({
   days: number;
 }) {
   const dataMap = new Map(data.map((d) => [d.day, d.total]));
-  const maxVal = Math.max(...data.map((d) => d.total), 1);
-  const CHART_H = 100;
+  const chartW = SCREEN_W - 80;
+  const barW = Math.max(3, Math.min(14, chartW / days / 1.6));
+  const gap = Math.max(1, Math.min(4, chartW / days / 4));
 
-  const bars = Array.from({ length: days }, (_, i) => ({
-    day: i + 1,
+  const barData = Array.from({ length: days }, (_, i) => ({
     value: dataMap.get(i + 1) ?? 0,
+    label: i === 0 || (i + 1) % 5 === 0 || i === days - 1 ? String(i + 1) : "",
+    frontColor: (dataMap.get(i + 1) ?? 0) > 0 ? "#22c55e" : "#555555",
+    labelTextStyle: { fontSize: 8, color: "#888" },
   }));
 
   return (
-    <YStack gap="$1">
-      <XStack height={CHART_H} style={{ alignItems: "flex-end" }} gap={1}>
-        {bars.map((b) => {
-          const h =
-            b.value > 0 ? Math.max((b.value / maxVal) * CHART_H * 0.9, 4) : 2;
-          return (
-            <YStack key={b.day} flex={1} style={{ alignItems: "center" }}>
-              <YStack
-                bg={b.value > 0 ? "$green8" : "$color4"}
-                width="70%"
-                height={h}
-                style={{ borderRadius: 2 }}
-              />
-            </YStack>
-          );
-        })}
-      </XStack>
-      <XStack>
-        {bars.map((b) => (
-          <YStack key={b.day} flex={1} style={{ alignItems: "center" }}>
-            {b.day === 1 || b.day % 5 === 0 || b.day === days ? (
-              <Text fontSize={9} color="$color8">
-                {b.day}
-              </Text>
-            ) : null}
-          </YStack>
-        ))}
-      </XStack>
-    </YStack>
+    <BarChart
+      data={barData}
+      height={110}
+      barWidth={barW}
+      spacing={gap}
+      noOfSections={3}
+      hideRules
+      yAxisTextStyle={{ fontSize: 9, color: "#888" }}
+      yAxisThickness={0}
+      xAxisThickness={0}
+      isAnimated
+      animationDuration={400}
+      barBorderRadius={2}
+    />
   );
 }
 
-// ── Horizontal bar chart (expense breakdown) ──────────────────────────────────
+// ── Pie chart (expense breakdown) ─────────────────────────────────────────────
 
 function ExpenseBreakdownChart({
   items,
@@ -146,7 +137,6 @@ function ExpenseBreakdownChart({
   items: { label: string; value: number; color: string }[];
 }) {
   const total = items.reduce((s, i) => s + i.value, 0);
-  const maxVal = Math.max(...items.map((i) => i.value), 1);
 
   if (items.length === 0) {
     return (
@@ -158,41 +148,56 @@ function ExpenseBreakdownChart({
     );
   }
 
+  const pieData = items.map((item) => ({
+    value: item.value,
+    color: item.color,
+  }));
+
   return (
-    <YStack gap="$3">
-      {items.map((item, idx) => {
-        const pct = total > 0 ? ((item.value / total) * 100).toFixed(0) : "0";
-        const barW = Math.max((item.value / maxVal) * 100, 2);
-        return (
-          <YStack key={idx} gap="$1">
-            <XStack
-              style={{
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}
-            >
-              <Text fontSize="$3" color="$color10">
+    <YStack gap="$4">
+      <YStack style={{ alignItems: "center" }}>
+        <PieChart
+          data={pieData}
+          donut
+          radius={80}
+          innerRadius={48}
+          centerLabelComponent={() => (
+            <YStack style={{ alignItems: "center", justifyContent: "center" }}>
+              <Text fontSize={11} color="$color10">
+                Total
+              </Text>
+              <Text fontSize={16} fontWeight="bold" color="$color">
+                ${fmtMoney(total)}
+              </Text>
+            </YStack>
+          )}
+          isAnimated
+          animationDuration={400}
+        />
+      </YStack>
+      <YStack gap="$2">
+        {items.map((item, idx) => {
+          const pct = total > 0 ? ((item.value / total) * 100).toFixed(0) : "0";
+          return (
+            <XStack key={idx} style={{ alignItems: "center" }} gap="$2">
+              <YStack
+                width={12}
+                height={12}
+                style={{
+                  borderRadius: 6,
+                  backgroundColor: item.color,
+                }}
+              />
+              <Text flex={1} fontSize="$3" color="$color10">
                 {item.label}
               </Text>
               <Text fontSize="$3" fontWeight="600" color="$color">
                 ${fmtMoney(item.value)} · {pct}%
               </Text>
             </XStack>
-            <YStack
-              bg="$color3"
-              height={8}
-              style={{ borderRadius: 4 }}
-              overflow="hidden"
-            >
-              <YStack
-                bg={item.color as any}
-                height={8}
-                style={{ borderRadius: 4, width: `${barW}%` }}
-              />
-            </YStack>
-          </YStack>
-        );
-      })}
+          );
+        })}
+      </YStack>
     </YStack>
   );
 }
@@ -462,21 +467,21 @@ export default function DashboardScreen() {
       items.push({
         label: "Compras de mercancía",
         value: purchaseMerchandise,
-        color: "$blue9",
+        color: "#3b82f6",
       });
     if (monthlyPurchases.totalTransport > 0)
       items.push({
         label: "Transporte (compras)",
         value: monthlyPurchases.totalTransport,
-        color: "$purple9",
+        color: "#a855f7",
       });
     const catColors: Record<string, string> = {
-      TRANSPORT: "$orange9",
-      ELECTRICITY: "$yellow9",
-      RENT: "$pink9",
-      REPAIRS: "$red9",
-      SUPPLIES: "$green9",
-      OTHER: "$color8",
+      TRANSPORT: "#f97316",
+      ELECTRICITY: "#eab308",
+      RENT: "#ec4899",
+      REPAIRS: "#ef4444",
+      SUPPLIES: "#22c55e",
+      OTHER: "#888888",
     };
     for (const ec of expensesByCategory) {
       items.push({
