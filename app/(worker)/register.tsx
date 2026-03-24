@@ -38,7 +38,7 @@ function SaleRow({ sale }: { sale: SaleEntry }) {
   );
 }
 
-export default function HistorialScreen() {
+export default function RegisterScreen() {
   return (
     <ScrollView>
       <YStack bg="$background" p="$4" gap="$5" pb="$8">
@@ -47,7 +47,7 @@ export default function HistorialScreen() {
           <ClipboardList size={26} color="$green10" />
           <YStack>
             <Text fontSize="$6" fontWeight="bold" color="$color">
-              Historial de ventas
+              Registro de ventas
             </Text>
             <Text fontSize="$3" color="$color10">
               Registro de transacciones del día

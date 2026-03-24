@@ -4,7 +4,7 @@ import {
   useCameraPermissions,
 } from "expo-camera";
 import { useState } from "react";
-import { Button, StyleSheet, View } from "react-native";
+import { Button, Text, YStack } from "tamagui";
 
 export interface BarcodeScannerViewProps {
   onScanned: (barcode: string) => void;
@@ -30,51 +30,57 @@ export function BarcodeScannerView({
   }
 
   if (!permission) {
-    return <View />;
+    return <YStack flex={1} />;
   }
 
   if (!permission.granted) {
     return (
-      <View style={styles.container}>
-        <Button
-          onPress={requestPermission}
-          title="Conceder permiso de cámara"
-        />
-      </View>
+      <YStack
+        flex={1}
+        p="$6"
+        gap="$4"
+        style={{ justifyContent: "center", alignItems: "center" }}
+      >
+        <Text color="$color" style={{ textAlign: "center" }} fontSize="$4">
+          Se necesita acceso a la cámara para escanear códigos de barras.
+        </Text>
+        <Button theme="blue" size="$4" onPress={requestPermission}>
+          Conceder permiso de cámara
+        </Button>
+      </YStack>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <CameraView
-        style={{ flex: 1, width: "100%" }}
-        facing="back"
-        barcodeScannerSettings={{
-          barcodeTypes: [
-            "ean13",
-            "ean8",
-            "upc_a",
-            "upc_e",
-            // "code128"
-          ],
+    <YStack flex={1} p="$4" gap="$4">
+      {/* Camera viewport — fixed height to avoid taking the whole screen */}
+      <YStack
+        style={{
+          borderRadius: 16,
+          overflow: "hidden",
+          height: 300,
+          width: "100%",
         }}
-        autofocus="on"
-        ratio="16:9"
-        zoom={0}
-        onBarcodeScanned={handleBarcodeScanned}
-      />
-      <Button title="Cancelar" onPress={onCancel} />
-    </View>
+      >
+        <CameraView
+          style={{ flex: 1 }}
+          facing="back"
+          barcodeScannerSettings={{
+            barcodeTypes: ["ean13", "ean8", "upc_a", "upc_e"],
+          }}
+          autofocus="on"
+          zoom={0}
+          onBarcodeScanned={handleBarcodeScanned}
+        />
+      </YStack>
+
+      <Text color="$color10" fontSize="$3" style={{ textAlign: "center" }}>
+        Apunta la cámara al código de barras del producto
+      </Text>
+
+      <Button theme="red" size="$4" onPress={onCancel}>
+        Cancelar
+      </Button>
+    </YStack>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    minHeight: 300,
-    marginVertical: 16,
-    justifyContent: "center",
-    alignItems: "center",
-    width: "100%",
-  },
-});

@@ -304,10 +304,14 @@ export default function ProductsScreen() {
         open={showScanner}
         onOpenChange={setShowScanner}
         modal
-        snapPoints={[90]}
+        snapPoints={[70]}
         dismissOnSnapToBottom
       >
-        <Sheet.Overlay />
+        <Sheet.Overlay
+          enterStyle={{ opacity: 0 }}
+          exitStyle={{ opacity: 0 }}
+          backgroundColor="rgba(0,0,0,0.5)"
+        />
         <Sheet.Frame theme={themeName as any}>
           <Sheet.Handle />
           <BarcodeScannerView
@@ -325,7 +329,11 @@ export default function ProductsScreen() {
         snapPoints={[95]}
         dismissOnSnapToBottom
       >
-        <Sheet.Overlay />
+        <Sheet.Overlay
+          enterStyle={{ opacity: 0 }}
+          exitStyle={{ opacity: 0 }}
+          backgroundColor="rgba(0,0,0,0.5)"
+        />
         <Sheet.Frame theme={themeName as any}>
           <Sheet.Handle />
           <ScrollView>
@@ -344,13 +352,19 @@ export default function ProductsScreen() {
         open={showDetailSheet}
         onOpenChange={setShowDetailSheet}
         modal
-        snapPoints={[60]}
+        snapPoints={[80]}
         dismissOnSnapToBottom
       >
-        <Sheet.Overlay />
+        <Sheet.Overlay
+          enterStyle={{ opacity: 0 }}
+          exitStyle={{ opacity: 0 }}
+          backgroundColor="rgba(0,0,0,0.5)"
+        />
         <Sheet.Frame p="$4" theme={themeName as any}>
           <Sheet.Handle />
-          {selectedProduct && <ProductDetail product={selectedProduct} />}
+          <ScrollView>
+            {selectedProduct && <ProductDetail product={selectedProduct} />}
+          </ScrollView>
         </Sheet.Frame>
       </Sheet>
     </YStack>

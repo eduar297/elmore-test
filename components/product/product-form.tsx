@@ -14,7 +14,7 @@ import {
   Spinner,
   Text,
   XStack,
-  YStack
+  YStack,
 } from "tamagui";
 
 // ── Unit picker ──────────────────────────────────────────────────────────────
@@ -48,7 +48,11 @@ function UnitPicker({
         snapPoints={[50]}
         dismissOnSnapToBottom
       >
-        <Sheet.Overlay />
+        <Sheet.Overlay
+          enterStyle={{ opacity: 0 }}
+          exitStyle={{ opacity: 0 }}
+          backgroundColor="rgba(0,0,0,0.5)"
+        />
         <Sheet.Frame p="$4" theme={themeName as any}>
           <Sheet.Handle />
           <Text fontWeight="bold" fontSize="$5" color="$color" mb="$3">

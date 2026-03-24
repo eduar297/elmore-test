@@ -1,3 +1,4 @@
+import { BarcodeDisplay } from "@/components/product/barcode-display";
 import type { Product } from "@/models/product";
 import { Card, Separator, Text, XStack, YStack } from "tamagui";
 
@@ -34,6 +35,26 @@ export function ProductDetail({ product }: ProductDetailProps) {
         <Text fontSize="$7" fontWeight="bold" color="$color" mb="$2">
           {product.name}
         </Text>
+
+        {/* Barcode visual */}
+        {/^\d{13}$/.test(product.barcode) && (
+          <YStack
+            bg="$color1"
+            style={{ borderRadius: 12, alignItems: "center" }}
+            p="$3"
+            gap="$2"
+            mb="$2"
+          >
+            <BarcodeDisplay
+              barcode={product.barcode}
+              width={240}
+              barHeight={50}
+            />
+            <Text fontSize="$2" color="$color10" letterSpacing={2}>
+              {product.barcode}
+            </Text>
+          </YStack>
+        )}
 
         <Separator />
 
