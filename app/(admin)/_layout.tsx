@@ -3,7 +3,12 @@ import React from "react";
 
 import { HapticTab } from "@/components/haptic-tab";
 import { useColorScheme } from "@/hooks/use-color-scheme";
-import { LayoutDashboard, PackageSearch } from "@tamagui/lucide-icons";
+import {
+  Building2,
+  LayoutDashboard,
+  PackageSearch,
+  ShoppingBag,
+} from "@tamagui/lucide-icons";
 import { useTheme } from "tamagui";
 
 export default function AdminLayout() {
@@ -35,9 +40,27 @@ export default function AdminLayout() {
       <Tabs.Screen
         name="dashboard"
         options={{
-          title: "Dashboard",
+          title: "Estadísticas",
           tabBarIcon: ({ color }) => (
             <LayoutDashboard size={26} color={color as any} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="suppliers"
+        options={{
+          title: "Proveedores",
+          tabBarIcon: ({ color }) => (
+            <Building2 size={26} color={color as any} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="purchases"
+        options={{
+          title: "Compras",
+          tabBarIcon: ({ color }) => (
+            <ShoppingBag size={26} color={color as any} />
           ),
         }}
       />

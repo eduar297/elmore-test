@@ -9,19 +9,11 @@ export type ScanResult =
   | { kind: "found"; product: Product }
   | { kind: "not-found"; barcode: string };
 
-/**
- * Reusable barcode-scanner hook.
- *
- * Launches the native iOS `DataScannerViewController`, looks up the barcode in
- * the DB and calls `onResult` with either `{ kind: "found", product }` or
- * `{ kind: "not-found", barcode }`.
- *
- * Usage:
- * ```ts
- * const scan = useBarcodeScanner({ onResult, onError });
- * <Button onPress={scan}>Escanear</Button>
- * ```
- */
+// Module-level gate: only the hook instance that launched the scanner should
+// handle the result. This prevents other mounted instances (e.g. a sibling tab)
+// from also firing their callbacks.
+let activeInstanceId: symbol | null = null;
+
 export function useBarcodeScanner({
   onResult,
   onError,
@@ -32,6 +24,7 @@ export function useBarcodeScanner({
   const products = useProductRepository();
   const [permission, requestPermission] = useCameraPermissions();
   const processedRef = useRef(false);
+  const instanceId = useRef(Symbol());
 
   // Stable refs so the listener doesn't re-subscribe on every render
   const onResultRef = useRef(onResult);
@@ -42,8 +35,11 @@ export function useBarcodeScanner({
   productsRef.current = products;
 
   const handleBarcode = useCallback(async (barcode: string) => {
+    // Only the instance that called scan() should process the result
+    if (activeInstanceId !== instanceId.current) return;
     if (processedRef.current) return;
     processedRef.current = true;
+    activeInstanceId = null;
     try {
       await CameraViewClass.dismissScanner().catch(() => {});
       const found = await productsRef.current.findByBarcode(barcode);
@@ -78,6 +74,7 @@ export function useBarcodeScanner({
       }
     }
     processedRef.current = false;
+    activeInstanceId = instanceId.current;
     try {
       await CameraViewClass.launchScanner({
         barcodeTypes: ["ean13", "ean8", "upc_a", "upc_e"],

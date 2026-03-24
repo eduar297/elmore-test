@@ -1,8 +1,15 @@
 import type { CreateTicketInput, Ticket, TicketItem } from "@/models/ticket";
+import { BaseRepository } from "@/repositories/base.repository";
 import type { SQLiteDatabase } from "expo-sqlite";
 
-export class TicketRepository {
-  constructor(private readonly db: SQLiteDatabase) {}
+export class TicketRepository extends BaseRepository<
+  Ticket,
+  CreateTicketInput,
+  Partial<Omit<Ticket, "id">>
+> {
+  constructor(db: SQLiteDatabase) {
+    super(db, "tickets");
+  }
 
   /** Create a ticket with its items and deduct stock, all in one transaction. */
   async create(input: CreateTicketInput): Promise<Ticket> {
@@ -14,7 +21,6 @@ export class TicketRepository {
     let ticketId = 0;
 
     await this.db.withExclusiveTransactionAsync(async (tx) => {
-      // 1. Insert ticket
       const ticketResult = await tx.runAsync(
         `INSERT INTO tickets (paymentMethod, total, itemCount) VALUES (?, ?, ?)`,
         input.paymentMethod,
@@ -24,7 +30,6 @@ export class TicketRepository {
 
       ticketId = ticketResult.lastInsertRowId;
 
-      // 2. Insert each item and deduct stock
       for (const item of input.items) {
         const subtotal = item.quantity * item.unitPrice;
 
@@ -39,7 +44,6 @@ export class TicketRepository {
           subtotal,
         );
 
-        // Deduct stock
         await tx.runAsync(
           `UPDATE products SET stockBaseQty = stockBaseQty - ? WHERE id = ?`,
           item.quantity,
@@ -48,19 +52,14 @@ export class TicketRepository {
       }
     });
 
-    const ticket = await this.db.getFirstAsync<Ticket>(
-      `SELECT * FROM tickets WHERE id = ?`,
-      [ticketId],
-    );
+    const ticket = await this.findById(ticketId);
     if (!ticket) throw new Error("Ticket creado pero no encontrado");
     return ticket;
   }
 
   /** Get all tickets, newest first. */
-  findAll(): Promise<Ticket[]> {
-    return this.db.getAllAsync<Ticket>(
-      `SELECT * FROM tickets ORDER BY createdAt DESC`,
-    );
+  override findAll(): Promise<Ticket[]> {
+    return super.findAll("createdAt DESC");
   }
 
   /** Get tickets created today, newest first. */

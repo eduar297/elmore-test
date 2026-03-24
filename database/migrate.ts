@@ -2,7 +2,7 @@ import type { SQLiteDatabase } from "expo-sqlite";
 import { seedUnits } from "./seed";
 
 export async function migrateDbIfNeeded(db: SQLiteDatabase) {
-  const DATABASE_VERSION = 3;
+  const DATABASE_VERSION = 4;
 
   const result = await db.getFirstAsync<{ user_version: number }>(
     "PRAGMA user_version",
@@ -73,6 +73,44 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase) {
       );
     `);
     currentVersion = 3;
+  }
+
+  if (currentVersion === 3) {
+    await db.execAsync(`
+      CREATE TABLE suppliers (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        contactName TEXT,
+        phone TEXT,
+        email TEXT,
+        notes TEXT,
+        createdAt TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+      );
+
+      CREATE TABLE purchases (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        supplierId INTEGER,
+        supplierName TEXT NOT NULL,
+        notes TEXT,
+        total REAL NOT NULL,
+        itemCount INTEGER NOT NULL,
+        createdAt TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+        FOREIGN KEY (supplierId) REFERENCES suppliers(id)
+      );
+
+      CREATE TABLE purchase_items (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        purchaseId INTEGER NOT NULL,
+        productId INTEGER NOT NULL,
+        productName TEXT NOT NULL,
+        quantity REAL NOT NULL,
+        unitCost REAL NOT NULL,
+        subtotal REAL NOT NULL,
+        FOREIGN KEY (purchaseId) REFERENCES purchases(id),
+        FOREIGN KEY (productId) REFERENCES products(id)
+      );
+    `);
+    currentVersion = 4;
   }
 
   await seedUnits(db);
