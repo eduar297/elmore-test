@@ -20,6 +20,12 @@ export default function AdminLayout() {
   return (
     <Tabs
       screenOptions={{
+        headerShown: true,
+        headerStyle: {
+          backgroundColor: colorScheme === "dark" ? "#151718" : "#ffffff",
+        },
+        headerTintColor: colorScheme === "dark" ? "#f2f2f7" : "#18181b",
+        headerShadowVisible: false,
         tabBarActiveTintColor: tint,
         tabBarButton: HapticTab,
         tabBarStyle: {

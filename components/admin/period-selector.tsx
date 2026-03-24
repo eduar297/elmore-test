@@ -124,6 +124,13 @@ export function DateNavigator({
 
 /* ── Calendar picker modal ────────────────────────────────────────────────── */
 
+function getMondayOfWeek(dateStr: string): string {
+  const d = new Date(dateStr + "T12:00:00");
+  const day = d.getDay(); // 0=Sun, 1=Mon...
+  d.setDate(d.getDate() + (day === 0 ? -6 : 1 - day));
+  return d.toISOString().slice(0, 10);
+}
+
 const MONTHS_SHORT = [
   "Ene",
   "Feb",
@@ -141,7 +148,7 @@ const MONTHS_SHORT = [
 
 const MODAL_TITLE: Record<Period, string> = {
   day: "Seleccionar día",
-  week: "Seleccionar mes",
+  week: "Seleccionar semana",
   month: "Seleccionar mes",
   year: "Seleccionar año",
   range: "Seleccionar rango",
@@ -194,13 +201,15 @@ export function CalendarSheet({
 
   const [rangeStart, setRangeStart] = useState<string | null>(null);
   const [rangeEnd, setRangeEnd] = useState<string | null>(null);
+  const [weekStart, setWeekStart] = useState<string | null>(null);
   const [pickerYear, setPickerYear] = useState(nowYear);
 
   useEffect(() => {
     if (!open) return;
     setRangeStart(range?.from ?? null);
     setRangeEnd(range?.to ?? null);
-    if (mode === "month" || mode === "week") {
+    setWeekStart(null);
+    if (mode === "month") {
       setPickerYear(
         selectedMonth ? parseInt(selectedMonth.slice(0, 4), 10) : nowYear,
       );
@@ -263,7 +272,7 @@ export function CalendarSheet({
     [c],
   );
 
-  // ── Month/Week grid ────────────────────────────────────────────────────────
+  // ── Month/Week grid ─────────────────────────────────────────────────────────
   const MonthPicker = (
     <View>
       <View style={styles.pickerNav}>
@@ -328,7 +337,68 @@ export function CalendarSheet({
     </View>
   );
 
-  // ── Year grid ──────────────────────────────────────────────────────────────
+  // ── Week picker ───────────────────────────────────────────────────────────
+  const weekMarkedDates = useMemo(() => {
+    if (!weekStart) return {};
+    const marks: Record<
+      string,
+      {
+        startingDay?: boolean;
+        endingDay?: boolean;
+        color?: string;
+        textColor?: string;
+      }
+    > = {};
+    const d = new Date(weekStart + "T12:00:00");
+    for (let i = 0; i < 7; i++) {
+      const key = d.toISOString().slice(0, 10);
+      marks[key] = {
+        color: i === 0 || i === 6 ? c.blue : c.blueLight,
+        textColor: "white",
+        startingDay: i === 0,
+        endingDay: i === 6,
+      };
+      d.setDate(d.getDate() + 1);
+    }
+    return marks;
+  }, [weekStart, c.blue, c.blueLight]);
+
+  const WeekPicker = (
+    <View>
+      <RNCalendar
+        markingType="period"
+        markedDates={weekMarkedDates}
+        onDayPress={(day: DateData) => {
+          if (day.dateString > today) return;
+          setWeekStart(getMondayOfWeek(day.dateString));
+        }}
+        maxDate={today}
+        theme={calendarTheme}
+      />
+      <View style={styles.confirmRow}>
+        <Pressable
+          onPress={() => {
+            if (weekStart) {
+              onSelectMonth?.(weekStart.slice(0, 7));
+              onClose();
+            }
+          }}
+          disabled={!weekStart}
+          style={[
+            styles.confirmBtn,
+            {
+              backgroundColor: weekStart ? c.blue : c.disabled,
+              opacity: weekStart ? 1 : 0.5,
+            },
+          ]}
+        >
+          <RNText style={styles.confirmText}>Ver esta semana</RNText>
+        </Pressable>
+      </View>
+    </View>
+  );
+
+  // ── Year grid ─────────────────────────────────────────────────────────────
   const years = Array.from({ length: 7 }, (_, i) => nowYear - 6 + i);
   const YearPicker = (
     <View style={styles.yearGrid}>
@@ -407,8 +477,11 @@ export function CalendarSheet({
               />
             )}
 
-            {/* Month/Week grid */}
-            {(mode === "month" || mode === "week") && MonthPicker}
+            {/* Month grid */}
+            {mode === "month" && MonthPicker}
+
+            {/* Week picker */}
+            {mode === "week" && WeekPicker}
 
             {/* Year grid */}
             {mode === "year" && YearPicker}

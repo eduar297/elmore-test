@@ -270,16 +270,13 @@ export default function SuppliersScreen() {
 
   return (
     <YStack flex={1} bg="$background">
-      {/* Header */}
+      {/* Action bar */}
       <XStack
         px="$4"
-        pt="$6"
+        pt="$2"
         pb="$3"
-        style={{ alignItems: "center", justifyContent: "space-between" }}
+        style={{ alignItems: "center", justifyContent: "flex-end" }}
       >
-        <Text fontSize="$7" fontWeight="bold" color="$color">
-          Proveedores
-        </Text>
         <Button
           theme="blue"
           size="$3"

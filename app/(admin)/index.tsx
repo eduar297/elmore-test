@@ -37,19 +37,6 @@ export default function DashboardScreen() {
 
   return (
     <YStack flex={1} bg="$background">
-      {/* Header */}
-      <XStack px="$4" pt="$5" pb="$3" gap="$2" style={{ alignItems: "center" }}>
-        <LayoutDashboard size={22} color={activeColor as any} />
-        <Text
-          fontSize="$6"
-          fontWeight="800"
-          color="$color"
-          letterSpacing={-0.5}
-        >
-          Dashboard
-        </Text>
-      </XStack>
-
       {/* Section tabs */}
       <XStack
         mx="$4"

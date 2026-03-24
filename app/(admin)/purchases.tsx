@@ -352,23 +352,18 @@ export default function PurchasesScreen() {
   // ── render ────────────────────────────────────────────────────────────────
   return (
     <YStack flex={1} bg="$background">
-      {/* Header */}
+      {/* Action bar */}
       <XStack
         px="$4"
-        pt="$6"
+        pt="$2"
         pb="$3"
         style={{ alignItems: "center", justifyContent: "space-between" }}
       >
-        <YStack>
-          <Text fontSize="$7" fontWeight="bold" color="$color">
-            Compras
-          </Text>
-          <Text fontSize="$3" color="$color10">
-            Este mes: {monthlyStats.purchaseCount}{" "}
-            {monthlyStats.purchaseCount === 1 ? "compra" : "compras"} · $
-            {fmtCurrency(monthlyStats.totalSpent)}
-          </Text>
-        </YStack>
+        <Text fontSize="$3" color="$color10">
+          Este mes: {monthlyStats.purchaseCount}{" "}
+          {monthlyStats.purchaseCount === 1 ? "compra" : "compras"} · $
+          {fmtCurrency(monthlyStats.totalSpent)}
+        </Text>
         <Button theme="blue" size="$3" icon={<Plus />} onPress={openCreate}>
           Nueva
         </Button>

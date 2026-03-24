@@ -2,10 +2,10 @@ import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useTicketRepository } from "@/hooks/use-ticket-repository";
 import type { Ticket, TicketItem } from "@/models/ticket";
 import {
-  Banknote,
-  ClipboardList,
-  CreditCard,
-  Receipt,
+    Banknote,
+    ClipboardList,
+    CreditCard,
+    Receipt,
 } from "@tamagui/lucide-icons";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
@@ -115,19 +115,6 @@ export default function HistoryScreen() {
     <YStack flex={1} bg="$background">
       <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
         <YStack p="$4" gap="$5" pb="$8">
-          {/* Header */}
-          <XStack gap="$3" mt="$2" style={{ alignItems: "center" }}>
-            <ClipboardList size={26} color="$green10" />
-            <YStack>
-              <Text fontSize="$6" fontWeight="bold" color="$color">
-                Registro de ventas
-              </Text>
-              <Text fontSize="$3" color="$color10">
-                {allTickets.length} tickets · Total ${todayTotal.toFixed(2)}
-              </Text>
-            </YStack>
-          </XStack>
-
           {/* Tickets list */}
           <Card
             bg="$background"

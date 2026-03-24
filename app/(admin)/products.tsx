@@ -347,7 +347,7 @@ export default function ProductsScreen() {
   return (
     <YStack flex={1} bg="$background">
       {/* Action bar */}
-      <XStack gap="$3" px="$4" pt="$4" pb="$3">
+      <XStack gap="$3" px="$4" pt="$2" pb="$3">
         <Button flex={1} theme="blue" icon={ScanLine} size="$4" onPress={scan}>
           Escanear
         </Button>

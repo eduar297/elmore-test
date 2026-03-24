@@ -4,31 +4,30 @@ import { useTicketRepository } from "@/hooks/use-ticket-repository";
 import type { Product } from "@/models/product";
 import type { PaymentMethod } from "@/models/ticket";
 import {
-  AlertCircle,
-  Banknote,
-  CreditCard,
-  Minus,
-  Package,
-  Plus,
-  Receipt,
-  ScanLine,
-  ShoppingCart,
-  Trash2,
-  TrendingUp,
+    AlertCircle,
+    Banknote,
+    CreditCard,
+    Minus,
+    Package,
+    Plus,
+    Receipt,
+    ScanLine,
+    ShoppingCart,
+    Trash2,
+    TrendingUp,
 } from "@tamagui/lucide-icons";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { Alert, Image, Keyboard, ScrollView, StyleSheet } from "react-native";
 import {
-  Button,
-  Card,
-  H2,
-  Input,
-  Sheet,
-  Spinner,
-  Text,
-  XStack,
-  YStack,
+    Button,
+    Card,
+    Input,
+    Sheet,
+    Spinner,
+    Text,
+    XStack,
+    YStack,
 } from "tamagui";
 
 // ── Cart item type ───────────────────────────────────────────────────────────
@@ -346,19 +345,6 @@ export default function WorkerScreen() {
     <YStack flex={1} bg="$background">
       <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
         <YStack p="$4" gap="$4">
-          {/* Header */}
-          <XStack style={{ alignItems: "center" }} gap="$3">
-            <Receipt size={28} color="$green10" />
-            <YStack>
-              <H2 color="$color" fontSize="$6" fontWeight="bold">
-                Panel de Ventas
-              </H2>
-              <Text fontSize="$3" color="$color10">
-                Escanea productos y registra ventas
-              </Text>
-            </YStack>
-          </XStack>
-
           {/* Stats row */}
           <XStack gap="$3">
             <Card

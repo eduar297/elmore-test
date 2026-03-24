@@ -312,21 +312,16 @@ export default function ExpensesScreen() {
 
   return (
     <YStack flex={1} bg="$background">
-      {/* Header */}
+      {/* Action bar */}
       <XStack
         px="$4"
-        pt="$6"
+        pt="$2"
         pb="$3"
         style={{ alignItems: "center", justifyContent: "space-between" }}
       >
-        <YStack>
-          <Text fontSize="$7" fontWeight="bold" color="$color">
-            Gastos
-          </Text>
-          <Text fontSize="$3" color="$color10">
-            Este mes: ${fmtCurrency(monthlyTotal)}
-          </Text>
-        </YStack>
+        <Text fontSize="$3" color="$color10">
+          Este mes: ${fmtCurrency(monthlyTotal)}
+        </Text>
         <Button
           theme="blue"
           size="$3"
