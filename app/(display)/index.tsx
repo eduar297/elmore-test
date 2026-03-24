@@ -24,13 +24,12 @@ export default function DisplayScreen() {
       <YStack
         flex={1}
         bg="$background"
-        justifyContent="center"
-        alignItems="center"
         gap="$6"
         p="$6"
+        style={{ justifyContent: "center", alignItems: "center" }}
       >
         <Monitor size={64} color="$purple10" />
-        <YStack alignItems="center" gap="$2">
+        <YStack gap="$2" style={{ alignItems: "center" }}>
           <Text
             fontSize="$7"
             fontWeight="bold"
@@ -54,9 +53,8 @@ export default function DisplayScreen() {
     <YStack
       flex={1}
       bg="$color12"
-      justifyContent="center"
-      alignItems="center"
       gap="$4"
+      style={{ justifyContent: "center", alignItems: "center" }}
     >
       <Monitor size={48} color="$color1" />
       <Text
