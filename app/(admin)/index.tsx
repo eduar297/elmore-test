@@ -16,15 +16,16 @@ import {
   LayoutDashboard,
   Package,
   PackageX,
+  Receipt,
   Ruler,
   ShoppingBag,
   Tag,
   TrendingDown,
   TrendingUp,
 } from "@tamagui/lucide-icons";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
-import { Dimensions, ScrollView } from "react-native";
+import { Dimensions, Pressable, ScrollView } from "react-native";
 import { BarChart, PieChart } from "react-native-gifted-charts";
 import {
   Button,
@@ -296,6 +297,7 @@ function StockRow({
 // ── Dashboard ─────────────────────────────────────────────────────────────────
 
 export default function DashboardScreen() {
+  const router = useRouter();
   const productRepo = useProductRepository();
   const unitRepo = useUnitRepository();
   const ticketRepo = useTicketRepository();
@@ -528,6 +530,67 @@ export default function DashboardScreen() {
                 Resumen financiero e inventario
               </Text>
             </YStack>
+          </XStack>
+
+          {/* ── Nav Cards (detail screens) ──────────────────────────── */}
+          <XStack gap="$3">
+            <Pressable
+              style={{ flex: 1 }}
+              onPress={() => router.push("/(admin)/sales")}
+            >
+              <Card
+                bg="$green3"
+                p="$3"
+                borderWidth={1}
+                borderColor="$green6"
+                style={{ borderRadius: 12 }}
+              >
+                <YStack gap="$1" style={{ alignItems: "center" }}>
+                  <BarChart3 size={22} color="$green10" />
+                  <Text fontSize="$3" fontWeight="600" color="$green10">
+                    Ventas
+                  </Text>
+                </YStack>
+              </Card>
+            </Pressable>
+            <Pressable
+              style={{ flex: 1 }}
+              onPress={() => router.push("/(admin)/inventory")}
+            >
+              <Card
+                bg="$blue3"
+                p="$3"
+                borderWidth={1}
+                borderColor="$blue6"
+                style={{ borderRadius: 12 }}
+              >
+                <YStack gap="$1" style={{ alignItems: "center" }}>
+                  <Package size={22} color="$blue10" />
+                  <Text fontSize="$3" fontWeight="600" color="$blue10">
+                    Inventario
+                  </Text>
+                </YStack>
+              </Card>
+            </Pressable>
+            <Pressable
+              style={{ flex: 1 }}
+              onPress={() => router.push("/(admin)/finance")}
+            >
+              <Card
+                bg="$orange3"
+                p="$3"
+                borderWidth={1}
+                borderColor="$orange6"
+                style={{ borderRadius: 12 }}
+              >
+                <YStack gap="$1" style={{ alignItems: "center" }}>
+                  <Receipt size={22} color="$orange10" />
+                  <Text fontSize="$3" fontWeight="600" color="$orange10">
+                    Finanzas
+                  </Text>
+                </YStack>
+              </Card>
+            </Pressable>
           </XStack>
 
           {/* ── Month Selector ──────────────────────────────────────── */}

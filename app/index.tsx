@@ -57,7 +57,7 @@ export default function HomeScreen() {
     >
       <YStack mb="$6" style={{ alignItems: "center" }}>
         <H1 color="$color" fontSize="$10" letterSpacing={-1}>
-          ElMore
+          El More Hub
         </H1>
       </YStack>
 
