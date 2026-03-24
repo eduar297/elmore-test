@@ -1,10 +1,17 @@
 import { todayISO } from "@/utils/format";
-import { Calendar, ChevronLeft, ChevronRight } from "@tamagui/lucide-icons";
-import { useCallback, useState } from "react";
-import { Pressable, useColorScheme } from "react-native";
+import { Calendar, ChevronLeft, ChevronRight, X } from "@tamagui/lucide-icons";
+import { useEffect, useMemo, useState } from "react";
+import {
+    Modal,
+    Pressable,
+    Text as RNText,
+    StyleSheet,
+    View,
+    useColorScheme,
+} from "react-native";
 import type { DateData } from "react-native-calendars";
 import { Calendar as RNCalendar } from "react-native-calendars";
-import { Button, Card, Sheet, Text, XStack, YStack } from "tamagui";
+import { Button, Card, Text, XStack } from "tamagui";
 
 export type Period = "day" | "week" | "month" | "year" | "range";
 
@@ -115,7 +122,7 @@ export function DateNavigator({
   );
 }
 
-/* ── Calendar picker sheet ────────────────────────────────────────────────── */
+/* ── Calendar picker modal ────────────────────────────────────────────────── */
 
 export function CalendarSheet({
   open,
@@ -134,55 +141,62 @@ export function CalendarSheet({
   onSelectDay?: (date: string) => void;
   onSelectRange?: (range: DateRange) => void;
 }) {
-  const colorScheme = useColorScheme();
-  const dark = colorScheme === "dark";
+  const dark = useColorScheme() === "dark";
   const today = todayISO();
 
-  const [rangeStart, setRangeStart] = useState<string | null>(
-    range?.from ?? null,
-  );
-  const [rangeEnd, setRangeEnd] = useState<string | null>(range?.to ?? null);
-
-  const handleDayPress = useCallback(
-    (day: DateData) => {
-      if (day.dateString > today) return;
-      if (mode === "day") {
-        onSelectDay?.(day.dateString);
-        onClose();
-        return;
-      }
-      // Range mode
-      if (!rangeStart || (rangeStart && rangeEnd)) {
-        setRangeStart(day.dateString);
-        setRangeEnd(null);
-      } else {
-        const start = day.dateString < rangeStart ? day.dateString : rangeStart;
-        const end = day.dateString < rangeStart ? rangeStart : day.dateString;
-        setRangeStart(start);
-        setRangeEnd(end);
-      }
-    },
-    [mode, rangeStart, rangeEnd, today, onSelectDay, onClose],
+  const c = useMemo(
+    () => ({
+      bg: dark ? "#1c1c1e" : "#ffffff",
+      card: dark ? "#2c2c2e" : "#f2f2f7",
+      text: dark ? "#f2f2f7" : "#1c1c1e",
+      muted: dark ? "#8e8e93" : "#8e8e93",
+      border: dark ? "#3a3a3c" : "#e5e5ea",
+      blue: "#2563eb",
+      blueLight: "#93c5fd",
+      blueFaint: dark ? "#1e3a5f" : "#eff6ff",
+      disabled: dark ? "#3a3a3c" : "#d1d1d6",
+    }),
+    [dark],
   );
 
-  const confirmRange = useCallback(() => {
-    if (rangeStart && rangeEnd) {
-      onSelectRange?.({ from: rangeStart, to: rangeEnd });
-      onClose();
+  const [rangeStart, setRangeStart] = useState<string | null>(null);
+  const [rangeEnd, setRangeEnd] = useState<string | null>(null);
+
+  // Sync internal state whenever the modal opens
+  useEffect(() => {
+    if (open) {
+      setRangeStart(range?.from ?? null);
+      setRangeEnd(range?.to ?? null);
     }
-  }, [rangeStart, rangeEnd, onSelectRange, onClose]);
+  }, [open, range?.from, range?.to]);
 
-  const markedDates = useCallback(() => {
+  const handleDayPress = (day: DateData) => {
+    if (day.dateString > today) return;
+    if (mode === "day") {
+      onSelectDay?.(day.dateString);
+      onClose();
+      return;
+    }
+    if (!rangeStart || (rangeStart && rangeEnd)) {
+      setRangeStart(day.dateString);
+      setRangeEnd(null);
+    } else {
+      const s = day.dateString < rangeStart ? day.dateString : rangeStart;
+      const e = day.dateString < rangeStart ? rangeStart : day.dateString;
+      setRangeStart(s);
+      setRangeEnd(e);
+    }
+  };
+
+  const markedDates = useMemo(() => {
     if (mode === "day") {
       return selectedDay
-        ? { [selectedDay]: { selected: true, selectedColor: "#2563eb" } }
+        ? { [selectedDay]: { selected: true, selectedColor: c.blue } }
         : {};
     }
     if (!rangeStart) return {};
     if (!rangeEnd)
-      return {
-        [rangeStart]: { selected: true, selectedColor: "#2563eb" },
-      };
+      return { [rangeStart]: { selected: true, selectedColor: c.blue } };
     const marks: Record<
       string,
       {
@@ -198,119 +212,212 @@ export function CalendarSheet({
     for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
       const key = d.toISOString().slice(0, 10);
       marks[key] = {
-        color: key === rangeStart || key === rangeEnd ? "#2563eb" : "#93c5fd",
+        color: key === rangeStart || key === rangeEnd ? c.blue : c.blueLight,
         textColor: "white",
         startingDay: key === rangeStart,
         endingDay: key === rangeEnd,
       };
     }
     return marks;
-  }, [mode, selectedDay, rangeStart, rangeEnd]);
+  }, [mode, selectedDay, rangeStart, rangeEnd, c.blue, c.blueLight]);
 
-  const calendarTheme = {
-    backgroundColor: "transparent",
-    calendarBackground: "transparent",
-    textSectionTitleColor: dark ? "#a1a1aa" : "#71717a",
-    selectedDayBackgroundColor: "#2563eb",
-    selectedDayTextColor: "#ffffff",
-    todayTextColor: "#2563eb",
-    dayTextColor: dark ? "#fafafa" : "#18181b",
-    textDisabledColor: dark ? "#52525b" : "#d4d4d8",
-    monthTextColor: dark ? "#fafafa" : "#18181b",
-    arrowColor: "#2563eb",
-    textMonthFontWeight: "bold" as const,
-    textDayFontSize: 14,
-    textMonthFontSize: 16,
-  };
+  const calendarTheme = useMemo(
+    () => ({
+      backgroundColor: "transparent",
+      calendarBackground: "transparent",
+      textSectionTitleColor: c.muted,
+      selectedDayBackgroundColor: c.blue,
+      selectedDayTextColor: "#ffffff",
+      todayTextColor: c.blue,
+      dayTextColor: c.text,
+      textDisabledColor: c.disabled,
+      monthTextColor: c.text,
+      arrowColor: c.blue,
+      textMonthFontWeight: "bold" as const,
+      textDayFontSize: 14,
+      textMonthFontSize: 15,
+    }),
+    [c],
+  );
 
   return (
-    <Sheet
-      open={open}
-      onOpenChange={(v: boolean) => !v && onClose()}
-      snapPoints={[70]}
-      dismissOnSnapToBottom
-      modal
-      zIndex={100_000}
+    <Modal
+      visible={open}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+      statusBarTranslucent
     >
-      <Sheet.Overlay />
-      <Sheet.Frame bg="$background" style={{ borderRadius: 20 }}>
-        <Sheet.Handle bg="$color6" />
-        <YStack p="$4" gap="$3">
-          <Text fontSize="$5" fontWeight="bold" color="$color">
-            {mode === "day" ? "Seleccionar fecha" : "Seleccionar rango"}
-          </Text>
+      {/* Tap-outside overlay */}
+      <Pressable style={styles.overlay} onPress={onClose} />
 
-          {mode === "range" && (
-            <XStack gap="$3" style={{ justifyContent: "center" }}>
-              <Card
-                flex={1}
-                p="$2"
-                bg={rangeStart ? "$blue3" : "$color2"}
-                borderWidth={1}
-                borderColor="$borderColor"
-                style={{ borderRadius: 8 }}
-              >
-                <Text
-                  fontSize="$3"
-                  style={{ textAlign: "center" }}
-                  color="$color"
+      {/* Centered card (pointerEvents="box-none" lets card children receive touches) */}
+      <View style={styles.centeredContainer} pointerEvents="box-none">
+        {/* Inner Pressable stops tap from bubbling to overlay */}
+        <Pressable onPress={() => {}}>
+          <View
+            style={[
+              styles.card,
+              { backgroundColor: c.bg, borderColor: c.border },
+            ]}
+          >
+            {/* Header */}
+            <View style={styles.header}>
+              <RNText style={[styles.title, { color: c.text }]}>
+                {mode === "day" ? "Seleccionar fecha" : "Seleccionar rango"}
+              </RNText>
+              <Pressable onPress={onClose} style={styles.closeBtn} hitSlop={8}>
+                <X size={18} color={c.muted as any} />
+              </Pressable>
+            </View>
+
+            {/* Range from / to chips */}
+            {mode === "range" && (
+              <View style={styles.rangeRow}>
+                <View
+                  style={[
+                    styles.rangeChip,
+                    {
+                      backgroundColor: rangeStart ? c.blueFaint : c.card,
+                      borderColor: rangeStart ? c.blue : c.border,
+                    },
+                  ]}
                 >
-                  {rangeStart ?? "Desde"}
-                </Text>
-              </Card>
-              <Text
-                fontSize="$4"
-                color="$color10"
-                style={{ alignSelf: "center" }}
-              >
-                →
-              </Text>
-              <Card
-                flex={1}
-                p="$2"
-                bg={rangeEnd ? "$blue3" : "$color2"}
-                borderWidth={1}
-                borderColor="$borderColor"
-                style={{ borderRadius: 8 }}
-              >
-                <Text
-                  fontSize="$3"
-                  style={{ textAlign: "center" }}
-                  color="$color"
+                  <RNText style={[styles.chipLabel, { color: c.muted }]}>
+                    Desde
+                  </RNText>
+                  <RNText style={[styles.chipValue, { color: c.text }]}>
+                    {rangeStart ?? "—"}
+                  </RNText>
+                </View>
+                <RNText style={[styles.arrow, { color: c.muted }]}>→</RNText>
+                <View
+                  style={[
+                    styles.rangeChip,
+                    {
+                      backgroundColor: rangeEnd ? c.blueFaint : c.card,
+                      borderColor: rangeEnd ? c.blue : c.border,
+                    },
+                  ]}
                 >
-                  {rangeEnd ?? "Hasta"}
-                </Text>
-              </Card>
-            </XStack>
-          )}
+                  <RNText style={[styles.chipLabel, { color: c.muted }]}>
+                    Hasta
+                  </RNText>
+                  <RNText style={[styles.chipValue, { color: c.text }]}>
+                    {rangeEnd ?? "—"}
+                  </RNText>
+                </View>
+              </View>
+            )}
 
-          <RNCalendar
-            markingType={mode === "range" ? "period" : "dot"}
-            markedDates={markedDates()}
-            onDayPress={handleDayPress}
-            maxDate={today}
-            theme={calendarTheme}
-          />
+            {/* Calendar */}
+            <RNCalendar
+              markingType={mode === "range" ? "period" : "dot"}
+              markedDates={markedDates}
+              onDayPress={handleDayPress}
+              maxDate={today}
+              theme={calendarTheme}
+            />
 
-          {mode === "range" && (
-            <Pressable
-              onPress={confirmRange}
-              disabled={!rangeStart || !rangeEnd}
-              style={{
-                backgroundColor: rangeStart && rangeEnd ? "#2563eb" : "#93c5fd",
-                borderRadius: 10,
-                paddingVertical: 12,
-                alignItems: "center",
-                opacity: rangeStart && rangeEnd ? 1 : 0.5,
-              }}
-            >
-              <Text fontSize="$4" fontWeight="700" color="white">
-                Aplicar rango
-              </Text>
-            </Pressable>
-          )}
-        </YStack>
-      </Sheet.Frame>
-    </Sheet>
+            {/* Confirm button (range only) */}
+            {mode === "range" && (
+              <View style={styles.confirmRow}>
+                <Pressable
+                  onPress={() => {
+                    if (rangeStart && rangeEnd) {
+                      onSelectRange?.({ from: rangeStart, to: rangeEnd });
+                      onClose();
+                    }
+                  }}
+                  disabled={!rangeStart || !rangeEnd}
+                  style={[
+                    styles.confirmBtn,
+                    {
+                      backgroundColor:
+                        rangeStart && rangeEnd ? c.blue : c.disabled,
+                      opacity: rangeStart && rangeEnd ? 1 : 0.6,
+                    },
+                  ]}
+                >
+                  <RNText style={styles.confirmText}>Aplicar rango</RNText>
+                </Pressable>
+              </View>
+            )}
+          </View>
+        </Pressable>
+      </View>
+    </Modal>
   );
 }
+
+const styles = StyleSheet.create({
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.55)",
+  },
+  centeredContainer: {
+    flex: 1,
+    justifyContent: "center",
+    paddingHorizontal: 16,
+  },
+  card: {
+    borderRadius: 20,
+    borderWidth: 1,
+    overflow: "hidden",
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 4,
+  },
+  title: {
+    fontSize: 17,
+    fontWeight: "700",
+  },
+  closeBtn: {
+    padding: 4,
+  },
+  rangeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  rangeChip: {
+    flex: 1,
+    borderRadius: 10,
+    borderWidth: 1,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+  },
+  chipLabel: {
+    fontSize: 11,
+    textAlign: "center",
+  },
+  chipValue: {
+    fontSize: 13,
+    fontWeight: "600",
+    textAlign: "center",
+  },
+  arrow: {
+    fontSize: 18,
+  },
+  confirmRow: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+  },
+  confirmBtn: {
+    borderRadius: 12,
+    paddingVertical: 13,
+    alignItems: "center",
+  },
+  confirmText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "white",
+  },
+});
