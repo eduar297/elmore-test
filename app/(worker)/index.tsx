@@ -10,7 +10,7 @@ export default function WorkerScreen() {
   return (
     <YStack flex={1} bg="$background" p="$5" gap="$4">
       {/* Header */}
-      <XStack alignItems="center" gap="$3" mb="$2">
+      <XStack style={{ alignItems: "center" }} gap="$3" mb="$2">
         <Receipt size={28} color="$green10" />
         <YStack>
           <H2 color="$color" fontSize="$6" fontWeight="bold">
@@ -29,7 +29,7 @@ export default function WorkerScreen() {
           borderWidth={1}
           bg="$green2"
           p="$4"
-          br="$5"
+          style={{ borderRadius: 16 }}
           borderColor="$green5"
         >
           <TrendingUp size={20} color="$green10" />
@@ -46,7 +46,7 @@ export default function WorkerScreen() {
           borderWidth={1}
           bg="$blue2"
           p="$4"
-          br="$5"
+          style={{ borderRadius: 16 }}
           borderColor="$blue5"
         >
           <ShoppingCart size={20} color="$blue10" />
@@ -76,7 +76,7 @@ export default function WorkerScreen() {
         borderWidth={1}
         bg="$background"
         p="$4"
-        br="$5"
+        style={{ borderRadius: 16 }}
         borderColor="$borderColor"
       >
         <Text color="$color10" fontSize="$3" style={{ textAlign: "center" }}>
