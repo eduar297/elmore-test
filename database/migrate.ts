@@ -2,7 +2,7 @@ import type { SQLiteDatabase } from "expo-sqlite";
 import { seedUnits } from "./seed";
 
 export async function migrateDbIfNeeded(db: SQLiteDatabase) {
-  const DATABASE_VERSION = 1;
+  const DATABASE_VERSION = 2;
 
   const result = await db.getFirstAsync<{ user_version: number }>(
     "PRAGMA user_version",
@@ -43,6 +43,11 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase) {
     `);
 
     currentVersion = 1;
+  }
+
+  if (currentVersion === 1) {
+    await db.execAsync(`ALTER TABLE products ADD COLUMN photoUri TEXT`);
+    currentVersion = 2;
   }
 
   await seedUnits(db);

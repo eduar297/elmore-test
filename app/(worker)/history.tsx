@@ -38,7 +38,7 @@ function SaleRow({ sale }: { sale: SaleEntry }) {
   );
 }
 
-export default function RegisterScreen() {
+export default function HistoryScreen() {
   return (
     <ScrollView>
       <YStack bg="$background" p="$4" gap="$5" pb="$8">

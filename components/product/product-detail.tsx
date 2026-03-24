@@ -1,6 +1,7 @@
 import { BarcodeDisplay } from "@/components/product/barcode-display";
 import type { Product } from "@/models/product";
 import { PackagePlus, Pencil, Trash2 } from "@tamagui/lucide-icons";
+import { Image, StyleSheet } from "react-native";
 import {
   Button,
   Card,
@@ -51,6 +52,15 @@ export function ProductDetail({
       bg="$background"
     >
       <YStack gap="$1">
+        {/* Product photo */}
+        {product.photoUri && (
+          <Image
+            source={{ uri: product.photoUri }}
+            style={styles.photo}
+            resizeMode="cover"
+          />
+        )}
+
         <Text fontSize="$7" fontWeight="bold" color="$color" mb="$2">
           {product.name}
         </Text>
@@ -132,3 +142,12 @@ export function ProductDetail({
     </Card>
   );
 }
+
+const styles = StyleSheet.create({
+  photo: {
+    width: "100%",
+    height: 200,
+    borderRadius: 10,
+    marginBottom: 8,
+  },
+});

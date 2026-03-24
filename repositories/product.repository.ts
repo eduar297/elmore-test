@@ -28,14 +28,15 @@ export class ProductRepository extends BaseRepository<
 
   async create(input: CreateProductInput): Promise<Product> {
     await this.db.runAsync(
-      `INSERT INTO products (name, barcode, pricePerBaseUnit, baseUnitId, stockBaseQty, saleMode)
-       VALUES (?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO products (name, barcode, pricePerBaseUnit, baseUnitId, stockBaseQty, saleMode, photoUri)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
       input.name,
       input.barcode,
       input.pricePerBaseUnit,
       input.baseUnitId,
       input.stockBaseQty,
       input.saleMode,
+      input.photoUri ?? null,
     );
     const created = await this.findByBarcode(input.barcode);
     if (!created) throw new Error("Producto creado pero no encontrado");

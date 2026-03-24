@@ -8,6 +8,8 @@ export interface Product {
   baseUnitId: number;
   stockBaseQty: number;
   saleMode: SaleMode;
+  /** Local file URI for the product photo (stored as TEXT in SQLite). Null when no photo set. */
+  photoUri: string | null;
 }
 
 export type CreateProductInput = Omit<Product, "id">;

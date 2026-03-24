@@ -15,7 +15,7 @@ import { generateEAN13 } from "@/utils/barcode";
 import { Package, Plus, ScanLine } from "@tamagui/lucide-icons";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
-import { Alert, ScrollView } from "react-native";
+import { Alert, Image, ScrollView, StyleSheet } from "react-native";
 import {
   Button,
   Input,
@@ -48,7 +48,21 @@ function ProductRow({
       borderBottomWidth={1}
       borderColor="$borderColor"
       style={{ alignItems: "center" }}
+      gap="$3"
     >
+      {/* Thumbnail */}
+      {product.photoUri ? (
+        <Image
+          source={{ uri: product.photoUri }}
+          style={rowStyles.thumb}
+          resizeMode="cover"
+        />
+      ) : (
+        <YStack style={rowStyles.thumbPlaceholder}>
+          <Package size={20} color="$color8" />
+        </YStack>
+      )}
+
       <YStack flex={1} gap="$1">
         <Text fontSize="$4" fontWeight="bold" color="$color" numberOfLines={1}>
           {product.name}
@@ -68,6 +82,22 @@ function ProductRow({
     </XStack>
   );
 }
+
+const rowStyles = StyleSheet.create({
+  thumb: {
+    width: 48,
+    height: 48,
+    borderRadius: 8,
+  },
+  thumbPlaceholder: {
+    width: 48,
+    height: 48,
+    borderRadius: 8,
+    backgroundColor: "rgba(128,128,128,0.12)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+});
 
 // ── Category section ─────────────────────────────────────────────────────────
 

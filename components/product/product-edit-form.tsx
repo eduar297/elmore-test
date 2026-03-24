@@ -1,4 +1,5 @@
 import { BarcodeDisplay } from "@/components/product/barcode-display";
+import { PhotoPicker } from "@/components/ui/photo-picker";
 import { UnitPicker } from "@/components/ui/unit-picker";
 import type { Product, SaleMode, UpdateProductInput } from "@/models/product";
 import type { Unit } from "@/models/unit";
@@ -23,6 +24,9 @@ export function ProductEditForm({
   const [price, setPrice] = useState(String(product.pricePerBaseUnit));
   const [unitId, setUnitId] = useState(String(product.baseUnitId));
   const [saleMode, setSaleMode] = useState<SaleMode>(product.saleMode);
+  const [photoUri, setPhotoUri] = useState<string | null>(
+    product.photoUri ?? null,
+  );
 
   const parsedPrice = parseFloat(price);
   const canSubmit =
@@ -39,6 +43,7 @@ export function ProductEditForm({
       pricePerBaseUnit: parsedPrice,
       baseUnitId: parseInt(unitId, 10),
       saleMode,
+      photoUri,
     });
   };
 
@@ -47,6 +52,14 @@ export function ProductEditForm({
       <Text fontSize="$6" fontWeight="bold" color="$color">
         Editar producto
       </Text>
+
+      {/* Photo picker */}
+      <YStack gap="$1">
+        <Label color="$color10" fontSize="$3">
+          Foto del producto
+        </Label>
+        <PhotoPicker uri={photoUri} onChange={setPhotoUri} />
+      </YStack>
 
       {/* Barcode (read-only) */}
       {/^\d{13}$/.test(product.barcode) && (

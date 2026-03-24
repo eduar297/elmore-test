@@ -1,4 +1,5 @@
 import { BarcodeDisplay } from "@/components/product/barcode-display";
+import { PhotoPicker } from "@/components/ui/photo-picker";
 import { UnitPicker } from "@/components/ui/unit-picker";
 import type { CreateProductInput, SaleMode } from "@/models/product";
 import type { Unit } from "@/models/unit";
@@ -26,6 +27,7 @@ export function ProductForm({
   const [price, setPrice] = useState("");
   const [stock, setStock] = useState("");
   const [unitId, setUnitId] = useState("");
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
 
   const canSubmit =
     name.trim().length > 0 &&
@@ -42,6 +44,7 @@ export function ProductForm({
       stockBaseQty: parseFloat(stock),
       saleMode: "UNIT" as SaleMode,
       baseUnitId: parseInt(unitId, 10),
+      photoUri,
     });
   };
 
@@ -50,6 +53,14 @@ export function ProductForm({
       <Text fontSize="$6" fontWeight="bold" color="$color">
         Nuevo producto
       </Text>
+
+      {/* Photo picker */}
+      <YStack gap="$1">
+        <Label color="$color10" fontSize="$3">
+          Foto del producto
+        </Label>
+        <PhotoPicker uri={photoUri} onChange={setPhotoUri} />
+      </YStack>
 
       {/* Barcode visual */}
       <YStack

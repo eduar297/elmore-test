@@ -33,7 +33,7 @@ export default function WorkerLayout() {
         }}
       />
       <Tabs.Screen
-        name="register"
+        name="history"
         options={{
           title: "Registro",
           tabBarIcon: ({ color }) => (
