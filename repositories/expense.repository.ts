@@ -64,6 +64,57 @@ export class ExpenseRepository extends BaseRepository<
     return row?.total ?? 0;
   }
 
+  /** Total expenses for a specific day. */
+  async dayTotal(date: string): Promise<number> {
+    const row = await this.db.getFirstAsync<{ total: number }>(
+      `SELECT COALESCE(SUM(amount), 0) as total
+       FROM expenses
+       WHERE date = ?`,
+      [date],
+    );
+    return row?.total ?? 0;
+  }
+
+  /** Daily expenses by category. */
+  async daySummaryByCategory(
+    date: string,
+  ): Promise<{ category: ExpenseCategory; total: number }[]> {
+    return this.db.getAllAsync<{ category: ExpenseCategory; total: number }>(
+      `SELECT category, COALESCE(SUM(amount), 0) as total
+       FROM expenses
+       WHERE date = ?
+       GROUP BY category
+       ORDER BY total DESC`,
+      [date],
+    );
+  }
+
+  /** Total for a date range. */
+  async rangeTotal(from: string, to: string): Promise<number> {
+    const row = await this.db.getFirstAsync<{ total: number }>(
+      `SELECT COALESCE(SUM(amount), 0) as total
+       FROM expenses
+       WHERE date BETWEEN ? AND ?`,
+      [from, to],
+    );
+    return row?.total ?? 0;
+  }
+
+  /** Category breakdown for a date range. */
+  async rangeSummaryByCategory(
+    from: string,
+    to: string,
+  ): Promise<{ category: ExpenseCategory; total: number }[]> {
+    return this.db.getAllAsync(
+      `SELECT category, COALESCE(SUM(amount), 0) as total
+       FROM expenses
+       WHERE date BETWEEN ? AND ?
+       GROUP BY category
+       ORDER BY total DESC`,
+      [from, to],
+    );
+  }
+
   /** Monthly expense totals for a year (for trend charts). */
   async monthlyTotalsForYear(
     year?: string,

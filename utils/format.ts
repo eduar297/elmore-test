@@ -99,3 +99,16 @@ export function fmtTime(iso: string): string {
     minute: "2-digit",
   });
 }
+
+export function shortDayLabel(date: string): string {
+  const d = new Date(date + "T12:00:00");
+  return d.toLocaleDateString("es-MX", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+export function rangeLabel(from: string, to: string): string {
+  return `${shortDayLabel(from)} — ${shortDayLabel(to)}`;
+}

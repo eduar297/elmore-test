@@ -4,7 +4,8 @@ import { OverviewSection } from "@/components/admin/overview-section";
 import { SalesSection } from "@/components/admin/sales-section";
 import { LayoutDashboard } from "@tamagui/lucide-icons";
 import { useState } from "react";
-import { Button, Text, XStack, YStack } from "tamagui";
+import { Pressable } from "react-native";
+import { Text, XStack, YStack } from "tamagui";
 
 type Section = "overview" | "sales" | "inventory" | "finance";
 
@@ -29,25 +30,37 @@ export default function DashboardScreen() {
           </Text>
         </XStack>
 
-        <XStack bg="$color2" style={{ borderRadius: 10 }} p="$1" gap="$1">
-          {SECTIONS.map((s) => (
-            <Button
-              key={s.key}
-              flex={1}
-              size="$3"
-              bg={section === s.key ? "$blue10" : "transparent"}
-              onPress={() => setSection(s.key)}
-              style={{ borderRadius: 8 }}
-            >
-              <Text
-                fontSize="$2"
-                fontWeight="600"
-                color={section === s.key ? "white" : "$color10"}
+        <XStack
+          bg="$color2"
+          style={{ borderRadius: 10 }}
+          p="$1"
+          gap={4}
+          height={42}
+        >
+          {SECTIONS.map((s) => {
+            const active = section === s.key;
+            return (
+              <Pressable
+                key={s.key}
+                onPress={() => setSection(s.key)}
+                style={{
+                  flex: 1,
+                  borderRadius: 8,
+                  backgroundColor: active ? "#2563eb" : "transparent",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
               >
-                {s.label}
-              </Text>
-            </Button>
-          ))}
+                <Text
+                  fontSize={12}
+                  fontWeight="700"
+                  color={active ? "white" : "$color10"}
+                >
+                  {s.label}
+                </Text>
+              </Pressable>
+            );
+          })}
         </XStack>
       </YStack>
 

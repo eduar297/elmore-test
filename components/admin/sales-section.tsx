@@ -1,3 +1,10 @@
+import {
+    CalendarSheet,
+    DateNavigator,
+    PeriodTabs,
+    type DateRange,
+    type Period,
+} from "@/components/admin/period-selector";
 import { StatCard } from "@/components/admin/stat-card";
 import { useTicketRepository } from "@/hooks/use-ticket-repository";
 import type { Ticket, TicketItem } from "@/models/ticket";
@@ -9,15 +16,13 @@ import {
     fmtTime,
     MONTH_NAMES_SHORT,
     monthLabel,
+    rangeLabel,
     shiftDay,
     shiftMonth,
     todayISO,
 } from "@/utils/format";
 import {
-    Calendar,
     ChevronDown,
-    ChevronLeft,
-    ChevronRight,
     CreditCard,
     DollarSign,
     Receipt,
@@ -28,26 +33,7 @@ import { useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { Dimensions, FlatList, Pressable } from "react-native";
 import { BarChart, PieChart } from "react-native-gifted-charts";
-import {
-    Button,
-    Card,
-    Separator,
-    Spinner,
-    Text,
-    XStack,
-    YStack,
-} from "tamagui";
-
-// ── Types ─────────────────────────────────────────────────────────────────────
-
-type Period = "day" | "week" | "month" | "year";
-
-const PERIOD_LABELS: Record<Period, string> = {
-  day: "Día",
-  week: "Semana",
-  month: "Mes",
-  year: "Año",
-};
+import { Card, Separator, Spinner, Text, XStack, YStack } from "tamagui";
 
 const SCREEN_W = Dimensions.get("window").width;
 
@@ -163,6 +149,11 @@ export function SalesSection() {
   const [selectedYear, setSelectedYear] = useState(
     String(new Date().getFullYear()),
   );
+  const [dateRange, setDateRange] = useState<DateRange>({
+    from: todayISO(),
+    to: todayISO(),
+  });
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
 
   // Data states
@@ -266,7 +257,7 @@ export function SalesSection() {
         setTopProducts(top);
         setPaymentBreakdown(payment);
         setTickets(monthTickets);
-      } else {
+      } else if (period === "year") {
         const [yearly, top] = await Promise.all([
           ticketRepo.monthlySalesForYear(selectedYear),
           ticketRepo.topProducts(undefined, 10),
@@ -277,11 +268,22 @@ export function SalesSection() {
           totalSales: yearly.reduce((s, y) => s + y.total, 0),
           ticketCount: yearly.reduce((s, y) => s + y.tickets, 0),
         });
+      } else {
+        // range
+        const rangeTickets = await ticketRepo.findByDateRange(
+          dateRange.from,
+          dateRange.to,
+        );
+        setTickets(rangeTickets);
+        setMonthlySummary({
+          totalSales: rangeTickets.reduce((s, t) => s + t.total, 0),
+          ticketCount: rangeTickets.length,
+        });
       }
     } finally {
       setLoading(false);
     }
-  }, [period, selectedDay, selectedMonth, selectedYear, ticketRepo]);
+  }, [period, selectedDay, selectedMonth, selectedYear, dateRange, ticketRepo]);
 
   useFocusEffect(
     useCallback(() => {
@@ -294,7 +296,7 @@ export function SalesSection() {
     if (period === "day") setSelectedDay((d) => shiftDay(d, -1));
     else if (period === "month" || period === "week")
       setSelectedMonth((m) => shiftMonth(m, -1));
-    else setSelectedYear((y) => String(Number(y) - 1));
+    else if (period === "year") setSelectedYear((y) => String(Number(y) - 1));
   };
   const navigateForward = () => {
     if (period === "day") {
@@ -303,7 +305,7 @@ export function SalesSection() {
     } else if (period === "month" || period === "week") {
       const next = shiftMonth(selectedMonth, 1);
       if (next <= currentYearMonth()) setSelectedMonth(next);
-    } else {
+    } else if (period === "year") {
       const next = String(Number(selectedYear) + 1);
       if (Number(next) <= new Date().getFullYear()) setSelectedYear(next);
     }
@@ -312,18 +314,22 @@ export function SalesSection() {
     if (period === "day") return selectedDay < todayISO();
     if (period === "month" || period === "week")
       return selectedMonth < currentYearMonth();
-    return Number(selectedYear) < new Date().getFullYear();
+    if (period === "year")
+      return Number(selectedYear) < new Date().getFullYear();
+    return false;
   }, [period, selectedDay, selectedMonth, selectedYear]);
 
   const periodLabel = useMemo(() => {
     if (period === "day") return dayLabel(selectedDay);
     if (period === "month" || period === "week")
       return monthLabel(selectedMonth);
-    return selectedYear;
-  }, [period, selectedDay, selectedMonth, selectedYear]);
+    if (period === "year") return selectedYear;
+    return rangeLabel(dateRange.from, dateRange.to);
+  }, [period, selectedDay, selectedMonth, selectedYear, dateRange]);
 
   // ── Chart data ────────────────────────────────────────────────────────────
   const chartData = useMemo(() => {
+    if (period === "range") return [];
     if (period === "day") {
       return hourlySales.map((h) => ({
         value: h.total,
@@ -403,67 +409,14 @@ export function SalesSection() {
   // ── Render ────────────────────────────────────────────────────────────────
   const ListHeader = (
     <YStack gap="$4" px="$4" pb="$2">
-      {/* Period tabs */}
-      <XStack bg="$color2" style={{ borderRadius: 10 }} p="$1" gap="$1">
-        {(["day", "week", "month", "year"] as Period[]).map((p) => (
-          <Button
-            key={p}
-            flex={1}
-            size="$3"
-            bg={period === p ? "$blue10" : "transparent"}
-            onPress={() => setPeriod(p)}
-            style={{ borderRadius: 8 }}
-          >
-            <Text
-              fontSize="$3"
-              fontWeight="600"
-              color={period === p ? "white" : "$color10"}
-            >
-              {PERIOD_LABELS[p]}
-            </Text>
-          </Button>
-        ))}
-      </XStack>
-
-      {/* Date navigator */}
-      <Card
-        bg="$color1"
-        borderWidth={1}
-        borderColor="$borderColor"
-        style={{ borderRadius: 12 }}
-        p="$2"
-      >
-        <XStack
-          style={{ alignItems: "center", justifyContent: "space-between" }}
-        >
-          <Button
-            size="$3"
-            chromeless
-            icon={ChevronLeft}
-            onPress={navigateBack}
-          />
-          <YStack style={{ alignItems: "center" }}>
-            <Calendar size={14} color="$color10" />
-            <Text
-              fontSize="$3"
-              fontWeight="600"
-              color="$color"
-              mt="$0.5"
-              style={{ textAlign: "center" }}
-            >
-              {periodLabel}
-            </Text>
-          </YStack>
-          <Button
-            size="$3"
-            chromeless
-            icon={ChevronRight}
-            onPress={navigateForward}
-            disabled={!canGoForward}
-            opacity={canGoForward ? 1 : 0.3}
-          />
-        </XStack>
-      </Card>
+      <PeriodTabs period={period} onChangePeriod={setPeriod} />
+      <DateNavigator
+        label={periodLabel}
+        onPrev={navigateBack}
+        onNext={navigateForward}
+        canGoForward={canGoForward}
+        onCalendarPress={() => setCalendarOpen(true)}
+      />
 
       {/* KPI cards */}
       <XStack gap="$3">
@@ -655,39 +608,65 @@ export function SalesSection() {
     );
   }
 
-  return period !== "year" && tickets.length > 0 ? (
-    <FlatList
-      data={tickets}
-      keyExtractor={(item) => String(item.id)}
-      ListHeaderComponent={ListHeader}
-      contentContainerStyle={{ paddingBottom: 40 }}
-      ItemSeparatorComponent={() => <Separator />}
-      renderItem={({ item }) => (
-        <Card
-          bg="$color1"
-          borderWidth={1}
-          borderColor="$borderColor"
-          mx="$4"
-          mb="$2"
-          style={{ borderRadius: 12 }}
-          overflow="hidden"
-        >
-          <TicketRow
-            ticket={item}
-            expanded={expandedTicket === item.id}
-            onToggle={() => toggleTicket(item.id)}
-            items={ticketItems[item.id] ?? []}
-          />
-        </Card>
+  const showTickets =
+    period !== "year" && period !== "range"
+      ? tickets.length > 0
+      : period === "range" && tickets.length > 0;
+
+  return (
+    <>
+      {showTickets ? (
+        <FlatList
+          data={tickets}
+          keyExtractor={(item) => String(item.id)}
+          extraData={[expandedTicket, ticketItems]}
+          ListHeaderComponent={ListHeader}
+          contentContainerStyle={{ paddingBottom: 40 }}
+          ItemSeparatorComponent={() => <Separator />}
+          renderItem={({ item }) => (
+            <Card
+              bg="$color1"
+              borderWidth={1}
+              borderColor="$borderColor"
+              mx="$4"
+              mb="$2"
+              style={{ borderRadius: 12 }}
+              overflow="hidden"
+            >
+              <TicketRow
+                ticket={item}
+                expanded={expandedTicket === item.id}
+                onToggle={() => toggleTicket(item.id)}
+                items={ticketItems[item.id] ?? []}
+              />
+            </Card>
+          )}
+        />
+      ) : (
+        <FlatList
+          data={[]}
+          keyExtractor={() => "empty"}
+          ListHeaderComponent={ListHeader}
+          contentContainerStyle={{ paddingBottom: 40 }}
+          renderItem={() => null}
+        />
       )}
-    />
-  ) : (
-    <FlatList
-      data={[]}
-      keyExtractor={() => "empty"}
-      ListHeaderComponent={ListHeader}
-      contentContainerStyle={{ paddingBottom: 40 }}
-      renderItem={() => null}
-    />
+
+      <CalendarSheet
+        open={calendarOpen}
+        onClose={() => setCalendarOpen(false)}
+        mode={period === "range" ? "range" : "day"}
+        selectedDay={selectedDay}
+        range={dateRange}
+        onSelectDay={(d) => {
+          setSelectedDay(d);
+          if (period !== "day") setPeriod("day");
+        }}
+        onSelectRange={(r) => {
+          setDateRange(r);
+          if (period !== "range") setPeriod("range");
+        }}
+      />
+    </>
   );
 }

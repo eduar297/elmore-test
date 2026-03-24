@@ -103,6 +103,51 @@ export class PurchaseRepository extends BaseRepository<
     return row ?? { totalSpent: 0, totalTransport: 0, purchaseCount: 0 };
   }
 
+  /** Summary for a specific day. */
+  async daySummary(date: string): Promise<{
+    totalSpent: number;
+    totalTransport: number;
+    purchaseCount: number;
+  }> {
+    const row = await this.db.getFirstAsync<{
+      totalSpent: number;
+      totalTransport: number;
+      purchaseCount: number;
+    }>(
+      `SELECT COALESCE(SUM(total), 0) as totalSpent,
+              COALESCE(SUM(transportCost), 0) as totalTransport,
+              COUNT(*) as purchaseCount
+       FROM purchases
+       WHERE strftime('%Y-%m-%d', createdAt) = ?`,
+      [date],
+    );
+    return row ?? { totalSpent: 0, totalTransport: 0, purchaseCount: 0 };
+  }
+
+  /** Summary for a date range. */
+  async rangeSummary(
+    from: string,
+    to: string,
+  ): Promise<{
+    totalSpent: number;
+    totalTransport: number;
+    purchaseCount: number;
+  }> {
+    const row = await this.db.getFirstAsync<{
+      totalSpent: number;
+      totalTransport: number;
+      purchaseCount: number;
+    }>(
+      `SELECT COALESCE(SUM(total), 0) as totalSpent,
+              COALESCE(SUM(transportCost), 0) as totalTransport,
+              COUNT(*) as purchaseCount
+       FROM purchases
+       WHERE date(createdAt) BETWEEN ? AND ?`,
+      [from, to],
+    );
+    return row ?? { totalSpent: 0, totalTransport: 0, purchaseCount: 0 };
+  }
+
   /** Monthly purchase totals for a year (for trend charts). */
   async monthlyTotalsForYear(
     year?: string,
