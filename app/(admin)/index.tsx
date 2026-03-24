@@ -1,20 +1,21 @@
 import { ProductDetail } from "@/components/product/product-detail";
 import { ProductForm } from "@/components/product/product-form";
 import { BarcodeScannerView } from "@/components/ui/barcode-scanner-view";
+import { useProductRepository } from "@/hooks/use-product-repository";
+import type { CreateProductInput, Product } from "@/models/product";
 import { ScanLine, ShieldCheck } from "@tamagui/lucide-icons";
 import { useCameraPermissions } from "expo-camera";
-import { useSQLiteContext } from "expo-sqlite";
 import { useCallback, useState } from "react";
 import { View } from "react-native";
 import { Button, Sheet, Text, XStack, YStack } from "tamagui";
 
 export default function AdminScreen() {
   const [permission, requestPermission] = useCameraPermissions();
-  const db = useSQLiteContext();
+  const products = useProductRepository();
   const [scanned, setScanned] = useState(false);
   const [barcode, setBarcode] = useState<string | null>(null);
   const [showScanner, setShowScanner] = useState(false);
-  const [product, setProduct] = useState<any | null>(null);
+  const [product, setProduct] = useState<Product | null>(null);
   const [lookupError, setLookupError] = useState<string | null>(null);
   const [showCreateSheet, setShowCreateSheet] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -28,40 +29,23 @@ export default function AdminScreen() {
       setProduct(null);
       setLookupError(null);
       try {
-        const found = await db.getFirstAsync<any>(
-          "SELECT * FROM products WHERE barcode = ?",
-          [barcode],
-        );
+        const found = await products.findByBarcode(barcode);
         if (found) {
           setProduct(found);
         } else {
-          setProduct(null);
           setShowCreateSheet(true);
         }
       } catch (e) {
-        setProduct(null);
         setLookupError("Error buscando producto: " + (e as Error).message);
       }
     },
-    [db, scanned],
+    [products, scanned],
   );
 
-  const handleCreate = async (data: any) => {
+  const handleCreate = async (data: CreateProductInput) => {
     setCreating(true);
     try {
-      await db.runAsync(
-        `INSERT INTO products (name, barcode, pricePerBaseUnit, baseUnitId, stockBaseQty, saleMode) VALUES (?, ?, ?, ?, ?, ?)`,
-        data.name,
-        data.barcode,
-        data.pricePerBaseUnit,
-        data.baseUnitId,
-        data.stockBaseQty,
-        data.saleMode,
-      );
-      const created = await db.getFirstAsync<any>(
-        "SELECT * FROM products WHERE barcode = ?",
-        [data.barcode],
-      );
+      const created = await products.create(data);
       setProduct(created);
       setShowCreateSheet(false);
       setLookupError(null);

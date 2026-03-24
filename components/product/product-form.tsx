@@ -1,20 +1,11 @@
+import type { CreateProductInput, SaleMode } from "@/models/product";
 import { useState } from "react";
 import { Button, Input, Label, Spinner, Text, XStack, YStack } from "tamagui";
 
 export interface ProductFormProps {
   barcode: string;
-  onSubmit: (data: Omit<ProductFormData, "id">) => void;
+  onSubmit: (data: CreateProductInput) => void;
   loading?: boolean;
-}
-
-export interface ProductFormData {
-  id?: number;
-  name: string;
-  barcode: string;
-  pricePerBaseUnit: number;
-  stockBaseQty: number;
-  saleMode: string;
-  baseUnitId: number;
 }
 
 export function ProductForm({ barcode, onSubmit, loading }: ProductFormProps) {
@@ -102,7 +93,7 @@ export function ProductForm({ barcode, onSubmit, loading }: ProductFormProps) {
             barcode,
             pricePerBaseUnit: parseFloat(price),
             stockBaseQty: parseFloat(stock),
-            saleMode,
+            saleMode: saleMode as SaleMode,
             baseUnitId: parseInt(baseUnitId, 10),
           })
         }

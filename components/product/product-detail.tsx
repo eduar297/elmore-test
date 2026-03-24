@@ -1,15 +1,8 @@
+import type { Product } from "@/models/product";
 import { Card, Separator, Text, XStack, YStack } from "tamagui";
 
 export interface ProductDetailProps {
-  product: {
-    id: number;
-    name: string;
-    barcode: string;
-    pricePerBaseUnit: number;
-    stockBaseQty: number;
-    saleMode: string;
-    baseUnitId: number;
-  };
+  product: Product;
 }
 
 function DetailRow({ label, value }: { label: string; value: string }) {
