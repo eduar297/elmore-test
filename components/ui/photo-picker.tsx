@@ -1,36 +1,35 @@
 import { Camera, Image as ImageIcon, Trash2 } from "@tamagui/lucide-icons";
-import * as FileSystem from "expo-file-system";
+import { Directory, File, Paths } from "expo-file-system";
 import {
   launchCameraAsync,
   launchImageLibraryAsync,
   MediaType,
   useCameraPermissions,
-  useMediaLibraryPermissions,
 } from "expo-image-picker";
 import { Image, StyleSheet } from "react-native";
 import { Button, Text, XStack, YStack } from "tamagui";
 
 // Persistent directory for product photos
-const PHOTOS_DIR = FileSystem.documentDirectory + "product-photos/";
+const PHOTOS_DIR = new Directory(Paths.document, "product-photos");
 
 /** Copy a picked image to the persistent documents directory. */
-async function persistImage(cacheUri: string): Promise<string> {
-  const dirInfo = await FileSystem.getInfoAsync(PHOTOS_DIR);
-  if (!dirInfo.exists) {
-    await FileSystem.makeDirectoryAsync(PHOTOS_DIR, { intermediates: true });
+function persistImage(cacheUri: string): string {
+  if (!PHOTOS_DIR.exists) {
+    PHOTOS_DIR.create();
   }
   const filename = `photo_${Date.now()}.jpg`;
-  const destUri = PHOTOS_DIR + filename;
-  await FileSystem.copyAsync({ from: cacheUri, to: destUri });
-  return destUri;
+  const source = new File(cacheUri);
+  const dest = new File(PHOTOS_DIR, filename);
+  source.copy(dest);
+  return dest.uri;
 }
 
 /** Delete a previously persisted photo. */
-async function deletePersistedImage(uri: string): Promise<void> {
+function deletePersistedImage(uri: string): void {
   try {
-    const info = await FileSystem.getInfoAsync(uri);
-    if (info.exists) {
-      await FileSystem.deleteAsync(uri);
+    const file = new File(uri);
+    if (file.exists) {
+      file.delete();
     }
   } catch {
     // ignore — file may already be gone
@@ -57,8 +56,6 @@ export interface PhotoPickerProps {
  */
 export function PhotoPicker({ uri, onChange }: PhotoPickerProps) {
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
-  const [libraryPermission, requestLibraryPermission] =
-    useMediaLibraryPermissions();
 
   const pickFromCamera = async () => {
     if (!cameraPermission?.granted) {
@@ -73,18 +70,13 @@ export function PhotoPicker({ uri, onChange }: PhotoPickerProps) {
     });
 
     if (!result.canceled && result.assets.length > 0) {
-      const persisted = await persistImage(result.assets[0].uri);
-      if (uri) await deletePersistedImage(uri);
+      const persisted = persistImage(result.assets[0].uri);
+      if (uri) deletePersistedImage(uri);
       onChange(persisted);
     }
   };
 
   const pickFromLibrary = async () => {
-    if (!libraryPermission?.granted) {
-      const { granted } = await requestLibraryPermission();
-      if (!granted) return;
-    }
-
     const result = await launchImageLibraryAsync({
       mediaTypes: "images" as MediaType,
       allowsEditing: true,
@@ -92,8 +84,8 @@ export function PhotoPicker({ uri, onChange }: PhotoPickerProps) {
     });
 
     if (!result.canceled && result.assets.length > 0) {
-      const persisted = await persistImage(result.assets[0].uri);
-      if (uri) await deletePersistedImage(uri);
+      const persisted = persistImage(result.assets[0].uri);
+      if (uri) deletePersistedImage(uri);
       onChange(persisted);
     }
   };
