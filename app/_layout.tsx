@@ -19,14 +19,16 @@ function AppStack() {
 
   return (
     <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-      <Stack>
+      <Stack screenOptions={{ headerBackButtonDisplayMode: "minimal" }}>
         <Stack.Screen
           name="index"
           options={{ headerShown: false, title: "El More Hub" }}
         />
         <Stack.Screen
           name="(admin)"
-          options={{ title: "Panel Administrador" }}
+          options={{
+            title: "Panel Administrador",
+          }}
         />
         <Stack.Screen name="(worker)" options={{ title: "Panel Trabajador" }} />
         <Stack.Screen
