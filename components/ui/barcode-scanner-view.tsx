@@ -52,35 +52,31 @@ export function BarcodeScannerView({
   }
 
   return (
-    <YStack flex={1} p="$4" gap="$4">
-      {/* Camera viewport — fixed height to avoid taking the whole screen */}
-      <YStack
-        style={{
-          borderRadius: 16,
-          overflow: "hidden",
-          height: 300,
-          width: "100%",
+    <YStack flex={1}>
+      {/*
+       * Camera fills the available Sheet space.
+       * No overflow:"hidden" wrapper — that creates a mask layer that
+       * disrupts iOS autofocus. borderRadius applied directly on CameraView.
+       * zoom not forced so the system picks the best autofocus distance.
+       */}
+      <CameraView
+        style={{ flex: 1 }}
+        facing="back"
+        barcodeScannerSettings={{
+          barcodeTypes: ["ean13", "ean8", "upc_a", "upc_e"],
         }}
-      >
-        <CameraView
-          style={{ flex: 1 }}
-          facing="back"
-          barcodeScannerSettings={{
-            barcodeTypes: ["ean13", "ean8", "upc_a", "upc_e"],
-          }}
-          autofocus="on"
-          zoom={0}
-          onBarcodeScanned={handleBarcodeScanned}
-        />
+        autofocus="on"
+        onBarcodeScanned={handleBarcodeScanned}
+      />
+
+      <YStack p="$4" gap="$3">
+        <Text color="$color10" fontSize="$3" style={{ textAlign: "center" }}>
+          Apunta la cámara al código de barras del producto
+        </Text>
+        <Button theme="red" size="$4" onPress={onCancel}>
+          Cancelar
+        </Button>
       </YStack>
-
-      <Text color="$color10" fontSize="$3" style={{ textAlign: "center" }}>
-        Apunta la cámara al código de barras del producto
-      </Text>
-
-      <Button theme="red" size="$4" onPress={onCancel}>
-        Cancelar
-      </Button>
     </YStack>
   );
 }

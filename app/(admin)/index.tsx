@@ -2,6 +2,10 @@ import { ProductDetail } from "@/components/product/product-detail";
 import { ProductEditForm } from "@/components/product/product-edit-form";
 import { ProductForm } from "@/components/product/product-form";
 import { BarcodeScannerView } from "@/components/ui/barcode-scanner-view";
+import {
+  KEYBOARD_DONE_ID,
+  KeyboardDoneBar,
+} from "@/components/ui/keyboard-done-bar";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useProductRepository } from "@/hooks/use-product-repository";
 import { useUnitRepository } from "@/hooks/use-unit-repository";
@@ -452,7 +456,10 @@ export default function ProductsScreen() {
         />
         <Sheet.Frame theme={themeName as any}>
           <Sheet.Handle />
-          <ScrollView>
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            automaticallyAdjustKeyboardInsets
+          >
             <ProductForm
               barcode={createBarcode}
               units={allUnits}
@@ -507,7 +514,10 @@ export default function ProductsScreen() {
         />
         <Sheet.Frame theme={themeName as any}>
           <Sheet.Handle />
-          <ScrollView>
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            automaticallyAdjustKeyboardInsets
+          >
             {selectedProduct && (
               <ProductEditForm
                 product={selectedProduct}
@@ -535,44 +545,51 @@ export default function ProductsScreen() {
         />
         <Sheet.Frame p="$4" theme={themeName as any}>
           <Sheet.Handle />
-          <YStack gap="$3">
-            <Text fontSize="$5" fontWeight="bold" color="$color">
-              Añadir stock
-            </Text>
-            {selectedProduct && (
-              <Text color="$color10" fontSize="$3">
-                Stock actual: {selectedProduct.stockBaseQty}{" "}
-                {unitMap.get(selectedProduct.baseUnitId)?.symbol ?? "uds"}
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            automaticallyAdjustKeyboardInsets
+          >
+            <YStack gap="$3">
+              <Text fontSize="$5" fontWeight="bold" color="$color">
+                Añadir stock
               </Text>
-            )}
-            <YStack gap="$1">
-              <Label htmlFor="stock-qty-input" color="$color10" fontSize="$3">
-                Cantidad recibida
-              </Label>
-              <Input
-                id="stock-qty-input"
-                placeholder="0"
-                value={stockQty}
-                onChangeText={setStockQty}
-                keyboardType="numeric"
+              {selectedProduct && (
+                <Text color="$color10" fontSize="$3">
+                  Stock actual: {selectedProduct.stockBaseQty}{" "}
+                  {unitMap.get(selectedProduct.baseUnitId)?.symbol ?? "uds"}
+                </Text>
+              )}
+              <YStack gap="$1">
+                <Label htmlFor="stock-qty-input" color="$color10" fontSize="$3">
+                  Cantidad recibida
+                </Label>
+                <Input
+                  id="stock-qty-input"
+                  placeholder="0"
+                  value={stockQty}
+                  onChangeText={setStockQty}
+                  keyboardType="numeric"
+                  inputAccessoryViewID={KEYBOARD_DONE_ID}
+                  size="$4"
+                />
+              </YStack>
+              <Button
+                theme="green"
                 size="$4"
-              />
+                icon={addingStock ? <Spinner /> : undefined}
+                disabled={
+                  addingStock ||
+                  !stockQty ||
+                  isNaN(parseFloat(stockQty)) ||
+                  parseFloat(stockQty) <= 0
+                }
+                onPress={handleAddStock}
+              >
+                {addingStock ? "Guardando..." : "Confirmar entrada"}
+              </Button>
+              <KeyboardDoneBar />
             </YStack>
-            <Button
-              theme="green"
-              size="$4"
-              icon={addingStock ? <Spinner /> : undefined}
-              disabled={
-                addingStock ||
-                !stockQty ||
-                isNaN(parseFloat(stockQty)) ||
-                parseFloat(stockQty) <= 0
-              }
-              onPress={handleAddStock}
-            >
-              {addingStock ? "Guardando..." : "Confirmar entrada"}
-            </Button>
-          </YStack>
+          </ScrollView>
         </Sheet.Frame>
       </Sheet>
     </YStack>

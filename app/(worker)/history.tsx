@@ -40,50 +40,52 @@ function SaleRow({ sale }: { sale: SaleEntry }) {
 
 export default function HistoryScreen() {
   return (
-    <ScrollView>
-      <YStack bg="$background" p="$4" gap="$5" pb="$8">
-        {/* Header */}
-        <XStack gap="$3" mt="$2" style={{ alignItems: "center" }}>
-          <ClipboardList size={26} color="$green10" />
-          <YStack>
-            <Text fontSize="$6" fontWeight="bold" color="$color">
-              Registro de ventas
-            </Text>
-            <Text fontSize="$3" color="$color10">
-              Registro de transacciones del día
-            </Text>
-          </YStack>
-        </XStack>
-
-        {/* Sales list */}
-        <Card
-          bg="$background"
-          borderWidth={1}
-          borderColor="$borderColor"
-          style={{ borderRadius: 14 }}
-          overflow="hidden"
-        >
-          {PLACEHOLDER_SALES.length === 0 ? (
-            <YStack p="$6" style={{ alignItems: "center" }} gap="$3">
-              <ClipboardList size={44} color="$color8" />
-              <Text fontSize="$5" fontWeight="bold" color="$color">
-                Sin ventas hoy
+    <YStack flex={1} bg="$background">
+      <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+        <YStack p="$4" gap="$5" pb="$8">
+          {/* Header */}
+          <XStack gap="$3" mt="$2" style={{ alignItems: "center" }}>
+            <ClipboardList size={26} color="$green10" />
+            <YStack>
+              <Text fontSize="$6" fontWeight="bold" color="$color">
+                Registro de ventas
               </Text>
-              <Text color="$color10" style={{ textAlign: "center" }}>
-                Las ventas registradas desde la pestaña &quot;Ventas&quot;
-                aparecerán aquí.
+              <Text fontSize="$3" color="$color10">
+                Registro de transacciones del día
               </Text>
             </YStack>
-          ) : (
-            PLACEHOLDER_SALES.map((sale, idx) => (
-              <YStack key={sale.id}>
-                {idx > 0 && <Separator />}
-                <SaleRow sale={sale} />
+          </XStack>
+
+          {/* Sales list */}
+          <Card
+            bg="$background"
+            borderWidth={1}
+            borderColor="$borderColor"
+            style={{ borderRadius: 14 }}
+            overflow="hidden"
+          >
+            {PLACEHOLDER_SALES.length === 0 ? (
+              <YStack p="$6" style={{ alignItems: "center" }} gap="$3">
+                <ClipboardList size={44} color="$color8" />
+                <Text fontSize="$5" fontWeight="bold" color="$color">
+                  Sin ventas hoy
+                </Text>
+                <Text color="$color10" style={{ textAlign: "center" }}>
+                  Las ventas registradas desde la pestaña &quot;Ventas&quot;
+                  aparecerán aquí.
+                </Text>
               </YStack>
-            ))
-          )}
-        </Card>
-      </YStack>
-    </ScrollView>
+            ) : (
+              PLACEHOLDER_SALES.map((sale, idx) => (
+                <YStack key={sale.id}>
+                  {idx > 0 && <Separator />}
+                  <SaleRow sale={sale} />
+                </YStack>
+              ))
+            )}
+          </Card>
+        </YStack>
+      </ScrollView>
+    </YStack>
   );
 }
