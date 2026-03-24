@@ -72,7 +72,6 @@ export default function AdminLayout() {
           tabBarIcon: ({ color }) => <Receipt size={26} color={color as any} />,
         }}
       />
-      {/* Hidden screens — accessible from dashboard via router.push */}
       <Tabs.Screen name="sales" options={{ href: null }} />
       <Tabs.Screen name="inventory" options={{ href: null }} />
       <Tabs.Screen name="finance" options={{ href: null }} />
