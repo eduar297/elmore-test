@@ -466,7 +466,7 @@ export default function ProductsScreen() {
         open={showDetailSheet}
         onOpenChange={setShowDetailSheet}
         modal
-        snapPoints={[80]}
+        snapPoints={[95]}
         dismissOnSnapToBottom
       >
         <Sheet.Overlay
