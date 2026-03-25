@@ -18,6 +18,9 @@ export interface TicketItem {
   quantity: number;
   unitPrice: number;
   subtotal: number;
+  barcode: string | null;
+  photoUri: string | null;
+  originalPrice: number | null;
 }
 
 export interface CreateTicketInput {

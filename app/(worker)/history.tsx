@@ -24,12 +24,13 @@ import {
     Banknote,
     ClipboardList,
     CreditCard,
+    Package,
     Receipt,
     TrendingUp,
 } from "@tamagui/lucide-icons";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ScrollView } from "react-native";
+import { Image, ScrollView } from "react-native";
 import { Card, Separator, Sheet, Spinner, Text, XStack, YStack } from "tamagui";
 
 function formatTime(iso: string) {
@@ -414,21 +415,71 @@ export default function HistoryScreen() {
                   {ticketItems.map((item, idx) => (
                     <YStack key={item.id}>
                       {idx > 0 && <Separator />}
-                      <XStack px="$3" py="$3" style={{ alignItems: "center" }}>
+                      <XStack
+                        px="$3"
+                        py="$2.5"
+                        gap="$2.5"
+                        style={{ alignItems: "center" }}
+                      >
+                        {/* Thumbnail */}
+                        {item.photoUri ? (
+                          <Image
+                            source={{ uri: item.photoUri }}
+                            style={{ width: 38, height: 38, borderRadius: 6 }}
+                            resizeMode="cover"
+                          />
+                        ) : (
+                          <YStack
+                            width={38}
+                            height={38}
+                            style={{
+                              borderRadius: 6,
+                              backgroundColor: "$color3",
+                              alignItems: "center",
+                              justifyContent: "center",
+                            }}
+                            bg="$color3"
+                          >
+                            <Package size={18} color="$color8" />
+                          </YStack>
+                        )}
+                        {/* Name + code + prices */}
                         <YStack flex={1} gap="$0.5">
                           <Text
-                            fontSize="$3"
+                            fontSize="$2"
                             fontWeight="bold"
                             color="$color"
                             numberOfLines={1}
                           >
                             {item.productName}
                           </Text>
-                          <Text fontSize="$2" color="$color10">
-                            {item.quantity} × ${item.unitPrice.toFixed(2)}
-                          </Text>
+                          {item.barcode && (
+                            <Text
+                              fontSize="$1"
+                              color="$color9"
+                              numberOfLines={1}
+                            >
+                              {item.barcode}
+                            </Text>
+                          )}
+                          <XStack gap="$2" style={{ alignItems: "center" }}>
+                            <Text fontSize="$1" color="$color10">
+                              {item.quantity} × ${item.unitPrice.toFixed(2)}
+                            </Text>
+                            {item.originalPrice != null &&
+                              item.originalPrice !== item.unitPrice && (
+                                <Text
+                                  fontSize="$1"
+                                  color="$color8"
+                                  textDecorationLine="line-through"
+                                >
+                                  ${item.originalPrice.toFixed(2)}
+                                </Text>
+                              )}
+                          </XStack>
                         </YStack>
-                        <Text fontSize="$4" fontWeight="600" color="$green10">
+                        {/* Subtotal */}
+                        <Text fontSize="$3" fontWeight="600" color="$green10">
                           ${item.subtotal.toFixed(2)}
                         </Text>
                       </XStack>

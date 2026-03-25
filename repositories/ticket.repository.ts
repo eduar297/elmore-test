@@ -76,10 +76,13 @@ export class TicketRepository extends BaseRepository<
     );
   }
 
-  /** Get items for a specific ticket. */
+  /** Get items for a specific ticket (with product info). */
   findItemsByTicketId(ticketId: number): Promise<TicketItem[]> {
     return this.db.getAllAsync<TicketItem>(
-      `SELECT * FROM ticket_items WHERE ticketId = ? ORDER BY id`,
+      `SELECT ti.*, p.barcode, p.photoUri, p.pricePerBaseUnit AS originalPrice
+       FROM ticket_items ti
+       LEFT JOIN products p ON p.id = ti.productId
+       WHERE ti.ticketId = ? ORDER BY ti.id`,
       [ticketId],
     );
   }
