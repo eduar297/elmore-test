@@ -7,7 +7,7 @@ import {
     ShoppingBag,
     Trash2,
 } from "@tamagui/lucide-icons";
-import { useCallback, useEffect, useId, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useState } from "react";
 import { Alert, FlatList, Image, StyleSheet } from "react-native";
 import {
     Button,
@@ -23,6 +23,13 @@ import {
     YStack,
 } from "tamagui";
 
+import {
+    CalendarSheet,
+    DateNavigator,
+    PeriodTabs,
+    type DateRange,
+    type Period,
+} from "@/components/admin/period-selector";
 import { ScreenTabs, type TabDef } from "@/components/ui/screen-tabs";
 import { useBarcodeScanner } from "@/hooks/use-barcode-scanner";
 import { useColorScheme } from "@/hooks/use-color-scheme";
@@ -31,6 +38,16 @@ import { usePurchaseRepository } from "@/hooks/use-purchase-repository";
 import { useSupplierRepository } from "@/hooks/use-supplier-repository";
 import type { Purchase, PurchaseItem } from "@/models/purchase";
 import type { Supplier } from "@/models/supplier";
+import {
+    currentYear,
+    currentYearMonth,
+    dayLabel,
+    monthLabel,
+    rangeLabel,
+    shiftDay,
+    shiftMonth,
+    todayISO,
+} from "@/utils/format";
 import SuppliersScreen from "./suppliers";
 
 // ── Sub-tab types ────────────────────────────────────────────────────────────
@@ -171,7 +188,16 @@ export default function PurchasesScreen() {
   // ── history ──────────────────────────────────────────────────────────────
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(true);
-  const [monthlyStats, setMonthlyStats] = useState({
+  const [period, setPeriod] = useState<Period>("month");
+  const [selectedDay, setSelectedDay] = useState(() => todayISO());
+  const [selectedMonth, setSelectedMonth] = useState(() => currentYearMonth());
+  const [selectedYear, setSelectedYear] = useState(() => currentYear());
+  const [dateRange, setDateRange] = useState<DateRange>(() => ({
+    from: todayISO(),
+    to: todayISO(),
+  }));
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const [periodStats, setPeriodStats] = useState({
     totalSpent: 0,
     totalTransport: 0,
     purchaseCount: 0,
@@ -240,16 +266,49 @@ export default function PurchasesScreen() {
   const loadHistory = useCallback(async () => {
     setLoadingHistory(true);
     try {
-      const [list, stats] = await Promise.all([
-        purchaseRepo.findAll(),
-        purchaseRepo.monthlySummary(),
-      ]);
+      let list: Purchase[];
+      let stats: {
+        totalSpent: number;
+        totalTransport: number;
+        purchaseCount: number;
+      };
+      if (period === "day") {
+        [list, stats] = await Promise.all([
+          purchaseRepo.findByDay(selectedDay),
+          purchaseRepo.daySummary(selectedDay),
+        ]);
+      } else if (period === "week" || period === "month") {
+        [list, stats] = await Promise.all([
+          purchaseRepo.findByMonth(selectedMonth),
+          purchaseRepo.monthlySummary(selectedMonth),
+        ]);
+      } else if (period === "year") {
+        [list, stats] = await Promise.all([
+          purchaseRepo.findByYear(selectedYear),
+          purchaseRepo.rangeSummary(
+            `${selectedYear}-01-01`,
+            `${selectedYear}-12-31`,
+          ),
+        ]);
+      } else {
+        [list, stats] = await Promise.all([
+          purchaseRepo.findByDateRange(dateRange.from, dateRange.to),
+          purchaseRepo.rangeSummary(dateRange.from, dateRange.to),
+        ]);
+      }
       setPurchases(list);
-      setMonthlyStats(stats);
+      setPeriodStats(stats);
     } finally {
       setLoadingHistory(false);
     }
-  }, [purchaseRepo]);
+  }, [
+    purchaseRepo,
+    period,
+    selectedDay,
+    selectedMonth,
+    selectedYear,
+    dateRange,
+  ]);
 
   useEffect(() => {
     loadHistory();
@@ -345,6 +404,44 @@ export default function PurchasesScreen() {
     }
   };
 
+  // ── period navigation ─────────────────────────────────────────────────────
+  const dateLabel = useMemo(() => {
+    if (period === "day") return dayLabel(selectedDay);
+    if (period === "month" || period === "week")
+      return monthLabel(selectedMonth);
+    if (period === "year") return selectedYear;
+    return rangeLabel(dateRange.from, dateRange.to);
+  }, [period, selectedDay, selectedMonth, selectedYear, dateRange]);
+
+  const canGoForward = useMemo(() => {
+    if (period === "day") return selectedDay < todayISO();
+    if (period === "month" || period === "week")
+      return selectedMonth < currentYearMonth();
+    if (period === "year")
+      return Number(selectedYear) < new Date().getFullYear();
+    return false;
+  }, [period, selectedDay, selectedMonth, selectedYear]);
+
+  const navigateBack = () => {
+    if (period === "day") setSelectedDay((d) => shiftDay(d, -1));
+    else if (period === "month" || period === "week")
+      setSelectedMonth((m) => shiftMonth(m, -1));
+    else if (period === "year") setSelectedYear((y) => String(Number(y) - 1));
+  };
+
+  const navigateForward = () => {
+    if (period === "day") {
+      const next = shiftDay(selectedDay, 1);
+      if (next <= todayISO()) setSelectedDay(next);
+    } else if (period === "month" || period === "week") {
+      const next = shiftMonth(selectedMonth, 1);
+      if (next <= currentYearMonth()) setSelectedMonth(next);
+    } else if (period === "year") {
+      const next = String(Number(selectedYear) + 1);
+      if (Number(next) <= new Date().getFullYear()) setSelectedYear(next);
+    }
+  };
+
   // ── formatting helpers ────────────────────────────────────────────────────
   const fmtCurrency = (v: number) =>
     v.toLocaleString("es-VE", {
@@ -374,22 +471,34 @@ export default function PurchasesScreen() {
 
       {activeTab === "purchases" && (
         <>
-          {/* Action bar */}
-          <XStack
-            px="$4"
-            pt="$2"
-            pb="$3"
-            style={{ alignItems: "center", justifyContent: "space-between" }}
-          >
-            <Text fontSize="$3" color="$color10">
-              Este mes: {monthlyStats.purchaseCount}{" "}
-              {monthlyStats.purchaseCount === 1 ? "compra" : "compras"} · $
-              {fmtCurrency(monthlyStats.totalSpent)}
-            </Text>
-            <Button theme="blue" size="$3" icon={<Plus />} onPress={openCreate}>
-              Nueva
-            </Button>
-          </XStack>
+          {/* Period selector + stats */}
+          <YStack px="$4" pt="$2" pb="$2" gap="$2">
+            <XStack
+              style={{ alignItems: "center", justifyContent: "space-between" }}
+            >
+              <Text fontSize="$3" color="$color10">
+                {periodStats.purchaseCount}{" "}
+                {periodStats.purchaseCount === 1 ? "compra" : "compras"} · $
+                {fmtCurrency(periodStats.totalSpent)}
+              </Text>
+              <Button
+                theme="blue"
+                size="$3"
+                icon={<Plus />}
+                onPress={openCreate}
+              >
+                Nueva
+              </Button>
+            </XStack>
+            <PeriodTabs period={period} onChangePeriod={setPeriod} />
+            <DateNavigator
+              label={dateLabel}
+              onPrev={navigateBack}
+              onNext={navigateForward}
+              canGoForward={canGoForward}
+              onCalendarPress={() => setCalendarOpen(true)}
+            />
+          </YStack>
 
           {/* History list */}
           {loadingHistory ? (
@@ -894,6 +1003,32 @@ export default function PurchasesScreen() {
           </Sheet.ScrollView>
         </Sheet.Frame>
       </Sheet>
+
+      <CalendarSheet
+        open={calendarOpen}
+        onClose={() => setCalendarOpen(false)}
+        mode={period}
+        selectedDay={selectedDay}
+        selectedMonth={selectedMonth}
+        selectedYear={selectedYear}
+        range={dateRange}
+        onSelectDay={(d) => {
+          setSelectedDay(d);
+          setCalendarOpen(false);
+        }}
+        onSelectMonth={(m) => {
+          setSelectedMonth(m);
+          setCalendarOpen(false);
+        }}
+        onSelectYear={(y) => {
+          setSelectedYear(y);
+          setCalendarOpen(false);
+        }}
+        onSelectRange={(r) => {
+          setDateRange(r);
+          setCalendarOpen(false);
+        }}
+      />
     </YStack>
   );
 }

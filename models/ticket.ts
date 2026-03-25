@@ -6,6 +6,8 @@ export interface Ticket {
   paymentMethod: PaymentMethod;
   total: number;
   itemCount: number;
+  workerId: number | null;
+  workerName: string | null;
 }
 
 export interface TicketItem {
@@ -20,6 +22,8 @@ export interface TicketItem {
 
 export interface CreateTicketInput {
   paymentMethod: PaymentMethod;
+  workerId?: number | null;
+  workerName?: string | null;
   items: {
     productId: number;
     productName: string;

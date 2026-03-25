@@ -130,4 +130,36 @@ export class ExpenseRepository extends BaseRepository<
       [y],
     );
   }
+
+  /** Expenses for a specific day. */
+  findByDay(date: string): Promise<Expense[]> {
+    return this.db.getAllAsync<Expense>(
+      `SELECT * FROM expenses WHERE date = ? ORDER BY createdAt DESC`,
+      [date],
+    );
+  }
+
+  /** Expenses for a specific month (YYYY-MM). */
+  findByMonth(month: string): Promise<Expense[]> {
+    return this.db.getAllAsync<Expense>(
+      `SELECT * FROM expenses WHERE strftime('%Y-%m', date) = ? ORDER BY date DESC, createdAt DESC`,
+      [month],
+    );
+  }
+
+  /** Expenses for a specific year. */
+  findByYear(year: string): Promise<Expense[]> {
+    return this.db.getAllAsync<Expense>(
+      `SELECT * FROM expenses WHERE strftime('%Y', date) = ? ORDER BY date DESC, createdAt DESC`,
+      [year],
+    );
+  }
+
+  /** Expenses in a date range [from, to] inclusive (YYYY-MM-DD). */
+  findByDateRange(from: string, to: string): Promise<Expense[]> {
+    return this.db.getAllAsync<Expense>(
+      `SELECT * FROM expenses WHERE date >= ? AND date <= ? ORDER BY date DESC, createdAt DESC`,
+      [from, to],
+    );
+  }
 }

@@ -1,5 +1,5 @@
 import { ChevronDown, Plus, Receipt, Trash2 } from "@tamagui/lucide-icons";
-import { useCallback, useEffect, useId, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useState } from "react";
 import { Alert, FlatList, ScrollView } from "react-native";
 import {
     Button,
@@ -12,6 +12,24 @@ import {
     XStack,
     YStack,
 } from "tamagui";
+
+import {
+    CalendarSheet,
+    DateNavigator,
+    PeriodTabs,
+    type DateRange,
+    type Period,
+} from "@/components/admin/period-selector";
+import {
+    currentYear,
+    currentYearMonth,
+    dayLabel,
+    monthLabel,
+    rangeLabel,
+    shiftDay,
+    shiftMonth,
+    todayISO,
+} from "@/utils/format";
 
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useExpenseRepository } from "@/hooks/use-expense-repository";
@@ -53,11 +71,6 @@ function fmtDate(iso: string): string {
     month: "short",
     year: "numeric",
   });
-}
-
-function todayISO(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 // ── CategoryPicker ────────────────────────────────────────────────────────────
@@ -248,27 +261,104 @@ export default function ExpensesScreen() {
 
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loadingList, setLoadingList] = useState(true);
-  const [monthlyTotal, setMonthlyTotal] = useState(0);
+  const [periodTotal, setPeriodTotal] = useState(0);
   const [showCreateSheet, setShowCreateSheet] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  const [period, setPeriod] = useState<Period>("month");
+  const [selectedDay, setSelectedDay] = useState(() => todayISO());
+  const [selectedMonth, setSelectedMonth] = useState(() => currentYearMonth());
+  const [selectedYear, setSelectedYear] = useState(() => currentYear());
+  const [dateRange, setDateRange] = useState<DateRange>(() => ({
+    from: todayISO(),
+    to: todayISO(),
+  }));
+  const [calendarOpen, setCalendarOpen] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoadingList(true);
     try {
-      const [list, total] = await Promise.all([
-        expenseRepo.findAll(),
-        expenseRepo.monthlyTotal(),
-      ]);
+      let list: Expense[];
+      let total: number;
+      if (period === "day") {
+        [list, total] = await Promise.all([
+          expenseRepo.findByDay(selectedDay),
+          expenseRepo.dayTotal(selectedDay),
+        ]);
+      } else if (period === "week" || period === "month") {
+        [list, total] = await Promise.all([
+          expenseRepo.findByMonth(selectedMonth),
+          expenseRepo.monthlyTotal(selectedMonth),
+        ]);
+      } else if (period === "year") {
+        [list, total] = await Promise.all([
+          expenseRepo.findByYear(selectedYear),
+          expenseRepo.rangeTotal(
+            `${selectedYear}-01-01`,
+            `${selectedYear}-12-31`,
+          ),
+        ]);
+      } else {
+        [list, total] = await Promise.all([
+          expenseRepo.findByDateRange(dateRange.from, dateRange.to),
+          expenseRepo.rangeTotal(dateRange.from, dateRange.to),
+        ]);
+      }
       setExpenses(list);
-      setMonthlyTotal(total);
+      setPeriodTotal(total);
     } finally {
       setLoadingList(false);
     }
-  }, [expenseRepo]);
+  }, [
+    expenseRepo,
+    period,
+    selectedDay,
+    selectedMonth,
+    selectedYear,
+    dateRange,
+  ]);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // ── period navigation ──────────────────────────────────────────────────
+  const dateLabel = useMemo(() => {
+    if (period === "day") return dayLabel(selectedDay);
+    if (period === "month" || period === "week")
+      return monthLabel(selectedMonth);
+    if (period === "year") return selectedYear;
+    return rangeLabel(dateRange.from, dateRange.to);
+  }, [period, selectedDay, selectedMonth, selectedYear, dateRange]);
+
+  const canGoForward = useMemo(() => {
+    if (period === "day") return selectedDay < todayISO();
+    if (period === "month" || period === "week")
+      return selectedMonth < currentYearMonth();
+    if (period === "year")
+      return Number(selectedYear) < new Date().getFullYear();
+    return false;
+  }, [period, selectedDay, selectedMonth, selectedYear]);
+
+  const navigateBack = () => {
+    if (period === "day") setSelectedDay((d) => shiftDay(d, -1));
+    else if (period === "month" || period === "week")
+      setSelectedMonth((m) => shiftMonth(m, -1));
+    else if (period === "year") setSelectedYear((y) => String(Number(y) - 1));
+  };
+
+  const navigateForward = () => {
+    if (period === "day") {
+      const next = shiftDay(selectedDay, 1);
+      if (next <= todayISO()) setSelectedDay(next);
+    } else if (period === "month" || period === "week") {
+      const next = shiftMonth(selectedMonth, 1);
+      if (next <= currentYearMonth()) setSelectedMonth(next);
+    } else if (period === "year") {
+      const next = String(Number(selectedYear) + 1);
+      if (Number(next) <= new Date().getFullYear()) setSelectedYear(next);
+    }
+  };
 
   const handleCreate = async (data: {
     category: ExpenseCategory;
@@ -312,25 +402,32 @@ export default function ExpensesScreen() {
 
   return (
     <YStack flex={1} bg="$background">
-      {/* Action bar */}
-      <XStack
-        px="$4"
-        pt="$2"
-        pb="$3"
-        style={{ alignItems: "center", justifyContent: "space-between" }}
-      >
-        <Text fontSize="$3" color="$color10">
-          Este mes: ${fmtCurrency(monthlyTotal)}
-        </Text>
-        <Button
-          theme="blue"
-          size="$3"
-          icon={<Plus />}
-          onPress={() => setShowCreateSheet(true)}
+      {/* Period selector + stats */}
+      <YStack px="$4" pt="$2" pb="$2" gap="$2">
+        <XStack
+          style={{ alignItems: "center", justifyContent: "space-between" }}
         >
-          Nuevo
-        </Button>
-      </XStack>
+          <Text fontSize="$3" color="$color10">
+            Total: ${fmtCurrency(periodTotal)}
+          </Text>
+          <Button
+            theme="blue"
+            size="$3"
+            icon={<Plus />}
+            onPress={() => setShowCreateSheet(true)}
+          >
+            Nuevo
+          </Button>
+        </XStack>
+        <PeriodTabs period={period} onChangePeriod={setPeriod} />
+        <DateNavigator
+          label={dateLabel}
+          onPrev={navigateBack}
+          onNext={navigateForward}
+          canGoForward={canGoForward}
+          onCalendarPress={() => setCalendarOpen(true)}
+        />
+      </YStack>
 
       {/* List */}
       {loadingList ? (
@@ -443,6 +540,32 @@ export default function ExpensesScreen() {
           </Sheet.ScrollView>
         </Sheet.Frame>
       </Sheet>
+
+      <CalendarSheet
+        open={calendarOpen}
+        onClose={() => setCalendarOpen(false)}
+        mode={period}
+        selectedDay={selectedDay}
+        selectedMonth={selectedMonth}
+        selectedYear={selectedYear}
+        range={dateRange}
+        onSelectDay={(d) => {
+          setSelectedDay(d);
+          setCalendarOpen(false);
+        }}
+        onSelectMonth={(m) => {
+          setSelectedMonth(m);
+          setCalendarOpen(false);
+        }}
+        onSelectYear={(y) => {
+          setSelectedYear(y);
+          setCalendarOpen(false);
+        }}
+        onSelectRange={(r) => {
+          setDateRange(r);
+          setCalendarOpen(false);
+        }}
+      />
     </YStack>
   );
 }

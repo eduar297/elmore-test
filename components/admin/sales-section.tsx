@@ -28,6 +28,7 @@ import {
     Receipt,
     ShoppingCart,
     TrendingUp,
+    User,
 } from "@tamagui/lucide-icons";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
@@ -95,6 +96,14 @@ function TicketRow({
                 {ticket.itemCount === 1 ? "producto" : "productos"}
               </Text>
             </XStack>
+            {ticket.workerName ? (
+              <XStack gap="$1" style={{ alignItems: "center" }} mt="$0.5">
+                <User size={11} color="$color8" />
+                <Text fontSize="$2" color="$color8">
+                  {ticket.workerName}
+                </Text>
+              </XStack>
+            ) : null}
           </YStack>
           <XStack style={{ alignItems: "center" }} gap="$2">
             <Text fontSize="$4" fontWeight="bold" color="$green10">

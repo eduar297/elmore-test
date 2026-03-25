@@ -164,4 +164,36 @@ export class PurchaseRepository extends BaseRepository<
       [y],
     );
   }
+
+  /** Purchases for a specific day. */
+  findByDay(date: string): Promise<Purchase[]> {
+    return this.db.getAllAsync<Purchase>(
+      `SELECT * FROM purchases WHERE date(createdAt) = ? ORDER BY createdAt DESC`,
+      [date],
+    );
+  }
+
+  /** Purchases for a specific month (YYYY-MM). */
+  findByMonth(month: string): Promise<Purchase[]> {
+    return this.db.getAllAsync<Purchase>(
+      `SELECT * FROM purchases WHERE strftime('%Y-%m', createdAt) = ? ORDER BY createdAt DESC`,
+      [month],
+    );
+  }
+
+  /** Purchases for a specific year. */
+  findByYear(year: string): Promise<Purchase[]> {
+    return this.db.getAllAsync<Purchase>(
+      `SELECT * FROM purchases WHERE strftime('%Y', createdAt) = ? ORDER BY createdAt DESC`,
+      [year],
+    );
+  }
+
+  /** Purchases in a date range [from, to] inclusive (YYYY-MM-DD). */
+  findByDateRange(from: string, to: string): Promise<Purchase[]> {
+    return this.db.getAllAsync<Purchase>(
+      `SELECT * FROM purchases WHERE date(createdAt) >= ? AND date(createdAt) <= ? ORDER BY createdAt DESC`,
+      [from, to],
+    );
+  }
 }

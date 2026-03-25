@@ -1,8 +1,12 @@
+import { useAuth } from "@/contexts/auth-context";
 import { useBarcodeScanner } from "@/hooks/use-barcode-scanner";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useTicketRepository } from "@/hooks/use-ticket-repository";
 import type { Product } from "@/models/product";
 import type { PaymentMethod } from "@/models/ticket";
+import {
+    todayISO,
+} from "@/utils/format";
 import {
     AlertCircle,
     Banknote,
@@ -215,6 +219,7 @@ export default function WorkerScreen() {
   const tickets = useTicketRepository();
   const colorScheme = useColorScheme();
   const themeName = colorScheme === "dark" ? "dark" : "light";
+  const { user } = useAuth();
 
   // Cart state
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -223,19 +228,21 @@ export default function WorkerScreen() {
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Today's summary
+  // Today's summary (worker-scoped)
   const [todaySales, setTodaySales] = useState(0);
   const [todayCount, setTodayCount] = useState(0);
 
   const loadSummary = useCallback(async () => {
+    if (!user) return;
     try {
-      const s = await tickets.todaySummary();
+      const today = todayISO();
+      const s = await tickets.workerRangeSummary(user.id, today, today);
       setTodaySales(s.totalSales);
       setTodayCount(s.ticketCount);
     } catch {
       // ignore
     }
-  }, [tickets]);
+  }, [tickets, user]);
 
   useFocusEffect(
     useCallback(() => {
@@ -337,6 +344,8 @@ export default function WorkerScreen() {
     try {
       await tickets.create({
         paymentMethod,
+        workerId: user?.id ?? null,
+        workerName: user?.name ?? null,
         items: cart.map((c) => ({
           productId: c.product.id,
           productName: c.product.name,
@@ -357,7 +366,7 @@ export default function WorkerScreen() {
     <YStack flex={1} bg="$background">
       <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
         <YStack p="$4" gap="$4">
-          {/* Stats row */}
+          {/* Stats row — worker-scoped today */}
           <XStack gap="$3">
             <Card
               flex={1}
@@ -372,10 +381,9 @@ export default function WorkerScreen() {
                 ${todaySales.toFixed(2)}
               </Text>
               <Text fontSize="$2" color="$color10">
-                Total hoy
+                Mis ventas hoy
               </Text>
             </Card>
-
             <Card
               flex={1}
               borderWidth={1}
@@ -389,7 +397,7 @@ export default function WorkerScreen() {
                 {todayCount}
               </Text>
               <Text fontSize="$2" color="$color10">
-                Tickets
+                Mis tickets
               </Text>
             </Card>
           </XStack>
@@ -457,7 +465,6 @@ export default function WorkerScreen() {
                   Vaciar
                 </Button>
               </XStack>
-
               {cart.map((item) => (
                 <CartItemRow
                   key={item.product.id}
@@ -472,8 +479,6 @@ export default function WorkerScreen() {
                   onRemove={() => removeCartItem(item.product.id)}
                 />
               ))}
-
-              {/* Cart total + checkout */}
               <YStack px="$3" py="$3" gap="$3">
                 <XStack
                   style={{
@@ -488,7 +493,6 @@ export default function WorkerScreen() {
                     ${cartTotal.toFixed(2)}
                   </Text>
                 </XStack>
-
                 <Button
                   size="$5"
                   theme="blue"
@@ -549,7 +553,6 @@ export default function WorkerScreen() {
                 Resumen de venta
               </Text>
 
-              {/* Editable item list */}
               <Card
                 borderWidth={1}
                 borderColor="$borderColor"
@@ -573,7 +576,6 @@ export default function WorkerScreen() {
                 ))}
               </Card>
 
-              {/* Stock warnings */}
               {stockErrors.length > 0 && (
                 <YStack bg="$red2" p="$3" style={{ borderRadius: 12 }} gap="$1">
                   {stockErrors.map((err) => (
@@ -587,7 +589,6 @@ export default function WorkerScreen() {
                 </YStack>
               )}
 
-              {/* Payment method */}
               <YStack gap="$2">
                 <Text fontSize="$4" fontWeight="bold" color="$color">
                   Método de pago
@@ -616,7 +617,6 @@ export default function WorkerScreen() {
                 </XStack>
               </YStack>
 
-              {/* Total */}
               <XStack
                 style={{
                   justifyContent: "space-between",
@@ -632,7 +632,6 @@ export default function WorkerScreen() {
                 </Text>
               </XStack>
 
-              {/* Confirm */}
               <Button
                 size="$5"
                 theme="green"
@@ -651,19 +650,3 @@ export default function WorkerScreen() {
     </YStack>
   );
 }
-
-const styles = StyleSheet.create({
-  productImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 12,
-  },
-  imagePlaceholder: {
-    width: 80,
-    height: 80,
-    borderRadius: 12,
-    backgroundColor: "rgba(128,128,128,0.12)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-});

@@ -39,7 +39,10 @@ async function ensureTables(db: SQLiteDatabase) {
       createdAt TEXT NOT NULL DEFAULT (datetime('now','localtime')),
       paymentMethod TEXT CHECK (paymentMethod IN ('CASH','CARD')) NOT NULL,
       total REAL NOT NULL,
-      itemCount INTEGER NOT NULL
+      itemCount INTEGER NOT NULL,
+      workerId INTEGER,
+      workerName TEXT,
+      FOREIGN KEY (workerId) REFERENCES users(id)
     );
 
     CREATE TABLE IF NOT EXISTS ticket_items (
@@ -109,7 +112,7 @@ async function ensureTables(db: SQLiteDatabase) {
 }
 
 export async function migrateDbIfNeeded(db: SQLiteDatabase) {
-  const DATABASE_VERSION = 6;
+  const DATABASE_VERSION = 8;
 
   const result = await db.getFirstAsync<{ user_version: number }>(
     "PRAGMA user_version",
@@ -252,6 +255,18 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase) {
       );
     `);
     currentVersion = 6;
+  }
+
+  if (currentVersion === 6) {
+    await db.execAsync(
+      `ALTER TABLE tickets ADD COLUMN workerId INTEGER REFERENCES users(id)`,
+    );
+    currentVersion = 7;
+  }
+
+  if (currentVersion === 7) {
+    await db.execAsync(`ALTER TABLE tickets ADD COLUMN workerName TEXT`);
+    currentVersion = 8;
   }
 
   await seedUnits(db);

@@ -27,10 +27,12 @@ export class TicketRepository extends BaseRepository<
 
     await this.db.withExclusiveTransactionAsync(async (tx) => {
       const ticketResult = await tx.runAsync(
-        `INSERT INTO tickets (paymentMethod, total, itemCount) VALUES (?, ?, ?)`,
+        `INSERT INTO tickets (paymentMethod, total, itemCount, workerId, workerName) VALUES (?, ?, ?, ?, ?)`,
         input.paymentMethod,
         total,
         input.items.length,
+        input.workerId ?? null,
+        input.workerName ?? null,
       );
 
       ticketId = ticketResult.lastInsertRowId;
@@ -245,5 +247,39 @@ export class TicketRepository extends BaseRepository<
        ORDER BY hour`,
       [date],
     );
+  }
+
+  // ── Worker-scoped queries ─────────────────────────────────────────────────
+
+  /** Tickets for a specific worker in a date range [from, to] inclusive. */
+  findByWorkerAndDateRange(
+    workerId: number,
+    from: string,
+    to: string,
+  ): Promise<Ticket[]> {
+    return this.db.getAllAsync<Ticket>(
+      `SELECT * FROM tickets
+       WHERE workerId = ? AND date(createdAt) >= ? AND date(createdAt) <= ?
+       ORDER BY createdAt DESC`,
+      [workerId, from, to],
+    );
+  }
+
+  /** Worker summary for a date range. */
+  async workerRangeSummary(
+    workerId: number,
+    from: string,
+    to: string,
+  ): Promise<{ totalSales: number; ticketCount: number }> {
+    const row = await this.db.getFirstAsync<{
+      totalSales: number;
+      ticketCount: number;
+    }>(
+      `SELECT COALESCE(SUM(total), 0) as totalSales, COUNT(*) as ticketCount
+       FROM tickets
+       WHERE workerId = ? AND date(createdAt) >= ? AND date(createdAt) <= ?`,
+      [workerId, from, to],
+    );
+    return row ?? { totalSales: 0, ticketCount: 0 };
   }
 }
