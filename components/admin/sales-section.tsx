@@ -32,7 +32,7 @@ import {
 } from "@tamagui/lucide-icons";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
-import { Dimensions, FlatList, Pressable } from "react-native";
+import { Dimensions, FlatList, Image, Pressable } from "react-native";
 import { BarChart, PieChart } from "react-native-gifted-charts";
 import { Card, Separator, Spinner, Text, XStack, YStack } from "tamagui";
 
@@ -58,14 +58,26 @@ function TicketRow({
           <YStack
             width={40}
             height={40}
-            bg="$blue3"
+            bg={ticket.workerPhotoUri ? undefined : "$blue3"}
             style={{
               borderRadius: 20,
               alignItems: "center",
               justifyContent: "center",
+              overflow: "hidden",
             }}
           >
-            <Receipt size={18} color="$blue10" />
+            {ticket.workerPhotoUri ? (
+              <Image
+                source={{ uri: ticket.workerPhotoUri }}
+                style={{ width: 40, height: 40, borderRadius: 20 }}
+              />
+            ) : ticket.workerName ? (
+              <Text fontSize="$4" fontWeight="700" color="$blue10">
+                {ticket.workerName.charAt(0).toUpperCase()}
+              </Text>
+            ) : (
+              <Receipt size={18} color="$blue10" />
+            )}
           </YStack>
           <YStack flex={1}>
             <Text fontSize="$3" fontWeight="600" color="$color">

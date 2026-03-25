@@ -1,3 +1,4 @@
+import { PhotoPicker } from "@/components/ui/photo-picker";
 import type { TabDef } from "@/components/ui/screen-tabs";
 import { ScreenTabs } from "@/components/ui/screen-tabs";
 import { useAuth } from "@/contexts/auth-context";
@@ -20,6 +21,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -68,6 +70,7 @@ function WorkersSection({ isDark, c }: { isDark: boolean; c: Colors }) {
   const [name, setName] = useState("");
   const [pin, setPin] = useState("");
   const [pinConfirm, setPinConfirm] = useState("");
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [formError, setFormError] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -95,6 +98,7 @@ function WorkersSection({ isDark, c }: { isDark: boolean; c: Colors }) {
       setName(editing?.name ?? "");
       setPin("");
       setPinConfirm("");
+      setPhotoUri(editing?.photoUri ?? null);
       setFormError("");
     }
   }, [sheetOpen, editing]);
@@ -130,15 +134,20 @@ function WorkersSection({ isDark, c }: { isDark: boolean; c: Colors }) {
     setFormError("");
     try {
       if (editing) {
-        const updates: { name: string; pinHash?: string } = { name: trimName };
+        const updates: {
+          name: string;
+          pinHash?: string;
+          photoUri?: string | null;
+        } = { name: trimName, photoUri };
         if (pin) updates.pinHash = await hashPin(pin);
         await userRepo.update(editing.id, updates);
       } else {
-        await userRepo.create({
+        const created = await userRepo.create({
           name: trimName,
           role: "WORKER",
           pinHash: await hashPin(pin),
         });
+        if (photoUri) await userRepo.update(created.id, { photoUri });
       }
       setSheetOpen(false);
       load();
@@ -220,11 +229,21 @@ function WorkersSection({ isDark, c }: { isDark: boolean; c: Colors }) {
                 )}
                 <View style={styles.workerRow}>
                   <View
-                    style={[styles.avatar, { backgroundColor: c.greenLight }]}
+                    style={[
+                      styles.avatar,
+                      { backgroundColor: c.greenLight, overflow: "hidden" },
+                    ]}
                   >
-                    <Text style={[styles.avatarText, { color: c.green }]}>
-                      {w.name.charAt(0).toUpperCase()}
-                    </Text>
+                    {w.photoUri ? (
+                      <Image
+                        source={{ uri: w.photoUri }}
+                        style={{ width: 38, height: 38, borderRadius: 19 }}
+                      />
+                    ) : (
+                      <Text style={[styles.avatarText, { color: c.green }]}>
+                        {w.name.charAt(0).toUpperCase()}
+                      </Text>
+                    )}
                   </View>
                   <View style={styles.workerInfo}>
                     <Text style={[styles.workerName, { color: c.text }]}>
@@ -277,6 +296,9 @@ function WorkersSection({ isDark, c }: { isDark: boolean; c: Colors }) {
               <TText fontSize="$6" fontWeight="bold" color="$color">
                 {editing ? "Editar vendedor" : "Nuevo vendedor"}
               </TText>
+
+              {/* Photo picker */}
+              <PhotoPicker uri={photoUri} onChange={setPhotoUri} />
 
               <YStack gap="$1">
                 <TText

@@ -160,14 +160,22 @@ export default function AdminProfileScreen() {
             onPress={() => setShowPhotoPicker((v) => !v)}
             activeOpacity={0.85}
           >
-            <View
-              style={[styles.avatarCircle, { backgroundColor: c.accentLight }]}
-            >
-              {photoUri ? (
-                <Image source={{ uri: photoUri }} style={styles.avatarCircle} />
-              ) : (
-                <UserCog size={36} color={c.accent as any} />
-              )}
+            <View style={styles.avatarWrapper}>
+              <View
+                style={[
+                  styles.avatarCircle,
+                  { backgroundColor: c.accentLight },
+                ]}
+              >
+                {photoUri ? (
+                  <Image
+                    source={{ uri: photoUri }}
+                    style={styles.avatarImage}
+                  />
+                ) : (
+                  <UserCog size={36} color={c.accent as any} />
+                )}
+              </View>
               <View style={[styles.avatarEdit, { backgroundColor: c.accent }]}>
                 <Camera size={12} color="#fff" />
               </View>
@@ -399,24 +407,35 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 16,
   },
+  avatarWrapper: {
+    width: 80,
+    height: 80,
+    marginBottom: 4,
+  },
   avatarCircle: {
     width: 80,
     height: 80,
     borderRadius: 40,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 4,
     overflow: "hidden",
+  },
+  avatarImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
   },
   avatarEdit: {
     position: "absolute",
-    bottom: 4,
-    right: 0,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    bottom: 0,
+    right: -2,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "#fff",
   },
   userName: {
     fontSize: 22,

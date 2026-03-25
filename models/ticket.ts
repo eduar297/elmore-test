@@ -8,6 +8,7 @@ export interface Ticket {
   itemCount: number;
   workerId: number | null;
   workerName: string | null;
+  workerPhotoUri: string | null;
 }
 
 export interface TicketItem {

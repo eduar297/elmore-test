@@ -72,7 +72,11 @@ export class TicketRepository extends BaseRepository<
   /** Get tickets created today, newest first. */
   findToday(): Promise<Ticket[]> {
     return this.db.getAllAsync<Ticket>(
-      `SELECT * FROM tickets WHERE date(createdAt) = date('now','localtime') ORDER BY createdAt DESC`,
+      `SELECT t.*, u.photoUri AS workerPhotoUri
+       FROM tickets t
+       LEFT JOIN users u ON u.id = t.workerId
+       WHERE date(t.createdAt) = date('now','localtime')
+       ORDER BY t.createdAt DESC`,
     );
   }
 
@@ -160,9 +164,11 @@ export class TicketRepository extends BaseRepository<
   /** Tickets in a date range [from, to] inclusive (YYYY-MM-DD). */
   findByDateRange(from: string, to: string): Promise<Ticket[]> {
     return this.db.getAllAsync<Ticket>(
-      `SELECT * FROM tickets
-       WHERE date(createdAt) >= ? AND date(createdAt) <= ?
-       ORDER BY createdAt DESC`,
+      `SELECT t.*, u.photoUri AS workerPhotoUri
+       FROM tickets t
+       LEFT JOIN users u ON u.id = t.workerId
+       WHERE date(t.createdAt) >= ? AND date(t.createdAt) <= ?
+       ORDER BY t.createdAt DESC`,
       [from, to],
     );
   }
@@ -261,9 +267,11 @@ export class TicketRepository extends BaseRepository<
     to: string,
   ): Promise<Ticket[]> {
     return this.db.getAllAsync<Ticket>(
-      `SELECT * FROM tickets
-       WHERE workerId = ? AND date(createdAt) >= ? AND date(createdAt) <= ?
-       ORDER BY createdAt DESC`,
+      `SELECT t.*, u.photoUri AS workerPhotoUri
+       FROM tickets t
+       LEFT JOIN users u ON u.id = t.workerId
+       WHERE t.workerId = ? AND date(t.createdAt) >= ? AND date(t.createdAt) <= ?
+       ORDER BY t.createdAt DESC`,
       [workerId, from, to],
     );
   }
