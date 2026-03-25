@@ -268,6 +268,7 @@ export default function ProductsScreen() {
       const created = await products.create(data);
       setSelectedProduct(created);
       setShowCreateSheet(false);
+      setCreateBarcode("");
       setShowDetailSheet(true);
       await loadData();
     } catch (e) {
@@ -285,6 +286,7 @@ export default function ProductsScreen() {
       const updated = await products.update(selectedProduct.id, data);
       setSelectedProduct(updated);
       setShowEditSheet(false);
+      setShowDetailSheet(true);
       await loadData();
     } catch (e) {
       setError("Error actualizando: " + (e as Error).message);
@@ -434,6 +436,7 @@ export default function ProductsScreen() {
             automaticallyAdjustKeyboardInsets
           >
             <ProductForm
+              key={createBarcode}
               barcode={createBarcode}
               units={allUnits}
               onSubmit={handleCreate}
@@ -446,7 +449,10 @@ export default function ProductsScreen() {
       {/* Product detail sheet */}
       <Sheet
         open={showDetailSheet}
-        onOpenChange={setShowDetailSheet}
+        onOpenChange={(open) => {
+          setShowDetailSheet(open);
+          if (!open) setSelectedProduct(null);
+        }}
         modal
         snapPoints={[95]}
         dismissOnSnapToBottom
@@ -493,6 +499,7 @@ export default function ProductsScreen() {
           >
             {selectedProduct && (
               <ProductForm
+                key={selectedProduct.id}
                 product={selectedProduct}
                 units={allUnits}
                 onSubmit={handleEdit}

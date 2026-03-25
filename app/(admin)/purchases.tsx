@@ -23,6 +23,7 @@ import {
     YStack,
 } from "tamagui";
 
+import { ScreenTabs, type TabDef } from "@/components/ui/screen-tabs";
 import { useBarcodeScanner } from "@/hooks/use-barcode-scanner";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useProductRepository } from "@/hooks/use-product-repository";
@@ -30,6 +31,16 @@ import { usePurchaseRepository } from "@/hooks/use-purchase-repository";
 import { useSupplierRepository } from "@/hooks/use-supplier-repository";
 import type { Purchase, PurchaseItem } from "@/models/purchase";
 import type { Supplier } from "@/models/supplier";
+import SuppliersScreen from "./suppliers";
+
+// ── Sub-tab types ────────────────────────────────────────────────────────────
+
+type PTab = "purchases" | "suppliers";
+
+const PURCHASE_TABS: TabDef<PTab>[] = [
+  { key: "purchases", label: "Compras", Icon: ShoppingBag },
+  { key: "suppliers", label: "Proveedores", Icon: Building2 },
+];
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -155,6 +166,7 @@ export default function PurchasesScreen() {
   const productRepo = useProductRepository();
   const colorScheme = useColorScheme();
   const themeName = colorScheme === "dark" ? "dark" : "light";
+  const [activeTab, setActiveTab] = useState<PTab>("purchases");
 
   // ── history ──────────────────────────────────────────────────────────────
   const [purchases, setPurchases] = useState<Purchase[]>([]);
@@ -352,104 +364,120 @@ export default function PurchasesScreen() {
   // ── render ────────────────────────────────────────────────────────────────
   return (
     <YStack flex={1} bg="$background">
-      {/* Action bar */}
-      <XStack
-        px="$4"
-        pt="$2"
-        pb="$3"
-        style={{ alignItems: "center", justifyContent: "space-between" }}
-      >
-        <Text fontSize="$3" color="$color10">
-          Este mes: {monthlyStats.purchaseCount}{" "}
-          {monthlyStats.purchaseCount === 1 ? "compra" : "compras"} · $
-          {fmtCurrency(monthlyStats.totalSpent)}
-        </Text>
-        <Button theme="blue" size="$3" icon={<Plus />} onPress={openCreate}>
-          Nueva
-        </Button>
-      </XStack>
+      <ScreenTabs
+        tabs={PURCHASE_TABS}
+        active={activeTab}
+        onSelect={setActiveTab}
+      />
 
-      {/* History list */}
-      {loadingHistory ? (
-        <YStack
-          flex={1}
-          style={{ alignItems: "center", justifyContent: "center" }}
-        >
-          <Spinner size="large" />
-        </YStack>
-      ) : purchases.length === 0 ? (
-        <YStack
-          flex={1}
-          style={{ alignItems: "center", justifyContent: "center" }}
-          gap="$3"
-          px="$6"
-        >
-          <ShoppingBag size={48} color="$color8" />
-          <Text fontSize="$5" color="$color8" style={{ textAlign: "center" }}>
-            No hay compras registradas.{"\n"}Toca &quot;Nueva&quot; para
-            registrar una.
-          </Text>
-        </YStack>
-      ) : (
-        <FlatList
-          data={purchases}
-          keyExtractor={(p) => String(p.id)}
-          contentContainerStyle={{ padding: 16, gap: 8 }}
-          renderItem={({ item }) => (
-            <Card
-              pressStyle={{ opacity: 0.8 }}
-              onPress={() => openDetail(item)}
-              bg="$color1"
-              borderWidth={1}
-              borderColor="$color4"
-              p="$3"
+      {activeTab === "suppliers" && <SuppliersScreen />}
+
+      {activeTab === "purchases" && (
+        <>
+          {/* Action bar */}
+          <XStack
+            px="$4"
+            pt="$2"
+            pb="$3"
+            style={{ alignItems: "center", justifyContent: "space-between" }}
+          >
+            <Text fontSize="$3" color="$color10">
+              Este mes: {monthlyStats.purchaseCount}{" "}
+              {monthlyStats.purchaseCount === 1 ? "compra" : "compras"} · $
+              {fmtCurrency(monthlyStats.totalSpent)}
+            </Text>
+            <Button theme="blue" size="$3" icon={<Plus />} onPress={openCreate}>
+              Nueva
+            </Button>
+          </XStack>
+
+          {/* History list */}
+          {loadingHistory ? (
+            <YStack
+              flex={1}
+              style={{ alignItems: "center", justifyContent: "center" }}
             >
-              <XStack style={{ alignItems: "center" }} gap="$3">
-                <YStack
-                  width={44}
-                  height={44}
-                  bg="$green4"
-                  style={{
-                    borderRadius: 22,
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
+              <Spinner size="large" />
+            </YStack>
+          ) : purchases.length === 0 ? (
+            <YStack
+              flex={1}
+              style={{ alignItems: "center", justifyContent: "center" }}
+              gap="$3"
+              px="$6"
+            >
+              <ShoppingBag size={48} color="$color8" />
+              <Text
+                fontSize="$5"
+                color="$color8"
+                style={{ textAlign: "center" }}
+              >
+                No hay compras registradas.{"\n"}Toca &quot;Nueva&quot; para
+                registrar una.
+              </Text>
+            </YStack>
+          ) : (
+            <FlatList
+              data={purchases}
+              keyExtractor={(p) => String(p.id)}
+              contentContainerStyle={{ padding: 16, gap: 8 }}
+              renderItem={({ item }) => (
+                <Card
+                  pressStyle={{ opacity: 0.8 }}
+                  onPress={() => openDetail(item)}
+                  bg="$color1"
+                  borderWidth={1}
+                  borderColor="$color4"
+                  p="$3"
                 >
-                  <ShoppingBag size={20} color="$green10" />
-                </YStack>
-
-                <YStack flex={1} gap="$0.5">
-                  <Text fontSize="$4" fontWeight="600" color="$color">
-                    {item.supplierName}
-                  </Text>
-                  <Text fontSize="$3" color="$color10">
-                    {fmtDate(item.createdAt)}
-                  </Text>
-                  <XStack mt="$0.5">
+                  <XStack style={{ alignItems: "center" }} gap="$3">
                     <YStack
-                      bg="$green2"
-                      px="$2"
-                      py="$0.5"
-                      style={{ borderRadius: 4 }}
+                      width={44}
+                      height={44}
+                      bg="$green4"
+                      style={{
+                        borderRadius: 22,
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
                     >
-                      <Text fontSize="$2" color="$green10" fontWeight="600">
-                        {item.itemCount}{" "}
-                        {item.itemCount === 1 ? "producto" : "productos"}
-                      </Text>
+                      <ShoppingBag size={20} color="$green10" />
                     </YStack>
-                  </XStack>
-                </YStack>
 
-                <XStack style={{ alignItems: "center" }} gap="$1">
-                  <Text fontSize="$5" fontWeight="bold" color="$color">
-                    ${fmtCurrency(item.total)}
-                  </Text>
-                  <ChevronRight size={16} color="$color8" />
-                </XStack>
-              </XStack>
-            </Card>
+                    <YStack flex={1} gap="$0.5">
+                      <Text fontSize="$4" fontWeight="600" color="$color">
+                        {item.supplierName}
+                      </Text>
+                      <Text fontSize="$3" color="$color10">
+                        {fmtDate(item.createdAt)}
+                      </Text>
+                      <XStack mt="$0.5">
+                        <YStack
+                          bg="$green2"
+                          px="$2"
+                          py="$0.5"
+                          style={{ borderRadius: 4 }}
+                        >
+                          <Text fontSize="$2" color="$green10" fontWeight="600">
+                            {item.itemCount}{" "}
+                            {item.itemCount === 1 ? "producto" : "productos"}
+                          </Text>
+                        </YStack>
+                      </XStack>
+                    </YStack>
+
+                    <XStack style={{ alignItems: "center" }} gap="$1">
+                      <Text fontSize="$5" fontWeight="bold" color="$color">
+                        ${fmtCurrency(item.total)}
+                      </Text>
+                      <ChevronRight size={16} color="$color8" />
+                    </XStack>
+                  </XStack>
+                </Card>
+              )}
+            />
           )}
-        />
+        </>
       )}
 
       {/* ── Purchase Detail Sheet ─────────────────────────────────────────── */}

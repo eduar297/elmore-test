@@ -2,24 +2,24 @@ import { Building2, Edit3, Plus, Trash2 } from "@tamagui/lucide-icons";
 import { useCallback, useEffect, useId, useState } from "react";
 import { Alert, FlatList } from "react-native";
 import {
-    Button,
-    Card,
-    Input,
-    Label,
-    Sheet,
-    Spinner,
-    Text,
-    TextArea,
-    XStack,
-    YStack,
+  Button,
+  Card,
+  Input,
+  Label,
+  Sheet,
+  Spinner,
+  Text,
+  TextArea,
+  XStack,
+  YStack,
 } from "tamagui";
 
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useSupplierRepository } from "@/hooks/use-supplier-repository";
 import type {
-    CreateSupplierInput,
-    Supplier,
-    UpdateSupplierInput,
+  CreateSupplierInput,
+  Supplier,
+  UpdateSupplierInput,
 } from "@/models/supplier";
 
 // ── SupplierForm ─────────────────────────────────────────────────────────────
