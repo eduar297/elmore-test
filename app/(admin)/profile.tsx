@@ -1,7 +1,7 @@
+import { PhotoPicker } from "@/components/ui/photo-picker";
 import { useAuth } from "@/contexts/auth-context";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useUserRepository } from "@/hooks/use-user-repository";
-import { PhotoPicker } from "@/components/ui/photo-picker";
 import { hashPin } from "@/utils/auth";
 import {
     AlertCircle,
@@ -34,7 +34,9 @@ export default function AdminProfileScreen() {
   const isDark = colorScheme === "dark";
 
   const [name, setName] = useState(user?.name ?? "");
-  const [photoUri, setPhotoUri] = useState<string | null>(user?.photoUri ?? null);
+  const [photoUri, setPhotoUri] = useState<string | null>(
+    user?.photoUri ?? null,
+  );
   const [showPhotoPicker, setShowPhotoPicker] = useState(false);
   const [currentPin, setCurrentPin] = useState("");
   const [newPin, setNewPin] = useState("");
@@ -162,10 +164,7 @@ export default function AdminProfileScreen() {
               style={[styles.avatarCircle, { backgroundColor: c.accentLight }]}
             >
               {photoUri ? (
-                <Image
-                  source={{ uri: photoUri }}
-                  style={styles.avatarCircle}
-                />
+                <Image source={{ uri: photoUri }} style={styles.avatarCircle} />
               ) : (
                 <UserCog size={36} color={c.accent as any} />
               )}

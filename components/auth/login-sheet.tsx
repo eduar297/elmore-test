@@ -119,7 +119,12 @@ export function LoginSheet({
         const pinH = await hashPin(currentPin);
         const ok = await userRepo.verifyPin(user.id, pinH);
         if (ok) {
-          setUser({ id: user.id, name: user.name, role: user.role, photoUri: user.photoUri });
+          setUser({
+            id: user.id,
+            name: user.name,
+            role: user.role,
+            photoUri: user.photoUri,
+          });
           onSuccess();
         } else {
           setError("PIN incorrecto");
@@ -254,7 +259,10 @@ export function LoginSheet({
                                 />
                               ) : (
                                 <Text
-                                  style={[styles.avatarText, { color: c.accent }]}
+                                  style={[
+                                    styles.avatarText,
+                                    { color: c.accent },
+                                  ]}
                                 >
                                   {u.name.charAt(0).toUpperCase()}
                                 </Text>
@@ -303,7 +311,9 @@ export function LoginSheet({
                             style={styles.avatarImg}
                           />
                         ) : (
-                          <Text style={[styles.avatarText, { color: c.accent }]}>
+                          <Text
+                            style={[styles.avatarText, { color: c.accent }]}
+                          >
                             {selectedUser?.name.charAt(0).toUpperCase()}
                           </Text>
                         )}
