@@ -7,6 +7,8 @@ import {
 } from "@/components/admin/period-selector";
 import { StatCard } from "@/components/admin/stat-card";
 import { StockRow } from "@/components/admin/stock-row";
+import { ProductDetail } from "@/components/product/product-detail";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useProductRepository } from "@/hooks/use-product-repository";
 import { usePurchaseRepository } from "@/hooks/use-purchase-repository";
 import { useTicketRepository } from "@/hooks/use-ticket-repository";
@@ -38,11 +40,9 @@ import {
 } from "@tamagui/lucide-icons";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
-import { Dimensions, ScrollView } from "react-native";
+import { Image, Pressable, ScrollView } from "react-native";
 import { BarChart, PieChart } from "react-native-gifted-charts";
-import { Card, Separator, Spinner, Text, XStack, YStack } from "tamagui";
-
-const SCREEN_W = Dimensions.get("window").width;
+import { Card, Separator, Sheet, Spinner, Text, XStack, YStack } from "tamagui";
 
 const CAT_COLORS = [
   "#3b82f6",
@@ -62,6 +62,8 @@ export function InventorySection() {
   const unitRepo = useUnitRepository();
   const purchaseRepo = usePurchaseRepository();
   const ticketRepo = useTicketRepository();
+  const colorScheme = useColorScheme();
+  const themeName = colorScheme === "dark" ? "dark" : "light";
 
   const [period, setPeriod] = useState<Period>("month");
   const [selectedMonth, setSelectedMonth] = useState(currentYearMonth);
@@ -77,6 +79,8 @@ export function InventorySection() {
   const [allUnits, setAllUnits] = useState<Unit[]>([]);
   const [allCategories, setAllCategories] = useState<UnitCategory[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [showDetailSheet, setShowDetailSheet] = useState(false);
 
   // Movement data for selected period
   const [periodSales, setPeriodSales] = useState(0);
@@ -514,6 +518,10 @@ export function InventorySection() {
                         product={p}
                         unit={unitMap.get(p.baseUnitId)}
                         lowlight
+                        onPress={() => {
+                          setSelectedProduct(p);
+                          setShowDetailSheet(true);
+                        }}
                       />
                     </YStack>
                   ))}
@@ -544,6 +552,10 @@ export function InventorySection() {
                       product={p}
                       unit={unitMap.get(p.baseUnitId)}
                       rank={idx + 1}
+                      onPress={() => {
+                        setSelectedProduct(p);
+                        setShowDetailSheet(true);
+                      }}
                     />
                   </YStack>
                 ))}
@@ -574,6 +586,10 @@ export function InventorySection() {
                       product={p}
                       unit={unitMap.get(p.baseUnitId)}
                       rank={idx + 1}
+                      onPress={() => {
+                        setSelectedProduct(p);
+                        setShowDetailSheet(true);
+                      }}
                     />
                   </YStack>
                 ))}
@@ -664,39 +680,70 @@ export function InventorySection() {
                   return (
                     <YStack key={p.id}>
                       {idx > 0 && <Separator />}
-                      <XStack
-                        px="$4"
-                        py="$3"
-                        style={{ alignItems: "center" }}
-                        gap="$3"
+                      <Pressable
+                        onPress={() => {
+                          setSelectedProduct(p);
+                          setShowDetailSheet(true);
+                        }}
+                        style={({ pressed }) => ({
+                          opacity: pressed ? 0.6 : 1,
+                        })}
                       >
-                        <YStack flex={1}>
-                          <Text
-                            fontSize="$3"
-                            fontWeight="600"
-                            color="$color"
-                            numberOfLines={1}
-                          >
-                            {p.name}
-                          </Text>
-                          <Text fontSize="$2" color="$color10">
-                            {p.barcode} · ${fmtMoney(p.pricePerBaseUnit)}/
-                            {unit?.symbol ?? "ud"}
-                          </Text>
-                        </YStack>
-                        <YStack style={{ alignItems: "flex-end" }}>
-                          <Text
-                            fontSize="$4"
-                            fontWeight="bold"
-                            color={stockColor as any}
-                          >
-                            {p.stockBaseQty} {unit?.symbol ?? "uds"}
-                          </Text>
-                          <Text fontSize="$1" color="$color10">
-                            ${fmtMoney(p.pricePerBaseUnit * p.stockBaseQty)}
-                          </Text>
-                        </YStack>
-                      </XStack>
+                        <XStack
+                          px="$4"
+                          py="$3"
+                          style={{ alignItems: "center" }}
+                          gap="$3"
+                        >
+                          {/* Thumbnail */}
+                          {p.photoUri ? (
+                            <Image
+                              source={{ uri: p.photoUri }}
+                              style={{ width: 40, height: 40, borderRadius: 8 }}
+                              resizeMode="cover"
+                            />
+                          ) : (
+                            <YStack
+                              width={40}
+                              height={40}
+                              style={{
+                                borderRadius: 8,
+                                backgroundColor: "#e5e7eb",
+                                alignItems: "center",
+                                justifyContent: "center",
+                              }}
+                            >
+                              <Package size={20} color="$color8" />
+                            </YStack>
+                          )}
+                          <YStack flex={1}>
+                            <Text
+                              fontSize="$3"
+                              fontWeight="600"
+                              color="$color"
+                              numberOfLines={1}
+                            >
+                              {p.name}
+                            </Text>
+                            <Text fontSize="$2" color="$color10">
+                              {p.barcode} · ${fmtMoney(p.pricePerBaseUnit)}/
+                              {unit?.symbol ?? "ud"}
+                            </Text>
+                          </YStack>
+                          <YStack style={{ alignItems: "flex-end" }}>
+                            <Text
+                              fontSize="$4"
+                              fontWeight="bold"
+                              color={stockColor as any}
+                            >
+                              {p.stockBaseQty} {unit?.symbol ?? "uds"}
+                            </Text>
+                            <Text fontSize="$1" color="$color10">
+                              ${fmtMoney(p.pricePerBaseUnit * p.stockBaseQty)}
+                            </Text>
+                          </YStack>
+                        </XStack>
+                      </Pressable>
                     </YStack>
                   );
                 })
@@ -705,6 +752,30 @@ export function InventorySection() {
           </YStack>
         </YStack>
       </ScrollView>
+
+      {/* Product detail sheet */}
+      <Sheet
+        open={showDetailSheet}
+        onOpenChange={(open) => {
+          setShowDetailSheet(open);
+          if (!open) setSelectedProduct(null);
+        }}
+        modal
+        snapPoints={[95]}
+        dismissOnSnapToBottom
+      >
+        <Sheet.Overlay
+          enterStyle={{ opacity: 0 }}
+          exitStyle={{ opacity: 0 }}
+          backgroundColor="rgba(0,0,0,0.5)"
+        />
+        <Sheet.Frame p="$4" theme={themeName as any}>
+          <Sheet.Handle />
+          <ScrollView>
+            {selectedProduct && <ProductDetail product={selectedProduct} />}
+          </ScrollView>
+        </Sheet.Frame>
+      </Sheet>
 
       <CalendarSheet
         open={calendarOpen}
