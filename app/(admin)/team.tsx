@@ -279,67 +279,39 @@ function WorkersSection({ isDark, c }: { isDark: boolean; c: Colors }) {
             automaticallyAdjustKeyboardInsets
           >
             <View style={styles.sheetContent}>
-            <Text style={[styles.sheetTitle, { color: c.text }]}>
-              {editing ? "Editar vendedor" : "Nuevo vendedor"}
-            </Text>
-
-            <View style={styles.formField}>
-              <Text style={[styles.fieldLabel, { color: c.muted }]}>
-                Nombre
+              <Text style={[styles.sheetTitle, { color: c.text }]}>
+                {editing ? "Editar vendedor" : "Nuevo vendedor"}
               </Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  {
-                    backgroundColor: c.input,
-                    color: c.text,
-                    borderColor: c.border,
-                  },
-                ]}
-                placeholder="Nombre del vendedor"
-                placeholderTextColor={c.muted}
-                value={name}
-                onChangeText={(v) => {
-                  setName(v);
-                  setFormError("");
-                }}
-                autoCapitalize="words"
-                returnKeyType="next"
-                autoFocus={!editing}
-              />
-            </View>
 
-            <View style={styles.formField}>
-              <Text style={[styles.fieldLabel, { color: c.muted }]}>
-                {editing ? "Nuevo PIN (dejar vacío para no cambiar)" : "PIN"}
-              </Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  {
-                    backgroundColor: c.input,
-                    color: c.text,
-                    borderColor: c.border,
-                  },
-                ]}
-                placeholder="••••"
-                placeholderTextColor={c.muted}
-                value={pin}
-                onChangeText={(v) => {
-                  setPin(v);
-                  setFormError("");
-                }}
-                secureTextEntry
-                keyboardType="numeric"
-                maxLength={8}
-                returnKeyType={pin.length > 0 ? "next" : "done"}
-              />
-            </View>
-
-            {pin.length > 0 && (
               <View style={styles.formField}>
                 <Text style={[styles.fieldLabel, { color: c.muted }]}>
-                  Confirmar PIN
+                  Nombre
+                </Text>
+                <TextInput
+                  style={[
+                    styles.input,
+                    {
+                      backgroundColor: c.input,
+                      color: c.text,
+                      borderColor: c.border,
+                    },
+                  ]}
+                  placeholder="Nombre del vendedor"
+                  placeholderTextColor={c.muted}
+                  value={name}
+                  onChangeText={(v) => {
+                    setName(v);
+                    setFormError("");
+                  }}
+                  autoCapitalize="words"
+                  returnKeyType="next"
+                  autoFocus={!editing}
+                />
+              </View>
+
+              <View style={styles.formField}>
+                <Text style={[styles.fieldLabel, { color: c.muted }]}>
+                  {editing ? "Nuevo PIN (dejar vacío para no cambiar)" : "PIN"}
                 </Text>
                 <TextInput
                   style={[
@@ -352,58 +324,86 @@ function WorkersSection({ isDark, c }: { isDark: boolean; c: Colors }) {
                   ]}
                   placeholder="••••"
                   placeholderTextColor={c.muted}
-                  value={pinConfirm}
+                  value={pin}
                   onChangeText={(v) => {
-                    setPinConfirm(v);
+                    setPin(v);
                     setFormError("");
                   }}
                   secureTextEntry
                   keyboardType="numeric"
                   maxLength={8}
-                  returnKeyType="done"
-                  onSubmitEditing={handleSave}
+                  returnKeyType={pin.length > 0 ? "next" : "done"}
                 />
               </View>
-            )}
 
-            {!!formError && (
-              <View
-                style={[styles.feedbackRow, { backgroundColor: c.dangerBg }]}
-              >
-                <AlertCircle size={15} color={c.danger as any} />
-                <Text style={[styles.feedbackText, { color: c.danger }]}>
-                  {formError}
-                </Text>
+              {pin.length > 0 && (
+                <View style={styles.formField}>
+                  <Text style={[styles.fieldLabel, { color: c.muted }]}>
+                    Confirmar PIN
+                  </Text>
+                  <TextInput
+                    style={[
+                      styles.input,
+                      {
+                        backgroundColor: c.input,
+                        color: c.text,
+                        borderColor: c.border,
+                      },
+                    ]}
+                    placeholder="••••"
+                    placeholderTextColor={c.muted}
+                    value={pinConfirm}
+                    onChangeText={(v) => {
+                      setPinConfirm(v);
+                      setFormError("");
+                    }}
+                    secureTextEntry
+                    keyboardType="numeric"
+                    maxLength={8}
+                    returnKeyType="done"
+                    onSubmitEditing={handleSave}
+                  />
+                </View>
+              )}
+
+              {!!formError && (
+                <View
+                  style={[styles.feedbackRow, { backgroundColor: c.dangerBg }]}
+                >
+                  <AlertCircle size={15} color={c.danger as any} />
+                  <Text style={[styles.feedbackText, { color: c.danger }]}>
+                    {formError}
+                  </Text>
+                </View>
+              )}
+
+              <View style={styles.sheetBtns}>
+                <TouchableOpacity
+                  style={[styles.btnOutline, { borderColor: c.border }]}
+                  onPress={() => setSheetOpen(false)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.btnOutlineText, { color: c.muted }]}>
+                    Cancelar
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.btnSolid,
+                    { backgroundColor: c.green, opacity: saving ? 0.7 : 1 },
+                  ]}
+                  onPress={handleSave}
+                  disabled={saving}
+                  activeOpacity={0.8}
+                >
+                  {saving ? (
+                    <ActivityIndicator color="#fff" size="small" />
+                  ) : (
+                    <Text style={styles.btnSolidText}>Guardar</Text>
+                  )}
+                </TouchableOpacity>
               </View>
-            )}
-
-            <View style={styles.sheetBtns}>
-              <TouchableOpacity
-                style={[styles.btnOutline, { borderColor: c.border }]}
-                onPress={() => setSheetOpen(false)}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.btnOutlineText, { color: c.muted }]}>
-                  Cancelar
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.btnSolid,
-                  { backgroundColor: c.green, opacity: saving ? 0.7 : 1 },
-                ]}
-                onPress={handleSave}
-                disabled={saving}
-                activeOpacity={0.8}
-              >
-                {saving ? (
-                  <ActivityIndicator color="#fff" size="small" />
-                ) : (
-                  <Text style={styles.btnSolidText}>Guardar</Text>
-                )}
-              </TouchableOpacity>
             </View>
-          </View>
           </Sheet.ScrollView>
         </Sheet.Frame>
       </Sheet>
