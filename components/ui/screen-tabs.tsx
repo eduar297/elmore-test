@@ -1,7 +1,7 @@
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import React from "react";
 import { Pressable } from "react-native";
-import { Text, XStack, YStack } from "tamagui";
+import { Text, XStack } from "tamagui";
 
 export interface TabDef<T extends string = string> {
   key: T;
@@ -23,10 +23,18 @@ export function ScreenTabs<T extends string>({
   accentColor = "#2563eb",
 }: ScreenTabsProps<T>) {
   const dark = useColorScheme() === "dark";
-  const inactiveColor = dark ? "#6b7280" : "#9ca3af";
-  const indicatorBg = dark ? "#0f172a" : "#f1f5f9";
-  const borderColor = dark ? "#27272a" : "#e4e4e7";
-  const activeBg = dark ? "#1e3a5f" : "#dbeafe";
+
+  // Track background: subtle pill on the outer rail
+  const railBg = dark ? "#18181b" : "#f4f4f5";
+  const railBorder = dark ? "#3f3f46" : "#e4e4e7";
+
+  // Active pill gets a solid white (light) or zinc-800 (dark) card feel
+  const activePillBg = dark ? "#27272a" : "#ffffff";
+  const activePillShadow = dark ? "transparent" : "#00000014";
+
+  // Text / icon colors — high contrast
+  const activeTextColor = accentColor;
+  const inactiveTextColor = dark ? "#71717a" : "#a1a1aa";
 
   return (
     <XStack
@@ -34,56 +42,50 @@ export function ScreenTabs<T extends string>({
       mt="$2"
       mb="$3"
       style={{
-        borderRadius: 16,
-        backgroundColor: indicatorBg,
+        borderRadius: 14,
+        backgroundColor: railBg,
         borderWidth: 1,
-        borderColor,
-        overflow: "hidden",
+        borderColor: railBorder,
+        padding: 3,
+        gap: 3,
       }}
     >
-      {tabs.map((tab, i) => {
+      {tabs.map((tab) => {
         const isActive = active === tab.key;
-        const isLast = i === tabs.length - 1;
         return (
           <Pressable
             key={tab.key}
             onPress={() => onSelect(tab.key)}
             style={{
               flex: 1,
-              paddingVertical: 10,
+              paddingVertical: 9,
+              paddingHorizontal: 4,
               alignItems: "center",
               gap: 4,
-              borderRightWidth: isLast ? 0 : 1,
-              borderRightColor: borderColor,
-              backgroundColor: isActive ? activeBg : "transparent",
+              borderRadius: 11,
+              backgroundColor: isActive ? activePillBg : "transparent",
+              // subtle lift shadow on active (iOS)
+              shadowColor: isActive ? activePillShadow : "transparent",
+              shadowOffset: { width: 0, height: 1 },
+              shadowOpacity: isActive ? 1 : 0,
+              shadowRadius: 3,
+              elevation: isActive ? 2 : 0,
             }}
           >
             <tab.Icon
-              size={18}
-              color={isActive ? accentColor : inactiveColor}
+              size={17}
+              color={isActive ? activeTextColor : inactiveTextColor}
             />
             <Text
-              fontSize={10}
-              fontWeight={isActive ? "700" : "500"}
+              fontSize={11}
+              fontWeight={isActive ? "700" : "400"}
               style={{
-                color: isActive ? accentColor : inactiveColor,
-                letterSpacing: 0.2,
+                color: isActive ? activeTextColor : inactiveTextColor,
+                letterSpacing: isActive ? 0.1 : 0,
               }}
             >
               {tab.label}
             </Text>
-            {isActive && (
-              <YStack
-                style={{
-                  position: "absolute",
-                  bottom: 4,
-                  width: 4,
-                  height: 4,
-                  borderRadius: 2,
-                  backgroundColor: accentColor,
-                }}
-              />
-            )}
           </Pressable>
         );
       })}
