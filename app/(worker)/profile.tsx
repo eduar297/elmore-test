@@ -12,7 +12,7 @@ import {
     Receipt,
     User as UserIcon,
 } from "@tamagui/lucide-icons";
-import { useRouter } from "expo-router";
+import { useNavigation, useRouter } from "expo-router";
 import React, { useCallback, useState } from "react";
 import {
     ActivityIndicator,
@@ -31,6 +31,7 @@ export default function WorkerProfileScreen() {
   const userRepo = useUserRepository();
   const { user, setUser, logout } = useAuth();
   const router = useRouter();
+  const navigation = useNavigation();
   const isDark = colorScheme === "dark";
 
   const [photoUri, setPhotoUri] = useState<string | null>(
@@ -128,11 +129,12 @@ export default function WorkerProfileScreen() {
           style: "destructive",
           onPress: () => {
             logout();
-            router.replace("/");
+            navigation.getParent()?.goBack();
           },
         },
       ],
     );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [logout, router]);
 
   return (
