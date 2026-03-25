@@ -162,6 +162,7 @@ function WorkersSection({ isDark, c }: { isDark: boolean; c: Colors }) {
     } finally {
       setSaving(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [name, pin, pinConfirm, editing, userRepo, load]);
 
   const handleDelete = useCallback(
@@ -934,15 +935,15 @@ function ProfileSection({ isDark, c }: { isDark: boolean; c: Colors }) {
 // ── Main screen ───────────────────────────────────────────────────────────────
 
 const TABS: TabDef<TeamTab>[] = [
-  { key: "workers", label: "Vendedores", Icon: Users },
   { key: "profile", label: "Mi Perfil", Icon: UserCog },
+  { key: "workers", label: "Vendedores", Icon: Users },
 ];
 
 export default function TeamScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
   const c = useColors(isDark);
-  const [activeTab, setActiveTab] = useState<TeamTab>("workers");
+  const [activeTab, setActiveTab] = useState<TeamTab>("profile");
 
   return (
     <View style={[styles.root, { backgroundColor: c.bg }]}>
