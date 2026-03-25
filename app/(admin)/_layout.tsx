@@ -9,7 +9,6 @@ import {
   PackageSearch,
   Receipt,
   ShoppingBag,
-  User,
   Users,
 } from "@tamagui/lucide-icons";
 import { useTheme } from "tamagui";
@@ -39,7 +38,7 @@ export default function AdminLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Dashboard",
+          title: "Inicio",
           tabBarIcon: ({ color }) => (
             <LayoutDashboard size={26} color={color as any} />
           ),
@@ -48,18 +47,9 @@ export default function AdminLayout() {
       <Tabs.Screen
         name="products"
         options={{
-          title: "Productos",
+          title: "Catálogo",
           tabBarIcon: ({ color }) => (
             <PackageSearch size={26} color={color as any} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="suppliers"
-        options={{
-          title: "Proveedores",
-          tabBarIcon: ({ color }) => (
-            <Building2 size={26} color={color as any} />
           ),
         }}
       />
@@ -73,6 +63,15 @@ export default function AdminLayout() {
         }}
       />
       <Tabs.Screen
+        name="suppliers"
+        options={{
+          title: "Proveedores",
+          tabBarIcon: ({ color }) => (
+            <Building2 size={26} color={color as any} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="expenses"
         options={{
           title: "Gastos",
@@ -80,22 +79,15 @@ export default function AdminLayout() {
         }}
       />
       <Tabs.Screen
-        name="workers"
+        name="team"
         options={{
-          title: "Vendedores",
+          title: "Equipo",
           tabBarIcon: ({ color }) => <Users size={26} color={color as any} />,
         }}
       />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: "Perfil",
-          tabBarIcon: ({ color }) => <User size={26} color={color as any} />,
-        }}
-      />
-      <Tabs.Screen name="sales" options={{ href: null }} />
-      <Tabs.Screen name="inventory" options={{ href: null }} />
-      <Tabs.Screen name="finance" options={{ href: null }} />
+      {/* Hidden routes */}
+      <Tabs.Screen name="workers" options={{ href: null }} />
+      <Tabs.Screen name="profile" options={{ href: null }} />
     </Tabs>
   );
 }

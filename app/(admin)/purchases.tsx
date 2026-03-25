@@ -31,7 +31,7 @@ import { useSupplierRepository } from "@/hooks/use-supplier-repository";
 import type { Purchase, PurchaseItem } from "@/models/purchase";
 import type { Supplier } from "@/models/supplier";
 
-// ── Types ─────────────────────────────────────────────────────────────────────
+// ── Types ────────────────────────────────────────────────────────────────────
 
 interface CartItem {
   productId: number;
