@@ -9,11 +9,14 @@ import {
     User as UserIcon,
     Users,
 } from "@tamagui/lucide-icons";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
     ActivityIndicator,
+    KeyboardAvoidingView,
     Modal,
+    Platform,
     Pressable,
+    ScrollView,
     StyleSheet,
     Text,
     TextInput,
@@ -42,8 +45,9 @@ export function LoginSheet({
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [verifying, setVerifying] = useState(false);
   const [loadingUsers, setLoadingUsers] = useState(true);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isDark = colorScheme === "dark";
   const c = {
@@ -92,38 +96,47 @@ export function LoginSheet({
       setSelectedUser(null);
       loadUsers();
     }
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
   }, [open, loadUsers]);
 
-  const handleLogin = useCallback(async () => {
-    if (!selectedUser) {
-      setError("Selecciona un usuario");
-      return;
-    }
-    if (!pin.trim()) {
-      setError("Ingresa tu PIN");
-      return;
-    }
-    setLoading(true);
-    setError("");
-    try {
-      const pinH = await hashPin(pin);
-      const ok = await userRepo.verifyPin(selectedUser.id, pinH);
-      if (ok) {
-        setUser({
-          id: selectedUser.id,
-          name: selectedUser.name,
-          role: selectedUser.role,
-        });
-        onSuccess();
-      } else {
-        setError("PIN incorrecto");
+  const tryAutoLogin = useCallback(
+    async (currentPin: string, user: User) => {
+      if (currentPin.length < 4) return;
+      setVerifying(true);
+      setError("");
+      try {
+        const pinH = await hashPin(currentPin);
+        const ok = await userRepo.verifyPin(user.id, pinH);
+        if (ok) {
+          setUser({ id: user.id, name: user.name, role: user.role });
+          onSuccess();
+        } else {
+          setError("PIN incorrecto");
+        }
+      } catch {
+        setError("Error al verificar. Intenta de nuevo.");
+      } finally {
+        setVerifying(false);
       }
-    } catch {
-      setError("Error al verificar. Intenta de nuevo.");
-    } finally {
-      setLoading(false);
-    }
-  }, [selectedUser, pin, userRepo, setUser, onSuccess]);
+    },
+    [userRepo, setUser, onSuccess],
+  );
+
+  const handlePinChange = useCallback(
+    (value: string) => {
+      setPin(value);
+      setError("");
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      if (value.length >= 4 && selectedUser) {
+        debounceRef.current = setTimeout(() => {
+          tryAutoLogin(value, selectedUser);
+        }, 500);
+      }
+    },
+    [selectedUser, tryAutoLogin],
+  );
 
   if (!open) return null;
 
@@ -135,206 +148,221 @@ export function LoginSheet({
       onRequestClose={onClose}
       statusBarTranslucent
     >
-      <Pressable
-        style={[styles.overlay, { backgroundColor: c.overlay }]}
-        onPress={onClose}
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <Pressable onPress={(e) => e.stopPropagation()}>
-          <View
-            style={[
-              styles.card,
-              { backgroundColor: c.bg, borderColor: c.border },
-            ]}
-          >
-            {/* Header */}
-            <View style={styles.headerRow}>
-              <View
-                style={[styles.iconCircle, { backgroundColor: c.accentLight }]}
-              >
-                {role === "ADMIN" ? (
-                  <Lock size={22} color={c.accent as any} />
-                ) : (
-                  <UserIcon size={22} color={c.accent as any} />
-                )}
-              </View>
-              <Text style={[styles.title, { color: c.text }]}>{roleLabel}</Text>
-              <Text style={[styles.subtitle, { color: c.muted }]}>
-                Ingresa tus credenciales para continuar
-              </Text>
-            </View>
-
-            {/* User picker (hidden if only 1 user and auto-selected) */}
-            {loadingUsers ? (
-              <View style={styles.loaderRow}>
-                <ActivityIndicator color={c.accent} />
-              </View>
-            ) : users.length === 0 ? (
+        <ScrollView
+          contentContainerStyle={[
+            styles.overlay,
+            { backgroundColor: c.overlay },
+          ]}
+          keyboardShouldPersistTaps="handled"
+          bounces={false}
+        >
+          <Pressable style={{ width: "100%", maxWidth: 380 }} onPress={onClose}>
+            <Pressable onPress={(e) => e.stopPropagation()}>
               <View
                 style={[
-                  styles.emptyBox,
-                  { backgroundColor: c.errorBg, borderColor: c.error },
+                  styles.card,
+                  { backgroundColor: c.bg, borderColor: c.border },
                 ]}
               >
-                <Users size={20} color={c.error as any} />
-                <Text style={[styles.emptyText, { color: c.error }]}>
-                  {role === "ADMIN"
-                    ? "No hay administradores"
-                    : "No hay vendedores"}
-                </Text>
-              </View>
-            ) : users.length > 1 ? (
-              <View style={styles.section}>
-                <Text style={[styles.label, { color: c.muted }]}>Usuario</Text>
-                <View style={[styles.userList, { borderColor: c.border }]}>
-                  {users.map((u) => {
-                    const selected = selectedUser?.id === u.id;
-                    return (
-                      <TouchableOpacity
-                        key={u.id}
-                        style={[
-                          styles.userRow,
-                          {
-                            backgroundColor: selected
-                              ? c.userRowSelected
-                              : c.userRow,
-                            borderBottomColor: c.userRowBorder,
-                          },
-                        ]}
-                        onPress={() => setSelectedUser(u)}
-                        activeOpacity={0.7}
-                      >
-                        <View
-                          style={[
-                            styles.avatar,
-                            { backgroundColor: c.accentLight },
-                          ]}
-                        >
-                          <Text
-                            style={[styles.avatarText, { color: c.accent }]}
-                          >
-                            {u.name.charAt(0).toUpperCase()}
-                          </Text>
-                        </View>
-                        <Text style={[styles.userName, { color: c.text }]}>
-                          {u.name}
-                        </Text>
-                        {selected && (
-                          <View
-                            style={[styles.dot, { backgroundColor: c.accent }]}
-                          />
-                        )}
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </View>
-            ) : (
-              // Single user — show name badge
-              <View style={styles.section}>
-                <Text style={[styles.label, { color: c.muted }]}>Usuario</Text>
-                <View
-                  style={[
-                    styles.singleUser,
-                    {
-                      backgroundColor: c.userRowSelected,
-                      borderColor: c.border,
-                    },
-                  ]}
-                >
+                {/* Header */}
+                <View style={styles.headerRow}>
                   <View
-                    style={[styles.avatar, { backgroundColor: c.accentLight }]}
+                    style={[
+                      styles.iconCircle,
+                      { backgroundColor: c.accentLight },
+                    ]}
                   >
-                    <Text style={[styles.avatarText, { color: c.accent }]}>
-                      {selectedUser?.name.charAt(0).toUpperCase()}
+                    {role === "ADMIN" ? (
+                      <Lock size={22} color={c.accent as any} />
+                    ) : (
+                      <UserIcon size={22} color={c.accent as any} />
+                    )}
+                  </View>
+                  <Text style={[styles.title, { color: c.text }]}>
+                    {roleLabel}
+                  </Text>
+                  <Text style={[styles.subtitle, { color: c.muted }]}>
+                    Ingresa tus credenciales para continuar
+                  </Text>
+                </View>
+
+                {/* User picker (hidden if only 1 user and auto-selected) */}
+                {loadingUsers ? (
+                  <View style={styles.loaderRow}>
+                    <ActivityIndicator color={c.accent} />
+                  </View>
+                ) : users.length === 0 ? (
+                  <View
+                    style={[
+                      styles.emptyBox,
+                      { backgroundColor: c.errorBg, borderColor: c.error },
+                    ]}
+                  >
+                    <Users size={20} color={c.error as any} />
+                    <Text style={[styles.emptyText, { color: c.error }]}>
+                      {role === "ADMIN"
+                        ? "No hay administradores"
+                        : "No hay vendedores"}
                     </Text>
                   </View>
-                  <Text style={[styles.userName, { color: c.text }]}>
-                    {selectedUser?.name}
-                  </Text>
-                  <View style={[styles.dot, { backgroundColor: c.accent }]} />
-                </View>
-              </View>
-            )}
+                ) : users.length > 1 ? (
+                  <View style={styles.section}>
+                    <Text style={[styles.label, { color: c.muted }]}>
+                      Usuario
+                    </Text>
+                    <View style={[styles.userList, { borderColor: c.border }]}>
+                      {users.map((u) => {
+                        const selected = selectedUser?.id === u.id;
+                        return (
+                          <TouchableOpacity
+                            key={u.id}
+                            style={[
+                              styles.userRow,
+                              {
+                                backgroundColor: selected
+                                  ? c.userRowSelected
+                                  : c.userRow,
+                                borderBottomColor: c.userRowBorder,
+                              },
+                            ]}
+                            onPress={() => setSelectedUser(u)}
+                            activeOpacity={0.7}
+                          >
+                            <View
+                              style={[
+                                styles.avatar,
+                                { backgroundColor: c.accentLight },
+                              ]}
+                            >
+                              <Text
+                                style={[styles.avatarText, { color: c.accent }]}
+                              >
+                                {u.name.charAt(0).toUpperCase()}
+                              </Text>
+                            </View>
+                            <Text style={[styles.userName, { color: c.text }]}>
+                              {u.name}
+                            </Text>
+                            {selected && (
+                              <View
+                                style={[
+                                  styles.dot,
+                                  { backgroundColor: c.accent },
+                                ]}
+                              />
+                            )}
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  </View>
+                ) : (
+                  // Single user — show name badge
+                  <View style={styles.section}>
+                    <Text style={[styles.label, { color: c.muted }]}>
+                      Usuario
+                    </Text>
+                    <View
+                      style={[
+                        styles.singleUser,
+                        {
+                          backgroundColor: c.userRowSelected,
+                          borderColor: c.border,
+                        },
+                      ]}
+                    >
+                      <View
+                        style={[
+                          styles.avatar,
+                          { backgroundColor: c.accentLight },
+                        ]}
+                      >
+                        <Text style={[styles.avatarText, { color: c.accent }]}>
+                          {selectedUser?.name.charAt(0).toUpperCase()}
+                        </Text>
+                      </View>
+                      <Text style={[styles.userName, { color: c.text }]}>
+                        {selectedUser?.name}
+                      </Text>
+                      <View
+                        style={[styles.dot, { backgroundColor: c.accent }]}
+                      />
+                    </View>
+                  </View>
+                )}
 
-            {/* PIN input */}
-            {users.length > 0 && (
-              <View style={styles.section}>
-                <Text style={[styles.label, { color: c.muted }]}>PIN</Text>
-                <TextInput
-                  style={[
-                    styles.pinInput,
-                    {
-                      backgroundColor: c.input,
-                      color: c.text,
-                      borderColor: error ? c.error : c.border,
-                    },
-                  ]}
-                  placeholder="••••"
-                  placeholderTextColor={c.muted}
-                  value={pin}
-                  onChangeText={(v) => {
-                    setPin(v);
-                    setError("");
-                  }}
-                  secureTextEntry
-                  keyboardType="numeric"
-                  maxLength={8}
-                  returnKeyType="done"
-                  onSubmitEditing={handleLogin}
-                  autoFocus={users.length === 1}
-                />
-              </View>
-            )}
+                {/* PIN input */}
+                {users.length > 0 && (
+                  <View style={styles.section}>
+                    <Text style={[styles.label, { color: c.muted }]}>PIN</Text>
+                    <View>
+                      <TextInput
+                        style={[
+                          styles.pinInput,
+                          {
+                            backgroundColor: c.input,
+                            color: c.text,
+                            borderColor: error ? c.error : c.border,
+                          },
+                        ]}
+                        placeholder="••••"
+                        placeholderTextColor={c.muted}
+                        value={pin}
+                        onChangeText={handlePinChange}
+                        secureTextEntry
+                        keyboardType="numeric"
+                        maxLength={8}
+                        returnKeyType="done"
+                        editable={!verifying}
+                        autoFocus={users.length === 1}
+                      />
+                      {verifying && (
+                        <View style={styles.pinSpinner}>
+                          <ActivityIndicator color={c.accent} size="small" />
+                        </View>
+                      )}
+                    </View>
+                  </View>
+                )}
 
-            {/* Error message */}
-            {!!error && (
-              <View style={[styles.errorRow, { backgroundColor: c.errorBg }]}>
-                <AlertCircle size={16} color={c.error as any} />
-                <Text style={[styles.errorText, { color: c.error }]}>
-                  {error}
-                </Text>
-              </View>
-            )}
+                {/* Error message */}
+                {!!error && (
+                  <View
+                    style={[styles.errorRow, { backgroundColor: c.errorBg }]}
+                  >
+                    <AlertCircle size={16} color={c.error as any} />
+                    <Text style={[styles.errorText, { color: c.error }]}>
+                      {error}
+                    </Text>
+                  </View>
+                )}
 
-            {/* Buttons */}
-            <View style={styles.buttonRow}>
-              <TouchableOpacity
-                style={[styles.btnCancel, { borderColor: c.border }]}
-                onPress={onClose}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.btnCancelText, { color: c.muted }]}>
-                  Cancelar
-                </Text>
-              </TouchableOpacity>
-              {users.length > 0 && (
+                {/* Cancel button */}
                 <TouchableOpacity
-                  style={[
-                    styles.btnLogin,
-                    { backgroundColor: c.accent, opacity: loading ? 0.7 : 1 },
-                  ]}
-                  onPress={handleLogin}
-                  disabled={loading}
-                  activeOpacity={0.8}
+                  style={[styles.btnCancel, { borderColor: c.border }]}
+                  onPress={onClose}
+                  activeOpacity={0.7}
                 >
-                  {loading ? (
-                    <ActivityIndicator color="#fff" size="small" />
-                  ) : (
-                    <Text style={styles.btnLoginText}>Entrar</Text>
-                  )}
+                  <Text style={[styles.btnCancelText, { color: c.muted }]}>
+                    Cancelar
+                  </Text>
                 </TouchableOpacity>
-              )}
-            </View>
-          </View>
-        </Pressable>
-      </Pressable>
+              </View>
+            </Pressable>
+          </Pressable>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
   overlay: {
-    flex: 1,
+    flexGrow: 1,
     justifyContent: "center",
     alignItems: "center",
     padding: 24,
@@ -445,6 +473,13 @@ const styles = StyleSheet.create({
     letterSpacing: 6,
     textAlign: "center",
   },
+  pinSpinner: {
+    position: "absolute",
+    right: 12,
+    top: 0,
+    bottom: 0,
+    justifyContent: "center",
+  },
   errorRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -456,32 +491,15 @@ const styles = StyleSheet.create({
     fontSize: 13,
     flex: 1,
   },
-  buttonRow: {
-    flexDirection: "row",
-    gap: 10,
-    marginTop: 4,
-  },
   btnCancel: {
-    flex: 1,
     borderWidth: 1,
     borderRadius: 12,
     paddingVertical: 13,
     alignItems: "center",
+    marginTop: 4,
   },
   btnCancelText: {
     fontSize: 15,
     fontWeight: "600",
-  },
-  btnLogin: {
-    flex: 1,
-    borderRadius: 12,
-    paddingVertical: 13,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  btnLoginText: {
-    color: "#ffffff",
-    fontSize: 15,
-    fontWeight: "700",
   },
 });

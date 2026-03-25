@@ -6,28 +6,28 @@ import { useUserRepository } from "@/hooks/use-user-repository";
 import type { User } from "@/models/user";
 import { hashPin } from "@/utils/auth";
 import {
-    AlertCircle,
-    CheckCircle,
-    Edit3,
-    Lock,
-    Plus,
-    Trash2,
-    UserCog,
-    Users,
+  AlertCircle,
+  CheckCircle,
+  Edit3,
+  Lock,
+  Plus,
+  Trash2,
+  UserCog,
+  Users,
 } from "@tamagui/lucide-icons";
 import { useFocusEffect } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { Sheet } from "tamagui";
+import { Button, Input, Sheet, Text as TText, XStack, YStack } from "tamagui";
 
 // ── Colors ────────────────────────────────────────────────────────────────────
 
@@ -260,9 +260,7 @@ function WorkersSection({ isDark, c }: { isDark: boolean; c: Colors }) {
       {/* ── Worker form Sheet ──────────────────────────────────────────── */}
       <Sheet
         open={sheetOpen}
-        onOpenChange={(v: boolean) => {
-          if (!v) setSheetOpen(false);
-        }}
+        onOpenChange={setSheetOpen}
         modal
         snapPoints={[72]}
         dismissOnSnapToBottom
@@ -272,60 +270,52 @@ function WorkersSection({ isDark, c }: { isDark: boolean; c: Colors }) {
           exitStyle={{ opacity: 0 }}
           backgroundColor="rgba(0,0,0,0.5)"
         />
-        <Sheet.Frame bg="$background" theme={themeName as any}>
+        <Sheet.Frame theme={themeName as any} bg="$background">
           <Sheet.Handle />
-          <Sheet.ScrollView
-            keyboardShouldPersistTaps="handled"
-            automaticallyAdjustKeyboardInsets
-          >
-            <View style={styles.sheetContent}>
-              <Text style={[styles.sheetTitle, { color: c.text }]}>
+          <Sheet.ScrollView keyboardShouldPersistTaps="handled">
+            <YStack gap="$3" p="$4">
+              <TText fontSize="$6" fontWeight="bold" color="$color">
                 {editing ? "Editar vendedor" : "Nuevo vendedor"}
-              </Text>
+              </TText>
 
-              <View style={styles.formField}>
-                <Text style={[styles.fieldLabel, { color: c.muted }]}>
+              <YStack gap="$1">
+                <TText
+                  fontSize="$2"
+                  fontWeight="600"
+                  color="$color10"
+                  textTransform="uppercase"
+                  letterSpacing={0.5}
+                >
                   Nombre
-                </Text>
-                <TextInput
-                  style={[
-                    styles.input,
-                    {
-                      backgroundColor: c.input,
-                      color: c.text,
-                      borderColor: c.border,
-                    },
-                  ]}
+                </TText>
+                <Input
                   placeholder="Nombre del vendedor"
-                  placeholderTextColor={c.muted}
                   value={name}
-                  onChangeText={(v) => {
+                  onChangeText={(v: string) => {
                     setName(v);
                     setFormError("");
                   }}
                   autoCapitalize="words"
                   returnKeyType="next"
                   autoFocus={!editing}
+                  size="$4"
                 />
-              </View>
+              </YStack>
 
-              <View style={styles.formField}>
-                <Text style={[styles.fieldLabel, { color: c.muted }]}>
+              <YStack gap="$1">
+                <TText
+                  fontSize="$2"
+                  fontWeight="600"
+                  color="$color10"
+                  textTransform="uppercase"
+                  letterSpacing={0.5}
+                >
                   {editing ? "Nuevo PIN (dejar vacío para no cambiar)" : "PIN"}
-                </Text>
-                <TextInput
-                  style={[
-                    styles.input,
-                    {
-                      backgroundColor: c.input,
-                      color: c.text,
-                      borderColor: c.border,
-                    },
-                  ]}
+                </TText>
+                <Input
                   placeholder="••••"
-                  placeholderTextColor={c.muted}
                   value={pin}
-                  onChangeText={(v) => {
+                  onChangeText={(v: string) => {
                     setPin(v);
                     setFormError("");
                   }}
@@ -333,27 +323,25 @@ function WorkersSection({ isDark, c }: { isDark: boolean; c: Colors }) {
                   keyboardType="numeric"
                   maxLength={8}
                   returnKeyType={pin.length > 0 ? "next" : "done"}
+                  size="$4"
                 />
-              </View>
+              </YStack>
 
               {pin.length > 0 && (
-                <View style={styles.formField}>
-                  <Text style={[styles.fieldLabel, { color: c.muted }]}>
+                <YStack gap="$1">
+                  <TText
+                    fontSize="$2"
+                    fontWeight="600"
+                    color="$color10"
+                    textTransform="uppercase"
+                    letterSpacing={0.5}
+                  >
                     Confirmar PIN
-                  </Text>
-                  <TextInput
-                    style={[
-                      styles.input,
-                      {
-                        backgroundColor: c.input,
-                        color: c.text,
-                        borderColor: c.border,
-                      },
-                    ]}
+                  </TText>
+                  <Input
                     placeholder="••••"
-                    placeholderTextColor={c.muted}
                     value={pinConfirm}
-                    onChangeText={(v) => {
+                    onChangeText={(v: string) => {
                       setPinConfirm(v);
                       setFormError("");
                     }}
@@ -362,8 +350,9 @@ function WorkersSection({ isDark, c }: { isDark: boolean; c: Colors }) {
                     maxLength={8}
                     returnKeyType="done"
                     onSubmitEditing={handleSave}
+                    size="$4"
                   />
-                </View>
+                </YStack>
               )}
 
               {!!formError && (
@@ -377,33 +366,32 @@ function WorkersSection({ isDark, c }: { isDark: boolean; c: Colors }) {
                 </View>
               )}
 
-              <View style={styles.sheetBtns}>
-                <TouchableOpacity
-                  style={[styles.btnOutline, { borderColor: c.border }]}
+              <XStack gap="$2.5" mt="$1">
+                <Button
+                  flex={1}
+                  variant="outlined"
                   onPress={() => setSheetOpen(false)}
-                  activeOpacity={0.7}
+                  size="$4"
                 >
-                  <Text style={[styles.btnOutlineText, { color: c.muted }]}>
-                    Cancelar
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.btnSolid,
-                    { backgroundColor: c.green, opacity: saving ? 0.7 : 1 },
-                  ]}
+                  Cancelar
+                </Button>
+                <Button
+                  flex={1}
+                  theme="green"
                   onPress={handleSave}
                   disabled={saving}
-                  activeOpacity={0.8}
+                  opacity={saving ? 0.7 : 1}
+                  size="$4"
+                  icon={
+                    saving ? (
+                      <ActivityIndicator color="#fff" size="small" />
+                    ) : undefined
+                  }
                 >
-                  {saving ? (
-                    <ActivityIndicator color="#fff" size="small" />
-                  ) : (
-                    <Text style={styles.btnSolidText}>Guardar</Text>
-                  )}
-                </TouchableOpacity>
-              </View>
-            </View>
+                  Guardar
+                </Button>
+              </XStack>
+            </YStack>
           </Sheet.ScrollView>
         </Sheet.Frame>
       </Sheet>
@@ -769,11 +757,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
 
-  // Sheet form
-  sheetContent: { padding: 20, gap: 16, paddingBottom: 36 },
-  sheetTitle: { fontSize: 20, fontWeight: "700", marginBottom: 2 },
-  sheetBtns: { flexDirection: "row", gap: 10, marginTop: 4 },
-
   // Profile
   profileContent: { padding: 16, gap: 14, paddingBottom: 44 },
   profileAvatarRow: { alignItems: "center", gap: 8, paddingVertical: 12 },
@@ -815,21 +798,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   feedbackText: { fontSize: 13, flex: 1 },
-  btnOutline: {
-    flex: 1,
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingVertical: 13,
-    alignItems: "center",
-  },
-  btnOutlineText: { fontSize: 15, fontWeight: "600" },
-  btnSolid: {
-    flex: 1,
-    borderRadius: 12,
-    paddingVertical: 13,
-    alignItems: "center",
-    justifyContent: "center",
-  },
   btnSolidFull: {
     borderRadius: 14,
     paddingVertical: 15,

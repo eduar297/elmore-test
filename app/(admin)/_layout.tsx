@@ -86,7 +86,6 @@ export default function AdminLayout() {
         }}
       />
       {/* Hidden routes */}
-      <Tabs.Screen name="workers" options={{ href: null }} />
       <Tabs.Screen name="profile" options={{ href: null }} />
     </Tabs>
   );
