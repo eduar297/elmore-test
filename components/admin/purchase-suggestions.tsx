@@ -6,7 +6,12 @@ import type {
     Urgency,
 } from "@/utils/purchase-suggestions";
 import { runPurchaseSuggestions } from "@/utils/purchase-suggestions";
-import { ChevronDown, Package, ShoppingCart } from "@tamagui/lucide-icons";
+import {
+    ArrowUpDown,
+    ChevronDown,
+    Package,
+    ShoppingCart,
+} from "@tamagui/lucide-icons";
 import { useSQLiteContext } from "expo-sqlite";
 import { useCallback, useMemo, useState } from "react";
 import { Image, ScrollView } from "react-native";
@@ -424,11 +429,17 @@ export function PurchaseSuggestionsSection() {
   );
 
   return (
-    <YStack flex={1} bg="$background" p="$3" gap="$3">
+    <YStack flex={1} bg="$background">
       {/* Params */}
-      <XStack gap="$3" style={{ alignItems: "flex-end" }}>
+      <XStack
+        px="$4"
+        pt="$2"
+        pb="$3"
+        gap="$3"
+        style={{ alignItems: "flex-end" }}
+      >
         <YStack flex={1} gap="$1">
-          <Label fontSize="$1" color="$color10">
+          <Label fontSize="$2" color="$color10">
             Meta de stock (días)
           </Label>
           <Input
@@ -453,15 +464,17 @@ export function PurchaseSuggestionsSection() {
 
       {/* Results */}
       {report && (
-        <YStack flex={1} gap="$2">
+        <YStack flex={1}>
           {/* KPIs */}
-          <XStack gap="$2" flexWrap="wrap">
+          <XStack px="$4" pb="$2" gap="$2" flexWrap="wrap">
             <Card
               flex={1}
               p="$2"
+              bg="$color1"
               borderWidth={1}
               borderColor="$borderColor"
-              minWidth={90}
+              minWidth={100}
+              style={{ borderRadius: 10 }}
             >
               <Text fontSize="$1" color="$color10">
                 Requieren compra
@@ -473,9 +486,11 @@ export function PurchaseSuggestionsSection() {
             <Card
               flex={1}
               p="$2"
+              bg="$color1"
               borderWidth={1}
               borderColor="$borderColor"
-              minWidth={90}
+              minWidth={100}
+              style={{ borderRadius: 10 }}
             >
               <Text fontSize="$1" color="$color10">
                 Críticos
@@ -487,9 +502,11 @@ export function PurchaseSuggestionsSection() {
             <Card
               flex={1}
               p="$2"
+              bg="$color1"
               borderWidth={1}
               borderColor="$borderColor"
-              minWidth={90}
+              minWidth={100}
+              style={{ borderRadius: 10 }}
             >
               <Text fontSize="$1" color="$color10">
                 En alza
@@ -499,13 +516,15 @@ export function PurchaseSuggestionsSection() {
               </Text>
             </Card>
           </XStack>
-          <XStack gap="$2" flexWrap="wrap">
+          <XStack px="$4" pb="$2" gap="$2" flexWrap="wrap">
             <Card
               flex={1}
               p="$2"
+              bg="$color1"
               borderWidth={1}
               borderColor="$borderColor"
-              minWidth={90}
+              minWidth={100}
+              style={{ borderRadius: 10 }}
             >
               <Text fontSize="$1" color="$color10">
                 Costo estimado
@@ -517,9 +536,11 @@ export function PurchaseSuggestionsSection() {
             <Card
               flex={1}
               p="$2"
+              bg="$color1"
               borderWidth={1}
               borderColor="$borderColor"
-              minWidth={90}
+              minWidth={100}
+              style={{ borderRadius: 10 }}
             >
               <Text fontSize="$1" color="$color10">
                 ROI promedio
@@ -531,9 +552,11 @@ export function PurchaseSuggestionsSection() {
             <Card
               flex={1}
               p="$2"
+              bg="$color1"
               borderWidth={1}
               borderColor="$borderColor"
-              minWidth={90}
+              minWidth={100}
+              style={{ borderRadius: 10 }}
             >
               <Text fontSize="$1" color="$color10">
                 Días analizados
@@ -545,7 +568,7 @@ export function PurchaseSuggestionsSection() {
           </XStack>
 
           {/* Urgency filter pills */}
-          <XStack gap="$2" flexWrap="wrap">
+          <XStack px="$4" pb="$2" gap="$2" flexWrap="wrap">
             {(["critical", "low", "ok", "overstock"] as const).map((u) => {
               const meta = URGENCY_META[u];
               const active = filterUrgency === u;
@@ -564,30 +587,33 @@ export function PurchaseSuggestionsSection() {
           </XStack>
 
           {/* Sort row */}
-          <XStack gap="$2" flexWrap="wrap" style={{ alignItems: "center" }}>
-            <Text fontSize="$1" color="$color10">
-              Ordenar:
-            </Text>
-            {SORT_OPTIONS.map((opt) => {
-              const active = sortKey === opt.key;
-              return (
-                <Button
-                  key={opt.key}
-                  size="$1"
-                  chromeless={!active}
-                  theme={active ? "blue" : undefined}
-                  onPress={() => {
-                    if (active) setSortAsc(!sortAsc);
-                    else {
-                      setSortKey(opt.key);
-                      setSortAsc(true);
-                    }
-                  }}
+          <XStack px="$4" pb="$2" gap="$1.5" flexWrap="wrap">
+            {SORT_OPTIONS.map((opt) => (
+              <Button
+                key={opt.key}
+                size="$2"
+                chromeless
+                onPress={() => {
+                  if (sortKey === opt.key) setSortAsc(!sortAsc);
+                  else {
+                    setSortKey(opt.key);
+                    setSortAsc(true);
+                  }
+                }}
+                icon={
+                  sortKey === opt.key ? (
+                    <ArrowUpDown size={12} color="$blue10" />
+                  ) : undefined
+                }
+              >
+                <Text
+                  fontSize="$1"
+                  color={sortKey === opt.key ? "$blue10" : "$color10"}
                 >
-                  <Text fontSize="$1">{`${opt.label}${active ? (sortAsc ? " ↑" : " ↓") : ""}`}</Text>
-                </Button>
-              );
-            })}
+                  {opt.label}
+                </Text>
+              </Button>
+            ))}
           </XStack>
 
           {/* Product list */}
@@ -608,6 +634,21 @@ export function PurchaseSuggestionsSection() {
               </Accordion>
             )}
           </ScrollView>
+        </YStack>
+      )}
+
+      {!report && !loading && (
+        <YStack
+          flex={1}
+          style={{ justifyContent: "center", alignItems: "center" }}
+          gap="$3"
+          p="$8"
+        >
+          <ShoppingCart size={56} color="$color8" />
+          <Text fontSize="$4" color="$color10" style={{ textAlign: "center" }}>
+            Configura la meta de stock y presiona &quot;Analizar&quot; para ver
+            las sugerencias de compra.
+          </Text>
         </YStack>
       )}
     </YStack>
