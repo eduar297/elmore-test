@@ -3,13 +3,13 @@ import type { Product } from "@/models/product";
 import { PackagePlus, Pencil, Trash2 } from "@tamagui/lucide-icons";
 import { Image, StyleSheet } from "react-native";
 import {
-  Button,
-  Card,
-  Separator,
-  Spinner,
-  Text,
-  XStack,
-  YStack,
+    Button,
+    Card,
+    Separator,
+    Spinner,
+    Text,
+    XStack,
+    YStack,
 } from "tamagui";
 
 export interface ProductDetailProps {
@@ -90,8 +90,22 @@ export function ProductDetail({
         <DetailRow label="Código de barras" value={product.barcode} />
         <Separator />
         <DetailRow
-          label="Precio por unidad"
-          value={`$${product.pricePerBaseUnit.toFixed(2)}`}
+          label="Precio costo"
+          value={`$${product.costPrice.toFixed(2)}`}
+        />
+        <Separator />
+        <DetailRow
+          label="Precio venta"
+          value={`$${product.salePrice.toFixed(2)}`}
+        />
+        <Separator />
+        <DetailRow
+          label="Margen"
+          value={
+            product.costPrice > 0
+              ? `${(((product.salePrice - product.costPrice) / product.salePrice) * 100).toFixed(1)}%`
+              : "—"
+          }
         />
         <Separator />
         <DetailRow
@@ -102,6 +116,11 @@ export function ProductDetail({
         <DetailRow
           label="Modo de venta"
           value={product.saleMode === "UNIT" ? "Por unidad" : "Variable"}
+        />
+        <Separator />
+        <DetailRow
+          label="Visible"
+          value={product.visible ? "Sí" : "No — oculto"}
         />
 
         {/* Action buttons */}

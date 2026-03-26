@@ -82,7 +82,7 @@ export function OverviewSection() {
       const prods = await productRepo.findAll();
       setProductCount(prods.length);
       setInventoryValue(
-        prods.reduce((s, p) => s + p.pricePerBaseUnit * p.stockBaseQty, 0),
+        prods.reduce((s, p) => s + p.costPrice * p.stockBaseQty, 0),
       );
 
       if (period === "day") {

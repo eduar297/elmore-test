@@ -250,6 +250,7 @@ export default function WorkerScreen() {
 
   // Barcode scanner — adds to cart
   const scan = useBarcodeScanner({
+    visibleOnly: true,
     onResult(result) {
       if (result.kind === "found") {
         setError(null);
@@ -269,7 +270,7 @@ export default function WorkerScreen() {
             {
               product: result.product,
               quantity: 1,
-              unitPrice: result.product.pricePerBaseUnit,
+              unitPrice: result.product.salePrice,
             },
           ];
         });

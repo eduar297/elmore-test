@@ -568,17 +568,22 @@ export async function seedSimulation(
   const productNames: string[] = [];
   const productSupplierIdx: number[] = [];
   for (const p of PRODUCTS_DATA) {
+    // salePrice = costPrice * (1.25 to 1.55) — random realistic markup
+    const markup = 1.25 + rand() * 0.3;
+    const salePx = Math.round(p.price * markup * 100) / 100;
     const result = await db.runAsync(
-      `INSERT INTO products (name, barcode, pricePerBaseUnit, baseUnitId, stockBaseQty, saleMode)
-       VALUES (?, ?, ?, ?, 0, ?)`,
+      `INSERT INTO products (name, barcode, pricePerBaseUnit, costPrice, salePrice, visible, baseUnitId, stockBaseQty, saleMode)
+       VALUES (?, ?, ?, ?, ?, 1, ?, 0, ?)`,
       p.name,
       p.barcode,
       p.price,
+      p.price,
+      salePx,
       p.unit,
       p.mode,
     );
     productIds.push(result.lastInsertRowId);
-    productPrices.push(p.price);
+    productPrices.push(salePx); // tickets use salePrice
     productNames.push(p.name);
     productSupplierIdx.push(p.supplier);
   }

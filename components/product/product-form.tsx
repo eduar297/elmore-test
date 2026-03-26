@@ -3,8 +3,9 @@ import { PhotoPicker } from "@/components/ui/photo-picker";
 import { UnitPicker } from "@/components/ui/unit-picker";
 import type { CreateProductInput, Product, SaleMode } from "@/models/product";
 import type { Unit } from "@/models/unit";
+import { Eye, EyeOff } from "@tamagui/lucide-icons";
 import { useId, useState } from "react";
-import { Button, Input, Label, Spinner, Text, XStack, YStack } from "tamagui";
+import { Button, Input, Label, Spinner, Switch, Text, XStack, YStack } from "tamagui";
 
 // ── ProductForm (create + edit) ───────────────────────────────────────────────
 // Pass `product` to enter edit mode. Omit it for create mode.
@@ -34,8 +35,11 @@ export function ProductForm({
   const barcode = isEdit ? product.barcode : (barcodeProp ?? "");
 
   const [name, setName] = useState(isEdit ? product.name : "");
-  const [price, setPrice] = useState(
-    isEdit ? String(product.pricePerBaseUnit) : "",
+  const [costPrice, setCostPrice] = useState(
+    isEdit ? String(product.costPrice) : "",
+  );
+  const [salePrice, setSalePrice] = useState(
+    isEdit ? String(product.salePrice) : "",
   );
   const [stock, setStock] = useState(
     isEdit ? String(product.stockBaseQty) : "0",
@@ -49,14 +53,15 @@ export function ProductForm({
   const [photoUri, setPhotoUri] = useState<string | null>(
     isEdit ? (product.photoUri ?? null) : null,
   );
+  const [visible, setVisible] = useState(isEdit ? product.visible : true);
 
-  const parsedPrice = parseFloat(price);
-  const parsedStock = parseFloat(stock);
+  const parsedCost = parseFloat(costPrice);
+  const parsedSale = parseFloat(salePrice);
   const canSubmit =
     name.trim().length > 0 &&
-    !isNaN(parsedPrice) &&
-    parsedPrice > 0 &&
-    (isEdit || (!isNaN(parsedStock) && parsedStock >= 0)) &&
+    !isNaN(parsedCost) &&
+    parsedCost > 0 &&
+    (!isEdit || (!isNaN(parsedSale) && parsedSale > 0)) &&
     unitId.length > 0;
 
   const handleSubmit = () => {
@@ -64,8 +69,11 @@ export function ProductForm({
     onSubmit({
       name: name.trim(),
       barcode,
-      pricePerBaseUnit: parsedPrice,
-      stockBaseQty: isEdit ? product.stockBaseQty : parsedStock,
+      pricePerBaseUnit: parsedCost,
+      costPrice: parsedCost,
+      salePrice: isEdit ? parsedSale : parsedCost, // create: salePrice = costPrice initially
+      visible,
+      stockBaseQty: isEdit ? product.stockBaseQty : 0, // always 0 on create
       saleMode,
       baseUnitId: parseInt(unitId, 10),
       photoUri,
@@ -121,34 +129,34 @@ export function ProductForm({
         />
       </YStack>
 
-      {/* Price + Stock (stock only shown when creating) */}
+      {/* Cost price (always shown) + Sale price (edit only) */}
       <XStack gap="$3">
         <YStack flex={1} gap="$1">
-          <Label htmlFor={`${uid}-price`} color="$color10" fontSize="$3">
-            Precio
+          <Label htmlFor={`${uid}-cost`} color="$color10" fontSize="$3">
+            Precio costo
           </Label>
           <Input
-            id={`${uid}-price`}
+            id={`${uid}-cost`}
             placeholder="0.00"
-            value={price}
-            onChangeText={setPrice}
+            value={costPrice}
+            onChangeText={setCostPrice}
             keyboardType="decimal-pad"
             returnKeyType="done"
             size="$4"
           />
         </YStack>
 
-        {!isEdit && (
+        {isEdit && (
           <YStack flex={1} gap="$1">
-            <Label htmlFor={`${uid}-stock`} color="$color10" fontSize="$3">
-              Stock inicial
+            <Label htmlFor={`${uid}-sale`} color="$color10" fontSize="$3">
+              Precio venta
             </Label>
             <Input
-              id={`${uid}-stock`}
-              placeholder="0"
-              value={stock}
-              onChangeText={setStock}
-              keyboardType="numeric"
+              id={`${uid}-sale`}
+              placeholder="0.00"
+              value={salePrice}
+              onChangeText={setSalePrice}
+              keyboardType="decimal-pad"
               returnKeyType="done"
               size="$4"
             />
@@ -188,6 +196,32 @@ export function ProductForm({
           </Button>
         </XStack>
       </YStack>
+
+      {/* Visible to workers (edit only) */}
+      {isEdit && (
+        <XStack
+          gap="$3"
+          style={{ alignItems: "center", justifyContent: "space-between" }}
+        >
+          <XStack gap="$2" style={{ alignItems: "center" }}>
+            {visible ? (
+              <Eye size={18} color="$green10" />
+            ) : (
+              <EyeOff size={18} color="$color8" />
+            )}
+            <Label color="$color10" fontSize="$3">
+              Visible para vendedores
+            </Label>
+          </XStack>
+          <Switch
+            size="$3"
+            checked={visible}
+            onCheckedChange={setVisible}
+          >
+            <Switch.Thumb />
+          </Switch>
+        </XStack>
+      )}
 
       <Button
         size="$5"

@@ -27,6 +27,9 @@ async function ensureTables(db: SQLiteDatabase) {
       name TEXT NOT NULL,
       barcode TEXT UNIQUE,
       pricePerBaseUnit REAL NOT NULL,
+      costPrice REAL,
+      salePrice REAL,
+      visible INTEGER NOT NULL DEFAULT 1,
       baseUnitId INTEGER NOT NULL,
       stockBaseQty REAL NOT NULL DEFAULT 0,
       saleMode TEXT CHECK (saleMode IN ('UNIT','VARIABLE')) NOT NULL,
@@ -113,7 +116,7 @@ async function ensureTables(db: SQLiteDatabase) {
 }
 
 export async function migrateDbIfNeeded(db: SQLiteDatabase) {
-  const DATABASE_VERSION = 9;
+  const DATABASE_VERSION = 10;
 
   const result = await db.getFirstAsync<{ user_version: number }>(
     "PRAGMA user_version",
@@ -273,6 +276,19 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase) {
   if (currentVersion === 8) {
     await db.execAsync(`ALTER TABLE users ADD COLUMN photoUri TEXT`);
     currentVersion = 9;
+  }
+
+  if (currentVersion === 9) {
+    await db.execAsync(`
+      ALTER TABLE products ADD COLUMN costPrice REAL;
+      ALTER TABLE products ADD COLUMN salePrice REAL;
+      ALTER TABLE products ADD COLUMN visible INTEGER NOT NULL DEFAULT 1;
+    `);
+    // Migrate existing data: costPrice = pricePerBaseUnit, salePrice = pricePerBaseUnit
+    await db.execAsync(`
+      UPDATE products SET costPrice = pricePerBaseUnit, salePrice = pricePerBaseUnit WHERE costPrice IS NULL;
+    `);
+    currentVersion = 10;
   }
 
   await seedUnits(db);

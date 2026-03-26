@@ -192,11 +192,7 @@ export function InventorySection() {
   );
 
   const inventoryValue = useMemo(
-    () =>
-      allProducts.reduce(
-        (sum, p) => sum + p.pricePerBaseUnit * p.stockBaseQty,
-        0,
-      ),
+    () => allProducts.reduce((sum, p) => sum + p.costPrice * p.stockBaseQty, 0),
     [allProducts],
   );
 
@@ -238,7 +234,7 @@ export function InventorySection() {
       countMap.set(catId, (countMap.get(catId) ?? 0) + 1);
       valueMap.set(
         catId,
-        (valueMap.get(catId) ?? 0) + p.pricePerBaseUnit * p.stockBaseQty,
+        (valueMap.get(catId) ?? 0) + p.costPrice * p.stockBaseQty,
       );
     }
     return allCategories
@@ -264,7 +260,7 @@ export function InventorySection() {
       [...allProducts]
         .map((p) => ({
           ...p,
-          stockValue: p.pricePerBaseUnit * p.stockBaseQty,
+          stockValue: p.costPrice * p.stockBaseQty,
         }))
         .sort((a, b) => b.stockValue - a.stockValue)
         .slice(0, 10),
@@ -711,7 +707,7 @@ export function InventorySection() {
                     {p.name}
                   </Text>
                   <Text fontSize="$2" color="$color10">
-                    {p.barcode} · ${fmtMoney(p.pricePerBaseUnit)}/
+                    {p.barcode} · ${fmtMoney(p.salePrice)}/
                     {unit?.symbol ?? "ud"}
                   </Text>
                 </YStack>
@@ -724,7 +720,7 @@ export function InventorySection() {
                     {p.stockBaseQty} {unit?.symbol ?? "uds"}
                   </Text>
                   <Text fontSize="$1" color="$color10">
-                    ${fmtMoney(p.pricePerBaseUnit * p.stockBaseQty)}
+                    ${fmtMoney(p.costPrice * p.stockBaseQty)}
                   </Text>
                 </YStack>
               </XStack>

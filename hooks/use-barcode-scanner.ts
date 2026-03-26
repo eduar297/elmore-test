@@ -17,9 +17,12 @@ let activeInstanceId: symbol | null = null;
 export function useBarcodeScanner({
   onResult,
   onError,
+  visibleOnly,
 }: {
   onResult: (result: ScanResult) => void;
   onError?: (msg: string) => void;
+  /** When true, only finds products with visible = 1 (for worker scanner). */
+  visibleOnly?: boolean;
 }) {
   const products = useProductRepository();
   const [permission, requestPermission] = useCameraPermissions();
@@ -33,6 +36,8 @@ export function useBarcodeScanner({
   onErrorRef.current = onError;
   const productsRef = useRef(products);
   productsRef.current = products;
+  const visibleOnlyRef = useRef(visibleOnly);
+  visibleOnlyRef.current = visibleOnly;
 
   const handleBarcode = useCallback(async (barcode: string) => {
     // Only the instance that called scan() should process the result
@@ -42,7 +47,9 @@ export function useBarcodeScanner({
     activeInstanceId = null;
     try {
       await CameraViewClass.dismissScanner().catch(() => {});
-      const found = await productsRef.current.findByBarcode(barcode);
+      const found = visibleOnlyRef.current
+        ? await productsRef.current.findVisibleByBarcode(barcode)
+        : await productsRef.current.findByBarcode(barcode);
       if (found) {
         onResultRef.current({ kind: "found", product: found });
       } else {

@@ -4,11 +4,17 @@ export interface Product {
   id: number;
   name: string;
   barcode: string;
+  /** Legacy field kept for DB compat. Use costPrice / salePrice instead. */
   pricePerBaseUnit: number;
+  /** Cost price (purchase). Used for margin calculations. */
+  costPrice: number;
+  /** Actual selling price shown to workers. */
+  salePrice: number;
+  /** Whether this product is visible to workers. */
+  visible: boolean;
   baseUnitId: number;
   stockBaseQty: number;
   saleMode: SaleMode;
-  /** Local file URI for the product photo (stored as TEXT in SQLite). Null when no photo set. */
   photoUri: string | null;
 }
 

@@ -1,5 +1,9 @@
+import { PricingAnalysisSection } from "@/components/admin/pricing-analysis";
+import { PurchaseSuggestionsSection } from "@/components/admin/purchase-suggestions";
 import { ProductDetail } from "@/components/product/product-detail";
 import { ProductForm } from "@/components/product/product-form";
+import type { TabDef } from "@/components/ui/screen-tabs";
+import { ScreenTabs } from "@/components/ui/screen-tabs";
 import { useBarcodeScanner } from "@/hooks/use-barcode-scanner";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useProductRepository } from "@/hooks/use-product-repository";
@@ -7,7 +11,13 @@ import { useUnitRepository } from "@/hooks/use-unit-repository";
 import type { CreateProductInput, Product } from "@/models/product";
 import type { Unit, UnitCategory } from "@/models/unit";
 import { generateEAN13 } from "@/utils/barcode";
-import { Package, Plus, ScanLine } from "@tamagui/lucide-icons";
+import {
+  Package,
+  Plus,
+  ScanLine,
+  ShoppingCart,
+  TrendingUp,
+} from "@tamagui/lucide-icons";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -75,7 +85,10 @@ function ProductRow({
       </YStack>
       <YStack style={{ alignItems: "flex-end" }} gap="$1">
         <Text fontSize="$4" color="$blue10" fontWeight="600">
-          ${product.pricePerBaseUnit.toFixed(2)}
+          ${product.salePrice.toFixed(2)}
+        </Text>
+        <Text fontSize="$2" color="$color10">
+          Costo: ${product.costPrice.toFixed(2)}
         </Text>
         <Text fontSize="$2" color="$color10">
           Stock: {product.stockBaseQty} {unit?.symbol ?? "—"}
@@ -128,6 +141,16 @@ function SectionHeader({ name, count }: { name: string; count: number }) {
   );
 }
 
+// ── Tab definitions ──────────────────────────────────────────────────────────
+
+type Section = "catalog" | "pricing" | "purchases";
+
+const SECTIONS: TabDef<Section>[] = [
+  { key: "catalog", label: "Catálogo", Icon: Package },
+  { key: "pricing", label: "Precios", Icon: TrendingUp },
+  { key: "purchases", label: "Compras", Icon: ShoppingCart },
+];
+
 // ── Main screen ──────────────────────────────────────────────────────────────
 
 export default function ProductsScreen() {
@@ -136,6 +159,7 @@ export default function ProductsScreen() {
   const colorScheme = useColorScheme();
   const themeName = colorScheme === "dark" ? "dark" : "light";
 
+  const [section, setSection] = useState<Section>("catalog");
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [allUnits, setAllUnits] = useState<Unit[]>([]);
   const [categories, setCategories] = useState<UnitCategory[]>([]);
@@ -349,21 +373,7 @@ export default function ProductsScreen() {
 
   return (
     <YStack flex={1} bg="$background">
-      {/* Action bar */}
-      <XStack gap="$3" px="$4" pt="$2" pb="$3">
-        <Button flex={1} theme="blue" icon={ScanLine} size="$4" onPress={scan}>
-          Escanear
-        </Button>
-        <Button
-          flex={1}
-          theme="green"
-          icon={Plus}
-          size="$4"
-          onPress={handleAddManual}
-        >
-          Agregar
-        </Button>
-      </XStack>
+      <ScreenTabs tabs={SECTIONS} active={section} onSelect={setSection} />
 
       {/* Error banner */}
       {error && (
@@ -374,53 +384,88 @@ export default function ProductsScreen() {
         </XStack>
       )}
 
-      {/* Content */}
-      {loading ? (
-        <YStack
-          flex={1}
-          style={{ justifyContent: "center", alignItems: "center" }}
-          gap="$3"
-        >
-          <Spinner size="large" color="$blue10" />
-          <Text color="$color10">Cargando productos…</Text>
-        </YStack>
-      ) : grouped.length === 0 ? (
-        <YStack
-          flex={1}
-          style={{ justifyContent: "center", alignItems: "center" }}
-          gap="$3"
-          p="$8"
-        >
-          <Package size={56} color="$color8" />
-          <Text fontSize="$5" fontWeight="bold" color="$color">
-            Sin productos
-          </Text>
-          <Text color="$color10" style={{ textAlign: "center" }}>
-            Agrega tu primer producto con el botón &quot;Agregar&quot; o
-            escaneando un código de barras.
-          </Text>
-        </YStack>
-      ) : (
-        <SectionList
-          sections={sections}
-          keyExtractor={(item) => String(item.id)}
-          renderSectionHeader={({ section }) => (
-            <SectionHeader name={section.title} count={section.count} />
-          )}
-          renderItem={({ item: p }) => (
-            <ProductRow
-              product={p}
-              unit={unitMap.get(p.baseUnitId)}
-              onPress={() => {
-                setSelectedProduct(p);
-                setShowDetailSheet(true);
-              }}
+      {/* ── Catalog tab ─────────────────────────────────────────────── */}
+      {section === "catalog" && (
+        <>
+          {/* Action bar */}
+          <XStack gap="$3" px="$4" pt="$2" pb="$3">
+            <Button
+              flex={1}
+              theme="blue"
+              icon={ScanLine}
+              size="$4"
+              onPress={scan}
+            >
+              Escanear
+            </Button>
+            <Button
+              flex={1}
+              theme="green"
+              icon={Plus}
+              size="$4"
+              onPress={handleAddManual}
+            >
+              Agregar
+            </Button>
+          </XStack>
+
+          {/* Content */}
+          {loading ? (
+            <YStack
+              flex={1}
+              style={{ justifyContent: "center", alignItems: "center" }}
+              gap="$3"
+            >
+              <Spinner size="large" color="$blue10" />
+              <Text color="$color10">Cargando productos…</Text>
+            </YStack>
+          ) : grouped.length === 0 ? (
+            <YStack
+              flex={1}
+              style={{ justifyContent: "center", alignItems: "center" }}
+              gap="$3"
+              p="$8"
+            >
+              <Package size={56} color="$color8" />
+              <Text fontSize="$5" fontWeight="bold" color="$color">
+                Sin productos
+              </Text>
+              <Text color="$color10" style={{ textAlign: "center" }}>
+                Agrega tu primer producto con el botón &quot;Agregar&quot; o
+                escaneando un código de barras.
+              </Text>
+            </YStack>
+          ) : (
+            <SectionList
+              sections={sections}
+              keyExtractor={(item) => String(item.id)}
+              renderSectionHeader={({ section: s }) => (
+                <SectionHeader name={s.title} count={s.count} />
+              )}
+              renderItem={({ item: p }) => (
+                <ProductRow
+                  product={p}
+                  unit={unitMap.get(p.baseUnitId)}
+                  onPress={() => {
+                    setSelectedProduct(p);
+                    setShowDetailSheet(true);
+                  }}
+                />
+              )}
+              SectionSeparatorComponent={() => <YStack height="$2" />}
+              stickySectionHeadersEnabled={false}
             />
           )}
-          SectionSeparatorComponent={() => <YStack height="$2" />}
-          stickySectionHeadersEnabled={false}
-        />
+        </>
       )}
+
+      {/* ── Pricing tab ─────────────────────────────────────────────── */}
+      {section === "pricing" && (
+        <PricingAnalysisSection onPricesUpdated={loadData} />
+      )}
+
+      {/* ── Purchases tab ───────────────────────────────────────────── */}
+      {section === "purchases" && <PurchaseSuggestionsSection />}
 
       {/* Create product sheet */}
       <Sheet
