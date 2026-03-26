@@ -13,6 +13,7 @@ import type { CreateProductInput, Product } from "@/models/product";
 import type { Unit, UnitCategory } from "@/models/unit";
 import { generateEAN13 } from "@/utils/barcode";
 import {
+  ChevronDown,
   Package,
   Plus,
   ScanLine,
@@ -51,10 +52,17 @@ function ProductRow({
   unit: Unit | undefined;
   onPress: () => void;
 }) {
+  const margin =
+    product.costPrice > 0
+      ? Math.round(
+          ((product.salePrice - product.costPrice) / product.salePrice) * 100,
+        )
+      : null;
+  const inStock = product.stockBaseQty > 0;
   return (
     <XStack
       px="$4"
-      py="$3"
+      py="$2"
       bg="$background"
       pressStyle={{ bg: "$color2" }}
       onPress={onPress}
@@ -63,7 +71,6 @@ function ProductRow({
       style={{ alignItems: "center" }}
       gap="$3"
     >
-      {/* Thumbnail */}
       {product.photoUri ? (
         <Image
           source={{ uri: product.photoUri }}
@@ -72,27 +79,36 @@ function ProductRow({
         />
       ) : (
         <YStack style={rowStyles.thumbPlaceholder}>
-          <Package size={20} color="$color8" />
+          <Package size={18} color="$color8" />
         </YStack>
       )}
 
-      <YStack flex={1} gap="$1">
-        <Text fontSize="$4" fontWeight="bold" color="$color" numberOfLines={1}>
+      <YStack flex={1} gap="$0.5">
+        <Text fontSize="$3" fontWeight="bold" color="$color" numberOfLines={1}>
           {product.name}
         </Text>
-        <Text fontSize="$2" color="$color10">
+        <Text fontSize="$1" color="$color10" numberOfLines={1}>
           {product.barcode}
         </Text>
       </YStack>
-      <YStack style={{ alignItems: "flex-end" }} gap="$1">
-        <Text fontSize="$4" color="$blue10" fontWeight="600">
+
+      <YStack style={{ alignItems: "flex-end" }} gap="$0.5">
+        <Text fontSize="$3" color="$blue10" fontWeight="600">
           ${product.salePrice.toFixed(2)}
         </Text>
-        <Text fontSize="$2" color="$color10">
-          Costo: ${product.costPrice.toFixed(2)}
-        </Text>
-        <Text fontSize="$2" color="$color10">
-          Stock: {product.stockBaseQty} {unit?.symbol ?? "—"}
+        {margin !== null && (
+          <Text fontSize="$1" color="$green10">
+            Margen {margin}%
+          </Text>
+        )}
+        <Text
+          fontSize="$1"
+          color={inStock ? "$color10" : "$red10"}
+          fontWeight={inStock ? "400" : "600"}
+        >
+          {inStock
+            ? `Stock: ${product.stockBaseQty} ${unit?.symbol ?? "—"}`
+            : "Sin stock"}
         </Text>
       </YStack>
     </XStack>
@@ -101,13 +117,13 @@ function ProductRow({
 
 const rowStyles = StyleSheet.create({
   thumb: {
-    width: 48,
-    height: 48,
+    width: 40,
+    height: 40,
     borderRadius: 8,
   },
   thumbPlaceholder: {
-    width: 48,
-    height: 48,
+    width: 40,
+    height: 40,
     borderRadius: 8,
     backgroundColor: "rgba(128,128,128,0.12)",
     alignItems: "center",
@@ -117,17 +133,32 @@ const rowStyles = StyleSheet.create({
 
 // ── Section header ───────────────────────────────────────────────────────────
 
-function SectionHeader({ name, count }: { name: string; count: number }) {
+function SectionHeader({
+  name,
+  count,
+  isCollapsed,
+  onToggle,
+}: {
+  name: string;
+  count: number;
+  isCollapsed: boolean;
+  onToggle: () => void;
+}) {
   return (
     <XStack
       px="$4"
       py="$2"
       bg="$color2"
+      borderBottomWidth={1}
+      borderColor="$borderColor"
       style={{ alignItems: "center" }}
       gap="$2"
+      pressStyle={{ bg: "$color3" }}
+      onPress={onToggle}
     >
       <Text
-        fontSize="$4"
+        flex={1}
+        fontSize="$2"
         fontWeight="bold"
         color="$color10"
         textTransform="uppercase"
@@ -135,9 +166,16 @@ function SectionHeader({ name, count }: { name: string; count: number }) {
       >
         {name}
       </Text>
-      <Text fontSize="$3" color="$color8">
-        ({count})
+      <Text fontSize="$2" color="$color8">
+        {count}
       </Text>
+      <ChevronDown
+        size={16}
+        color="$color8"
+        style={{
+          transform: [{ rotate: isCollapsed ? "-90deg" : "0deg" }],
+        }}
+      />
     </XStack>
   );
 }
@@ -166,6 +204,9 @@ export default function ProductsScreen() {
   const [allUnits, setAllUnits] = useState<Unit[]>([]);
   const [categories, setCategories] = useState<UnitCategory[]>([]);
   const [loading, setLoading] = useState(true);
+  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(
+    () => new Set(),
+  );
 
   // Sheets
   const [showCreateSheet, setShowCreateSheet] = useState(false);
@@ -280,10 +321,24 @@ export default function ProductsScreen() {
                 p.barcode.toLowerCase().includes(q),
             )
           : catProducts;
-        return { title: category.name, count: filtered.length, data: filtered };
+        const isCollapsed = collapsedSections.has(category.name);
+        return {
+          title: category.name,
+          count: filtered.length,
+          data: isCollapsed ? [] : filtered,
+        };
       })
-      .filter((s) => s.data.length > 0);
-  }, [grouped, searchQuery]);
+      .filter((s) => s.count > 0);
+  }, [grouped, searchQuery, collapsedSections]);
+
+  const toggleSection = useCallback((title: string) => {
+    setCollapsedSections((prev) => {
+      const next = new Set(prev);
+      if (next.has(title)) next.delete(title);
+      else next.add(title);
+      return next;
+    });
+  }, []);
 
   // ── Handlers ───────────────────────────────────────────────────────────────
 
@@ -457,7 +512,12 @@ export default function ProductsScreen() {
               sections={sections}
               keyExtractor={(item) => String(item.id)}
               renderSectionHeader={({ section: s }) => (
-                <SectionHeader name={s.title} count={s.count} />
+                <SectionHeader
+                  name={s.title}
+                  count={s.count}
+                  isCollapsed={collapsedSections.has(s.title)}
+                  onToggle={() => toggleSection(s.title)}
+                />
               )}
               renderItem={({ item: p }) => (
                 <ProductRow
@@ -469,7 +529,7 @@ export default function ProductsScreen() {
                   }}
                 />
               )}
-              SectionSeparatorComponent={() => <YStack height="$2" />}
+              SectionSeparatorComponent={null}
               stickySectionHeadersEnabled={false}
             />
           )}
