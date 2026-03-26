@@ -30,7 +30,7 @@ import {
 } from "@tamagui/lucide-icons";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Image, ScrollView } from "react-native";
+import { FlatList, Image, ScrollView } from "react-native";
 import { Card, Separator, Sheet, Spinner, Text, XStack, YStack } from "tamagui";
 
 function formatTime(iso: string) {
@@ -256,58 +256,68 @@ export default function HistoryScreen() {
         </YStack>
       </Card>
 
-      <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
-        <YStack p="$4" gap="$4" pb="$8">
-          {/* Summary cards */}
-          <XStack gap="$3">
-            <Card
-              flex={1}
-              borderWidth={1}
-              bg="$green2"
-              p="$4"
-              style={{ borderRadius: 14 }}
-              borderColor="$green5"
-            >
-              <TrendingUp size={16} color="$green10" />
-              <Text fontSize="$6" fontWeight="bold" color="$green10" mt="$1">
-                ${fmtMoney(summary.totalSales)}
-              </Text>
-              <Text fontSize="$2" color="$color10">
-                Total
-              </Text>
-            </Card>
-            <Card
-              flex={1}
-              borderWidth={1}
-              bg="$blue2"
-              p="$4"
-              style={{ borderRadius: 14 }}
-              borderColor="$blue5"
-            >
-              <Receipt size={16} color="$blue10" />
-              <Text fontSize="$6" fontWeight="bold" color="$blue10" mt="$1">
-                {summary.ticketCount}
-              </Text>
-              <Text fontSize="$2" color="$color10">
-                Tickets
-              </Text>
-            </Card>
-          </XStack>
+      {/* Summary cards */}
+      <XStack gap="$3" px="$4" pt="$4">
+        <Card
+          flex={1}
+          borderWidth={1}
+          bg="$green2"
+          p="$4"
+          style={{ borderRadius: 14 }}
+          borderColor="$green5"
+        >
+          <TrendingUp size={16} color="$green10" />
+          <Text fontSize="$6" fontWeight="bold" color="$green10" mt="$1">
+            ${fmtMoney(summary.totalSales)}
+          </Text>
+          <Text fontSize="$2" color="$color10">
+            Total
+          </Text>
+        </Card>
+        <Card
+          flex={1}
+          borderWidth={1}
+          bg="$blue2"
+          p="$4"
+          style={{ borderRadius: 14 }}
+          borderColor="$blue5"
+        >
+          <Receipt size={16} color="$blue10" />
+          <Text fontSize="$6" fontWeight="bold" color="$blue10" mt="$1">
+            {summary.ticketCount}
+          </Text>
+          <Text fontSize="$2" color="$color10">
+            Tickets
+          </Text>
+        </Card>
+      </XStack>
 
-          {/* Tickets list */}
-          <Card
-            bg="$background"
-            borderWidth={1}
-            borderColor="$borderColor"
-            style={{ borderRadius: 14 }}
-            overflow="hidden"
-          >
-            {loading ? (
+      {/* Virtualized ticket list */}
+      <Card
+        mx="$4"
+        mt="$4"
+        mb="$4"
+        flex={1}
+        bg="$background"
+        borderWidth={1}
+        borderColor="$borderColor"
+        style={{ borderRadius: 14 }}
+        overflow="hidden"
+      >
+        <FlatList
+          data={allTickets}
+          keyExtractor={(item) => String(item.id)}
+          renderItem={({ item: ticket }) => (
+            <TicketRow ticket={ticket} onPress={() => openDetail(ticket)} />
+          )}
+          ItemSeparatorComponent={() => <Separator />}
+          ListEmptyComponent={
+            loading ? (
               <YStack p="$6" style={{ alignItems: "center" }} gap="$3">
                 <Spinner size="large" color="$green10" />
                 <Text color="$color10">Cargando...</Text>
               </YStack>
-            ) : allTickets.length === 0 ? (
+            ) : (
               <YStack p="$6" style={{ alignItems: "center" }} gap="$3">
                 <ClipboardList size={44} color="$color8" />
                 <Text fontSize="$5" fontWeight="bold" color="$color">
@@ -318,20 +328,11 @@ export default function HistoryScreen() {
                   aparecerán aquí.
                 </Text>
               </YStack>
-            ) : (
-              allTickets.map((ticket, idx) => (
-                <YStack key={ticket.id}>
-                  {idx > 0 && <Separator />}
-                  <TicketRow
-                    ticket={ticket}
-                    onPress={() => openDetail(ticket)}
-                  />
-                </YStack>
-              ))
-            )}
-          </Card>
-        </YStack>
-      </ScrollView>
+            )
+          }
+          contentContainerStyle={{ flexGrow: 1 }}
+        />
+      </Card>
 
       {/* Calendar sheet */}
       <CalendarSheet

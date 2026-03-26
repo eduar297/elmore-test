@@ -40,7 +40,7 @@ import {
 } from "@tamagui/lucide-icons";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
-import { Image, Pressable, ScrollView } from "react-native";
+import { FlatList, Image, Pressable, ScrollView } from "react-native";
 import { BarChart, PieChart } from "react-native-gifted-charts";
 import { Card, Separator, Sheet, Spinner, Text, XStack, YStack } from "tamagui";
 
@@ -319,205 +319,244 @@ export function InventorySection() {
         </YStack>
       </Card>
 
-      <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
-        <YStack p="$4" gap="$4" pb="$10">
-          {/* Movement KPIs */}
-          <XStack gap="$3">
-            <StatCard
-              label="Compras"
-              value={`$${fmtMoney(periodPurchases)}`}
-              color="$blue10"
-              icon={<ArrowDownToLine size={16} color="$blue10" />}
-            />
-            <StatCard
-              label="Ventas"
-              value={`$${fmtMoney(periodSales)}`}
-              color="$green10"
-              icon={<ArrowUpFromLine size={16} color="$green10" />}
-            />
-          </XStack>
+      <FlatList
+        data={allProducts}
+        keyExtractor={(item) => String(item.id)}
+        ListHeaderComponent={
+          <YStack p="$4" gap="$4">
+            {/* Movement KPIs */}
+            <XStack gap="$3">
+              <StatCard
+                label="Compras"
+                value={`$${fmtMoney(periodPurchases)}`}
+                color="$blue10"
+                icon={<ArrowDownToLine size={16} color="$blue10" />}
+              />
+              <StatCard
+                label="Ventas"
+                value={`$${fmtMoney(periodSales)}`}
+                color="$green10"
+                icon={<ArrowUpFromLine size={16} color="$green10" />}
+              />
+            </XStack>
 
-          {/* KPI Row 1 */}
-          <XStack gap="$3">
-            <StatCard
-              label="Productos"
-              value={allProducts.length}
-              color="$blue10"
-              icon={<Package size={16} color="$blue10" />}
-            />
-            <StatCard
-              label="Valor inv."
-              value={`$${fmtMoney(inventoryValue)}`}
-              color="$green10"
-              icon={<DollarSign size={16} color="$green10" />}
-            />
-            <StatCard
-              label="Categorías"
-              value={allCategories.length}
-              color="$pink10"
-              icon={<Tag size={16} color="$pink10" />}
-            />
-          </XStack>
+            {/* KPI Row 1 */}
+            <XStack gap="$3">
+              <StatCard
+                label="Productos"
+                value={allProducts.length}
+                color="$blue10"
+                icon={<Package size={16} color="$blue10" />}
+              />
+              <StatCard
+                label="Valor inv."
+                value={`$${fmtMoney(inventoryValue)}`}
+                color="$green10"
+                icon={<DollarSign size={16} color="$green10" />}
+              />
+              <StatCard
+                label="Categorías"
+                value={allCategories.length}
+                color="$pink10"
+                icon={<Tag size={16} color="$pink10" />}
+              />
+            </XStack>
 
-          {/* KPI Row 2 */}
-          <XStack gap="$3">
-            <StatCard
-              label="Sin stock"
-              value={outOfStockCount}
-              color={outOfStockCount > 0 ? "$red10" : "$color10"}
-              icon={
-                <PackageX
-                  size={16}
-                  color={outOfStockCount > 0 ? "$red10" : "$color8"}
-                />
-              }
-            />
-            <StatCard
-              label="Stock bajo"
-              value={lowStockProducts.length}
-              color={lowStockProducts.length > 0 ? "$orange10" : "$color10"}
-              icon={
-                <AlertTriangle
-                  size={16}
-                  color={lowStockProducts.length > 0 ? "$orange10" : "$color8"}
-                />
-              }
-            />
-          </XStack>
-
-          {/* Value by category (pie) */}
-          {categoryPieData.length > 0 && (
-            <Card
-              bg="$color1"
-              borderWidth={1}
-              borderColor="$borderColor"
-              style={{ borderRadius: 14 }}
-              p="$4"
-            >
-              <YStack gap="$3">
-                <XStack gap="$2" style={{ alignItems: "center" }}>
-                  <Ruler size={16} color="$pink10" />
-                  <Text fontSize="$3" fontWeight="600" color="$color10">
-                    Valor por categoría
-                  </Text>
-                </XStack>
-                <XStack style={{ alignItems: "center" }} gap="$4">
-                  <PieChart
-                    data={categoryPieData}
-                    donut
-                    radius={60}
-                    innerRadius={35}
-                    centerLabelComponent={() => (
-                      <YStack
-                        style={{
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
-                      >
-                        <Text fontSize={10} color="$color10">
-                          Total
-                        </Text>
-                        <Text fontSize={13} fontWeight="bold" color="$color">
-                          ${fmtMoney(inventoryValue)}
-                        </Text>
-                      </YStack>
-                    )}
-                    isAnimated
-                    animationDuration={400}
+            {/* KPI Row 2 */}
+            <XStack gap="$3">
+              <StatCard
+                label="Sin stock"
+                value={outOfStockCount}
+                color={outOfStockCount > 0 ? "$red10" : "$color10"}
+                icon={
+                  <PackageX
+                    size={16}
+                    color={outOfStockCount > 0 ? "$red10" : "$color8"}
                   />
-                  <YStack gap="$1.5" flex={1}>
-                    {categoryStats
-                      .filter((c) => c.value > 0)
-                      .map((c) => (
-                        <XStack
-                          key={c.category.id}
-                          style={{ alignItems: "center" }}
-                          gap="$2"
-                        >
-                          <YStack
-                            width={10}
-                            height={10}
-                            style={{
-                              borderRadius: 5,
-                              backgroundColor: c.color,
-                            }}
-                          />
-                          <Text
-                            flex={1}
-                            fontSize="$2"
-                            color="$color10"
-                            numberOfLines={1}
-                          >
-                            {c.category.name}
-                          </Text>
-                          <Text fontSize="$2" fontWeight="600" color="$color">
-                            ${fmtMoney(c.value)}
-                          </Text>
-                        </XStack>
-                      ))}
-                  </YStack>
-                </XStack>
-              </YStack>
-            </Card>
-          )}
+                }
+              />
+              <StatCard
+                label="Stock bajo"
+                value={lowStockProducts.length}
+                color={lowStockProducts.length > 0 ? "$orange10" : "$color10"}
+                icon={
+                  <AlertTriangle
+                    size={16}
+                    color={
+                      lowStockProducts.length > 0 ? "$orange10" : "$color8"
+                    }
+                  />
+                }
+              />
+            </XStack>
 
-          {/* Top value products bar chart */}
-          {stockBarData.length > 0 && (
-            <Card
-              bg="$color1"
-              borderWidth={1}
-              borderColor="$borderColor"
-              style={{ borderRadius: 14 }}
-              p="$4"
-            >
-              <YStack gap="$2">
-                <Text fontSize="$3" fontWeight="600" color="$color10">
-                  Top 10 por valor en stock
-                </Text>
-                <BarChart
-                  data={stockBarData}
-                  height={120}
-                  barWidth={18}
-                  spacing={8}
-                  noOfSections={3}
-                  hideRules
-                  yAxisTextStyle={{ fontSize: 9, color: "#888" }}
-                  yAxisThickness={0}
-                  xAxisThickness={0}
-                  isAnimated
-                  animationDuration={400}
-                  barBorderRadius={3}
-                />
-              </YStack>
-            </Card>
-          )}
-
-          {/* Stock alerts */}
-          {(lowStockProducts.length > 0 || outOfStockCount > 0) && (
-            <YStack gap="$3">
-              <XStack gap="$2" style={{ alignItems: "center" }}>
-                <AlertTriangle size={18} color="$orange10" />
-                <Text fontSize="$4" fontWeight="bold" color="$color">
-                  Alertas de stock
-                </Text>
-              </XStack>
+            {/* Value by category (pie) */}
+            {categoryPieData.length > 0 && (
               <Card
                 bg="$color1"
                 borderWidth={1}
                 borderColor="$borderColor"
                 style={{ borderRadius: 14 }}
-                overflow="hidden"
+                p="$4"
               >
-                {allProducts
-                  .filter((p) => p.stockBaseQty <= 5)
-                  .sort((a, b) => a.stockBaseQty - b.stockBaseQty)
-                  .map((p, idx) => (
+                <YStack gap="$3">
+                  <XStack gap="$2" style={{ alignItems: "center" }}>
+                    <Ruler size={16} color="$pink10" />
+                    <Text fontSize="$3" fontWeight="600" color="$color10">
+                      Valor por categoría
+                    </Text>
+                  </XStack>
+                  <XStack style={{ alignItems: "center" }} gap="$4">
+                    <PieChart
+                      data={categoryPieData}
+                      donut
+                      radius={60}
+                      innerRadius={35}
+                      centerLabelComponent={() => (
+                        <YStack
+                          style={{
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                        >
+                          <Text fontSize={10} color="$color10">
+                            Total
+                          </Text>
+                          <Text fontSize={13} fontWeight="bold" color="$color">
+                            ${fmtMoney(inventoryValue)}
+                          </Text>
+                        </YStack>
+                      )}
+                      isAnimated
+                      animationDuration={400}
+                    />
+                    <YStack gap="$1.5" flex={1}>
+                      {categoryStats
+                        .filter((c) => c.value > 0)
+                        .map((c) => (
+                          <XStack
+                            key={c.category.id}
+                            style={{ alignItems: "center" }}
+                            gap="$2"
+                          >
+                            <YStack
+                              width={10}
+                              height={10}
+                              style={{
+                                borderRadius: 5,
+                                backgroundColor: c.color,
+                              }}
+                            />
+                            <Text
+                              flex={1}
+                              fontSize="$2"
+                              color="$color10"
+                              numberOfLines={1}
+                            >
+                              {c.category.name}
+                            </Text>
+                            <Text fontSize="$2" fontWeight="600" color="$color">
+                              ${fmtMoney(c.value)}
+                            </Text>
+                          </XStack>
+                        ))}
+                    </YStack>
+                  </XStack>
+                </YStack>
+              </Card>
+            )}
+
+            {/* Top value products bar chart */}
+            {stockBarData.length > 0 && (
+              <Card
+                bg="$color1"
+                borderWidth={1}
+                borderColor="$borderColor"
+                style={{ borderRadius: 14 }}
+                p="$4"
+              >
+                <YStack gap="$2">
+                  <Text fontSize="$3" fontWeight="600" color="$color10">
+                    Top 10 por valor en stock
+                  </Text>
+                  <BarChart
+                    data={stockBarData}
+                    height={120}
+                    barWidth={18}
+                    spacing={8}
+                    noOfSections={3}
+                    hideRules
+                    yAxisTextStyle={{ fontSize: 9, color: "#888" }}
+                    yAxisThickness={0}
+                    xAxisThickness={0}
+                    isAnimated
+                    animationDuration={400}
+                    barBorderRadius={3}
+                  />
+                </YStack>
+              </Card>
+            )}
+
+            {/* Stock alerts */}
+            {(lowStockProducts.length > 0 || outOfStockCount > 0) && (
+              <YStack gap="$3">
+                <XStack gap="$2" style={{ alignItems: "center" }}>
+                  <AlertTriangle size={18} color="$orange10" />
+                  <Text fontSize="$4" fontWeight="bold" color="$color">
+                    Alertas de stock
+                  </Text>
+                </XStack>
+                <Card
+                  bg="$color1"
+                  borderWidth={1}
+                  borderColor="$borderColor"
+                  style={{ borderRadius: 14 }}
+                  overflow="hidden"
+                >
+                  {allProducts
+                    .filter((p) => p.stockBaseQty <= 5)
+                    .sort((a, b) => a.stockBaseQty - b.stockBaseQty)
+                    .map((p, idx) => (
+                      <YStack key={p.id}>
+                        {idx > 0 && <Separator />}
+                        <StockRow
+                          product={p}
+                          unit={unitMap.get(p.baseUnitId)}
+                          lowlight
+                          onPress={() => {
+                            setSelectedProduct(p);
+                            setShowDetailSheet(true);
+                          }}
+                        />
+                      </YStack>
+                    ))}
+                </Card>
+              </YStack>
+            )}
+
+            {/* Top stocked */}
+            {topStocked.length > 0 && (
+              <YStack gap="$3">
+                <XStack gap="$2" style={{ alignItems: "center" }}>
+                  <TrendingUp size={18} color="$green10" />
+                  <Text fontSize="$4" fontWeight="bold" color="$color">
+                    Mayor stock
+                  </Text>
+                </XStack>
+                <Card
+                  bg="$color1"
+                  borderWidth={1}
+                  borderColor="$borderColor"
+                  style={{ borderRadius: 14 }}
+                  overflow="hidden"
+                >
+                  {topStocked.map((p, idx) => (
                     <YStack key={p.id}>
                       {idx > 0 && <Separator />}
                       <StockRow
                         product={p}
                         unit={unitMap.get(p.baseUnitId)}
-                        lowlight
+                        rank={idx + 1}
                         onPress={() => {
                           setSelectedProduct(p);
                           setShowDetailSheet(true);
@@ -525,233 +564,183 @@ export function InventorySection() {
                       />
                     </YStack>
                   ))}
-              </Card>
-            </YStack>
-          )}
+                </Card>
+              </YStack>
+            )}
 
-          {/* Top stocked */}
-          {topStocked.length > 0 && (
-            <YStack gap="$3">
-              <XStack gap="$2" style={{ alignItems: "center" }}>
-                <TrendingUp size={18} color="$green10" />
-                <Text fontSize="$4" fontWeight="bold" color="$color">
-                  Mayor stock
-                </Text>
-              </XStack>
-              <Card
-                bg="$color1"
-                borderWidth={1}
-                borderColor="$borderColor"
-                style={{ borderRadius: 14 }}
-                overflow="hidden"
-              >
-                {topStocked.map((p, idx) => (
-                  <YStack key={p.id}>
-                    {idx > 0 && <Separator />}
-                    <StockRow
-                      product={p}
-                      unit={unitMap.get(p.baseUnitId)}
-                      rank={idx + 1}
-                      onPress={() => {
-                        setSelectedProduct(p);
-                        setShowDetailSheet(true);
-                      }}
-                    />
-                  </YStack>
-                ))}
-              </Card>
-            </YStack>
-          )}
-
-          {/* Bottom stocked */}
-          {bottomStocked.length > 0 && (
-            <YStack gap="$3">
-              <XStack gap="$2" style={{ alignItems: "center" }}>
-                <TrendingDown size={18} color="$orange10" />
-                <Text fontSize="$4" fontWeight="bold" color="$color">
-                  Menor stock
-                </Text>
-              </XStack>
-              <Card
-                bg="$color1"
-                borderWidth={1}
-                borderColor="$borderColor"
-                style={{ borderRadius: 14 }}
-                overflow="hidden"
-              >
-                {bottomStocked.map((p, idx) => (
-                  <YStack key={p.id}>
-                    {idx > 0 && <Separator />}
-                    <StockRow
-                      product={p}
-                      unit={unitMap.get(p.baseUnitId)}
-                      rank={idx + 1}
-                      onPress={() => {
-                        setSelectedProduct(p);
-                        setShowDetailSheet(true);
-                      }}
-                    />
-                  </YStack>
-                ))}
-              </Card>
-            </YStack>
-          )}
-
-          {/* Products by category */}
-          <YStack gap="$3">
-            <XStack gap="$2" style={{ alignItems: "center" }}>
-              <Ruler size={18} color="$pink10" />
-              <Text fontSize="$4" fontWeight="bold" color="$color">
-                Productos por categoría
-              </Text>
-            </XStack>
-            <Card
-              bg="$color1"
-              borderWidth={1}
-              borderColor="$borderColor"
-              style={{ borderRadius: 14 }}
-              overflow="hidden"
-            >
-              {categoryStats.length === 0 ? (
-                <YStack p="$5" style={{ alignItems: "center" }} gap="$2">
-                  <Package size={40} color="$color8" />
-                  <Text color="$color10">Sin datos</Text>
-                </YStack>
-              ) : (
-                categoryStats.map((item, idx) => (
-                  <YStack key={item.category.id}>
-                    {idx > 0 && <Separator />}
-                    <XStack px="$4" py="$3" style={{ alignItems: "center" }}>
-                      <YStack
-                        width={10}
-                        height={10}
-                        style={{
-                          borderRadius: 5,
-                          backgroundColor: item.color,
+            {/* Bottom stocked */}
+            {bottomStocked.length > 0 && (
+              <YStack gap="$3">
+                <XStack gap="$2" style={{ alignItems: "center" }}>
+                  <TrendingDown size={18} color="$orange10" />
+                  <Text fontSize="$4" fontWeight="bold" color="$color">
+                    Menor stock
+                  </Text>
+                </XStack>
+                <Card
+                  bg="$color1"
+                  borderWidth={1}
+                  borderColor="$borderColor"
+                  style={{ borderRadius: 14 }}
+                  overflow="hidden"
+                >
+                  {bottomStocked.map((p, idx) => (
+                    <YStack key={p.id}>
+                      {idx > 0 && <Separator />}
+                      <StockRow
+                        product={p}
+                        unit={unitMap.get(p.baseUnitId)}
+                        rank={idx + 1}
+                        onPress={() => {
+                          setSelectedProduct(p);
+                          setShowDetailSheet(true);
                         }}
-                        mr="$2"
                       />
-                      <Text flex={1} fontSize="$4" color="$color">
-                        {item.category.name}
-                      </Text>
-                      <Text
-                        fontSize="$4"
-                        fontWeight="bold"
-                        color={item.count > 0 ? "$blue10" : "$color8"}
-                      >
-                        {item.count}
-                      </Text>
-                    </XStack>
-                  </YStack>
-                ))
-              )}
-            </Card>
-          </YStack>
+                    </YStack>
+                  ))}
+                </Card>
+              </YStack>
+            )}
 
-          {/* All Products List */}
-          <YStack gap="$3">
+            {/* Products by category */}
+            <YStack gap="$3">
+              <XStack gap="$2" style={{ alignItems: "center" }}>
+                <Ruler size={18} color="$pink10" />
+                <Text fontSize="$4" fontWeight="bold" color="$color">
+                  Productos por categoría
+                </Text>
+              </XStack>
+              <Card
+                bg="$color1"
+                borderWidth={1}
+                borderColor="$borderColor"
+                style={{ borderRadius: 14 }}
+                overflow="hidden"
+              >
+                {categoryStats.length === 0 ? (
+                  <YStack p="$5" style={{ alignItems: "center" }} gap="$2">
+                    <Package size={40} color="$color8" />
+                    <Text color="$color10">Sin datos</Text>
+                  </YStack>
+                ) : (
+                  categoryStats.map((item, idx) => (
+                    <YStack key={item.category.id}>
+                      {idx > 0 && <Separator />}
+                      <XStack px="$4" py="$3" style={{ alignItems: "center" }}>
+                        <YStack
+                          width={10}
+                          height={10}
+                          style={{
+                            borderRadius: 5,
+                            backgroundColor: item.color,
+                          }}
+                          mr="$2"
+                        />
+                        <Text flex={1} fontSize="$4" color="$color">
+                          {item.category.name}
+                        </Text>
+                        <Text
+                          fontSize="$4"
+                          fontWeight="bold"
+                          color={item.count > 0 ? "$blue10" : "$color8"}
+                        >
+                          {item.count}
+                        </Text>
+                      </XStack>
+                    </YStack>
+                  ))
+                )}
+              </Card>
+            </YStack>
+
+            {/* All Products header */}
             <XStack gap="$2" style={{ alignItems: "center" }}>
               <Package size={18} color="$blue10" />
               <Text fontSize="$4" fontWeight="bold" color="$color">
                 Todos los productos ({allProducts.length})
               </Text>
             </XStack>
-            <Card
-              bg="$color1"
-              borderWidth={1}
-              borderColor="$borderColor"
-              style={{ borderRadius: 14 }}
-              overflow="hidden"
-            >
-              {allProducts.length === 0 ? (
-                <YStack p="$5" style={{ alignItems: "center" }} gap="$2">
-                  <Package size={40} color="$color8" />
-                  <Text color="$color10">Sin productos</Text>
-                </YStack>
-              ) : (
-                allProducts.map((p, idx) => {
-                  const unit = unitMap.get(p.baseUnitId);
-                  const stockColor =
-                    p.stockBaseQty === 0
-                      ? "$red10"
-                      : p.stockBaseQty <= 5
-                        ? "$orange10"
-                        : "$green10";
-                  return (
-                    <YStack key={p.id}>
-                      {idx > 0 && <Separator />}
-                      <Pressable
-                        onPress={() => {
-                          setSelectedProduct(p);
-                          setShowDetailSheet(true);
-                        }}
-                        style={({ pressed }) => ({
-                          opacity: pressed ? 0.6 : 1,
-                        })}
-                      >
-                        <XStack
-                          px="$4"
-                          py="$3"
-                          style={{ alignItems: "center" }}
-                          gap="$3"
-                        >
-                          {/* Thumbnail */}
-                          {p.photoUri ? (
-                            <Image
-                              source={{ uri: p.photoUri }}
-                              style={{ width: 40, height: 40, borderRadius: 8 }}
-                              resizeMode="cover"
-                            />
-                          ) : (
-                            <YStack
-                              width={40}
-                              height={40}
-                              style={{
-                                borderRadius: 8,
-                                backgroundColor: "#e5e7eb",
-                                alignItems: "center",
-                                justifyContent: "center",
-                              }}
-                            >
-                              <Package size={20} color="$color8" />
-                            </YStack>
-                          )}
-                          <YStack flex={1}>
-                            <Text
-                              fontSize="$3"
-                              fontWeight="600"
-                              color="$color"
-                              numberOfLines={1}
-                            >
-                              {p.name}
-                            </Text>
-                            <Text fontSize="$2" color="$color10">
-                              {p.barcode} · ${fmtMoney(p.pricePerBaseUnit)}/
-                              {unit?.symbol ?? "ud"}
-                            </Text>
-                          </YStack>
-                          <YStack style={{ alignItems: "flex-end" }}>
-                            <Text
-                              fontSize="$4"
-                              fontWeight="bold"
-                              color={stockColor as any}
-                            >
-                              {p.stockBaseQty} {unit?.symbol ?? "uds"}
-                            </Text>
-                            <Text fontSize="$1" color="$color10">
-                              ${fmtMoney(p.pricePerBaseUnit * p.stockBaseQty)}
-                            </Text>
-                          </YStack>
-                        </XStack>
-                      </Pressable>
-                    </YStack>
-                  );
-                })
-              )}
-            </Card>
           </YStack>
-        </YStack>
-      </ScrollView>
+        }
+        renderItem={({ item: p }) => {
+          const unit = unitMap.get(p.baseUnitId);
+          const stockColor =
+            p.stockBaseQty === 0
+              ? "$red10"
+              : p.stockBaseQty <= 5
+                ? "$orange10"
+                : "$green10";
+          return (
+            <Pressable
+              onPress={() => {
+                setSelectedProduct(p);
+                setShowDetailSheet(true);
+              }}
+              style={({ pressed }) => ({
+                opacity: pressed ? 0.6 : 1,
+              })}
+            >
+              <XStack px="$4" py="$3" style={{ alignItems: "center" }} gap="$3">
+                {p.photoUri ? (
+                  <Image
+                    source={{ uri: p.photoUri }}
+                    style={{ width: 40, height: 40, borderRadius: 8 }}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <YStack
+                    width={40}
+                    height={40}
+                    style={{
+                      borderRadius: 8,
+                      backgroundColor: "#e5e7eb",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Package size={20} color="$color8" />
+                  </YStack>
+                )}
+                <YStack flex={1}>
+                  <Text
+                    fontSize="$3"
+                    fontWeight="600"
+                    color="$color"
+                    numberOfLines={1}
+                  >
+                    {p.name}
+                  </Text>
+                  <Text fontSize="$2" color="$color10">
+                    {p.barcode} · ${fmtMoney(p.pricePerBaseUnit)}/
+                    {unit?.symbol ?? "ud"}
+                  </Text>
+                </YStack>
+                <YStack style={{ alignItems: "flex-end" }}>
+                  <Text
+                    fontSize="$4"
+                    fontWeight="bold"
+                    color={stockColor as any}
+                  >
+                    {p.stockBaseQty} {unit?.symbol ?? "uds"}
+                  </Text>
+                  <Text fontSize="$1" color="$color10">
+                    ${fmtMoney(p.pricePerBaseUnit * p.stockBaseQty)}
+                  </Text>
+                </YStack>
+              </XStack>
+            </Pressable>
+          );
+        }}
+        ItemSeparatorComponent={() => <Separator />}
+        ListEmptyComponent={
+          <YStack p="$5" style={{ alignItems: "center" }} gap="$2">
+            <Package size={40} color="$color8" />
+            <Text color="$color10">Sin productos</Text>
+          </YStack>
+        }
+        contentContainerStyle={{ paddingBottom: 40 }}
+        style={{ flex: 1 }}
+      />
 
       {/* Product detail sheet */}
       <Sheet

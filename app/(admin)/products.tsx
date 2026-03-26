@@ -10,7 +10,14 @@ import { generateEAN13 } from "@/utils/barcode";
 import { Package, Plus, ScanLine } from "@tamagui/lucide-icons";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Alert, Image, Keyboard, ScrollView, StyleSheet } from "react-native";
+import {
+  Alert,
+  Image,
+  Keyboard,
+  ScrollView,
+  SectionList,
+  StyleSheet,
+} from "react-native";
 import {
   Button,
   Input,
@@ -94,50 +101,30 @@ const rowStyles = StyleSheet.create({
   },
 });
 
-// ── Category section ─────────────────────────────────────────────────────────
+// ── Section header ───────────────────────────────────────────────────────────
 
-function CategorySection({
-  category,
-  products,
-  unitMap,
-  onProductPress,
-}: {
-  category: UnitCategory;
-  products: Product[];
-  unitMap: Map<number, Unit>;
-  onProductPress: (p: Product) => void;
-}) {
+function SectionHeader({ name, count }: { name: string; count: number }) {
   return (
-    <YStack mb="$5">
-      <XStack
-        px="$4"
-        py="$2"
-        bg="$color2"
-        style={{ alignItems: "center" }}
-        gap="$2"
+    <XStack
+      px="$4"
+      py="$2"
+      bg="$color2"
+      style={{ alignItems: "center" }}
+      gap="$2"
+    >
+      <Text
+        fontSize="$4"
+        fontWeight="bold"
+        color="$color10"
+        textTransform="uppercase"
+        letterSpacing={1}
       >
-        <Text
-          fontSize="$4"
-          fontWeight="bold"
-          color="$color10"
-          textTransform="uppercase"
-          letterSpacing={1}
-        >
-          {category.name}
-        </Text>
-        <Text fontSize="$3" color="$color8">
-          ({products.length})
-        </Text>
-      </XStack>
-      {products.map((p) => (
-        <ProductRow
-          key={p.id}
-          product={p}
-          unit={unitMap.get(p.baseUnitId)}
-          onPress={() => onProductPress(p)}
-        />
-      ))}
-    </YStack>
+        {name}
+      </Text>
+      <Text fontSize="$3" color="$color8">
+        ({count})
+      </Text>
+    </XStack>
   );
 }
 
@@ -255,6 +242,16 @@ export default function ProductsScreen() {
       a.category.name.localeCompare(b.category.name),
     );
   }, [allProducts, unitMap, categories]);
+
+  const sections = useMemo(
+    () =>
+      grouped.map(({ category, products: catProducts }) => ({
+        title: category.name,
+        count: catProducts.length,
+        data: catProducts,
+      })),
+    [grouped],
+  );
 
   // ── Handlers ───────────────────────────────────────────────────────────────
 
@@ -404,20 +401,25 @@ export default function ProductsScreen() {
           </Text>
         </YStack>
       ) : (
-        <ScrollView>
-          {grouped.map(({ category, products: catProducts }) => (
-            <CategorySection
-              key={category.id}
-              category={category}
-              products={catProducts}
-              unitMap={unitMap}
-              onProductPress={(p) => {
+        <SectionList
+          sections={sections}
+          keyExtractor={(item) => String(item.id)}
+          renderSectionHeader={({ section }) => (
+            <SectionHeader name={section.title} count={section.count} />
+          )}
+          renderItem={({ item: p }) => (
+            <ProductRow
+              product={p}
+              unit={unitMap.get(p.baseUnitId)}
+              onPress={() => {
                 setSelectedProduct(p);
                 setShowDetailSheet(true);
               }}
             />
-          ))}
-        </ScrollView>
+          )}
+          SectionSeparatorComponent={() => <YStack height="$2" />}
+          stickySectionHeadersEnabled={false}
+        />
       )}
 
       {/* Create product sheet */}
