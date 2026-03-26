@@ -5,7 +5,16 @@ import type { CreateProductInput, Product, SaleMode } from "@/models/product";
 import type { Unit } from "@/models/unit";
 import { Eye, EyeOff } from "@tamagui/lucide-icons";
 import { useId, useState } from "react";
-import { Button, Input, Label, Spinner, Switch, Text, XStack, YStack } from "tamagui";
+import {
+    Button,
+    Input,
+    Label,
+    Spinner,
+    Switch,
+    Text,
+    XStack,
+    YStack,
+} from "tamagui";
 
 // ── ProductForm (create + edit) ───────────────────────────────────────────────
 // Pass `product` to enter edit mode. Omit it for create mode.
@@ -213,11 +222,7 @@ export function ProductForm({
               Visible para vendedores
             </Label>
           </XStack>
-          <Switch
-            size="$3"
-            checked={visible}
-            onCheckedChange={setVisible}
-          >
+          <Switch size="$3" checked={visible} onCheckedChange={setVisible}>
             <Switch.Thumb />
           </Switch>
         </XStack>
