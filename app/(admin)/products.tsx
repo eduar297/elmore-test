@@ -4,6 +4,7 @@ import { ProductDetail } from "@/components/product/product-detail";
 import { ProductForm } from "@/components/product/product-form";
 import type { TabDef } from "@/components/ui/screen-tabs";
 import { ScreenTabs } from "@/components/ui/screen-tabs";
+import { SearchInput } from "@/components/ui/search-input";
 import { useBarcodeScanner } from "@/hooks/use-barcode-scanner";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useProductRepository } from "@/hooks/use-product-repository";
@@ -160,6 +161,7 @@ export default function ProductsScreen() {
   const themeName = colorScheme === "dark" ? "dark" : "light";
 
   const [section, setSection] = useState<Section>("catalog");
+  const [searchQuery, setSearchQuery] = useState("");
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [allUnits, setAllUnits] = useState<Unit[]>([]);
   const [categories, setCategories] = useState<UnitCategory[]>([]);
@@ -267,15 +269,21 @@ export default function ProductsScreen() {
     );
   }, [allProducts, unitMap, categories]);
 
-  const sections = useMemo(
-    () =>
-      grouped.map(({ category, products: catProducts }) => ({
-        title: category.name,
-        count: catProducts.length,
-        data: catProducts,
-      })),
-    [grouped],
-  );
+  const sections = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim();
+    return grouped
+      .map(({ category, products: catProducts }) => {
+        const filtered = q
+          ? catProducts.filter(
+              (p) =>
+                p.name.toLowerCase().includes(q) ||
+                p.barcode.toLowerCase().includes(q),
+            )
+          : catProducts;
+        return { title: category.name, count: filtered.length, data: filtered };
+      })
+      .filter((s) => s.data.length > 0);
+  }, [grouped, searchQuery]);
 
   // ── Handlers ───────────────────────────────────────────────────────────────
 
@@ -408,6 +416,15 @@ export default function ProductsScreen() {
               Agregar
             </Button>
           </XStack>
+
+          {/* Search */}
+          <YStack px="$4" pb="$2">
+            <SearchInput
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder="Buscar por nombre o código…"
+            />
+          </YStack>
 
           {/* Content */}
           {loading ? (

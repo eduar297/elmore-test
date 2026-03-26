@@ -1,3 +1,4 @@
+import { SearchInput } from "@/components/ui/search-input";
 import { fmtMoney } from "@/utils/format";
 import type {
     PurchaseReport,
@@ -356,6 +357,7 @@ export function PurchaseSuggestionsSection() {
   const [sortKey, setSortKey] = useState<SortKey>("priority");
   const [sortAsc, setSortAsc] = useState(true);
   const [filterUrgency, setFilterUrgency] = useState<Urgency | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const analyse = useCallback(async () => {
     const targetDays = parseInt(targetDaysInput, 10);
@@ -371,12 +373,20 @@ export function PurchaseSuggestionsSection() {
     }
   }, [db, targetDaysInput]);
 
-  // Sort + filter
+  // Sort + filter + search
   const sorted = useMemo(() => {
     if (!report) return [];
     let items = [...report.suggestions];
     if (filterUrgency) {
       items = items.filter((i) => i.urgency === filterUrgency);
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      items = items.filter(
+        (i) =>
+          i.product.name.toLowerCase().includes(q) ||
+          i.product.barcode.toLowerCase().includes(q),
+      );
     }
     items.sort((a, b) => {
       let cmp = 0;
@@ -408,7 +418,7 @@ export function PurchaseSuggestionsSection() {
       return sortAsc ? cmp : -cmp;
     });
     return items;
-  }, [report, sortKey, sortAsc, filterUrgency]);
+  }, [report, sortKey, sortAsc, filterUrgency, searchQuery]);
 
   // Urgency counts
   const urgencyCounts = useMemo(() => {
@@ -585,6 +595,15 @@ export function PurchaseSuggestionsSection() {
               );
             })}
           </XStack>
+
+          {/* Search */}
+          <YStack px="$4" pb="$2">
+            <SearchInput
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder="Buscar producto…"
+            />
+          </YStack>
 
           {/* Sort row */}
           <XStack px="$4" pb="$2" gap="$1.5" flexWrap="wrap">

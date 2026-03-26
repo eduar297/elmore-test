@@ -1,35 +1,46 @@
 import { useAuth } from "@/contexts/auth-context";
 import { useBarcodeScanner } from "@/hooks/use-barcode-scanner";
 import { useColorScheme } from "@/hooks/use-color-scheme";
+import { useProductRepository } from "@/hooks/use-product-repository";
 import { useTicketRepository } from "@/hooks/use-ticket-repository";
 import type { Product } from "@/models/product";
 import type { PaymentMethod } from "@/models/ticket";
 import { todayISO } from "@/utils/format";
 import {
-    AlertCircle,
-    Banknote,
-    CreditCard,
-    Minus,
-    Package,
-    Plus,
-    Receipt,
-    ScanLine,
-    ShoppingCart,
-    Trash2,
-    TrendingUp,
+  AlertCircle,
+  Banknote,
+  CreditCard,
+  Minus,
+  Package,
+  Plus,
+  Receipt,
+  ScanLine,
+  Search,
+  ShoppingCart,
+  Trash2,
+  TrendingUp,
+  X,
 } from "@tamagui/lucide-icons";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Alert, Image, Keyboard, ScrollView, StyleSheet } from "react-native";
 import {
-    Button,
-    Card,
-    Input,
-    Sheet,
-    Spinner,
-    Text,
-    XStack,
-    YStack,
+  Alert,
+  FlatList,
+  Image,
+  Keyboard,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+} from "react-native";
+import {
+  Button,
+  Card,
+  Input,
+  Sheet,
+  Spinner,
+  Text,
+  XStack,
+  YStack,
 } from "tamagui";
 
 // ── Cart item type ───────────────────────────────────────────────────────────
@@ -215,6 +226,7 @@ const rowStyles = StyleSheet.create({
 
 export default function WorkerScreen() {
   const tickets = useTicketRepository();
+  const productRepo = useProductRepository();
   const colorScheme = useColorScheme();
   const themeName = colorScheme === "dark" ? "dark" : "light";
   const { user } = useAuth();
@@ -222,6 +234,9 @@ export default function WorkerScreen() {
   // Cart state
   const [cart, setCart] = useState<CartItem[]>([]);
   const [showCheckout, setShowCheckout] = useState(false);
+  const [showSearchSheet, setShowSearchSheet] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [visibleProducts, setVisibleProducts] = useState<Product[]>([]);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("CASH");
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -245,35 +260,50 @@ export default function WorkerScreen() {
   useFocusEffect(
     useCallback(() => {
       loadSummary();
-    }, [loadSummary]),
+      productRepo.findAllVisible().then(setVisibleProducts);
+    }, [loadSummary, productRepo]),
   );
 
   // Barcode scanner — adds to cart
+  const addToCart = useCallback((product: Product) => {
+    setCart((prev) => {
+      const idx = prev.findIndex((c) => c.product.id === product.id);
+      if (idx >= 0) {
+        const updated = [...prev];
+        updated[idx] = {
+          ...updated[idx],
+          quantity: updated[idx].quantity + 1,
+        };
+        return updated;
+      }
+      return [
+        ...prev,
+        {
+          product,
+          quantity: 1,
+          unitPrice: product.salePrice,
+        },
+      ];
+    });
+  }, []);
+
+  // Toggle product in cart (for manual search: add 1 / remove)
+  const toggleCartItem = useCallback((product: Product) => {
+    setCart((prev) => {
+      const idx = prev.findIndex((c) => c.product.id === product.id);
+      if (idx >= 0) {
+        return prev.filter((c) => c.product.id !== product.id);
+      }
+      return [...prev, { product, quantity: 1, unitPrice: product.salePrice }];
+    });
+  }, []);
+
   const scan = useBarcodeScanner({
     visibleOnly: true,
     onResult(result) {
       if (result.kind === "found") {
         setError(null);
-        setCart((prev) => {
-          const idx = prev.findIndex((c) => c.product.id === result.product.id);
-          if (idx >= 0) {
-            // Increment qty
-            const updated = [...prev];
-            updated[idx] = {
-              ...updated[idx],
-              quantity: updated[idx].quantity + 1,
-            };
-            return updated;
-          }
-          return [
-            ...prev,
-            {
-              product: result.product,
-              quantity: 1,
-              unitPrice: result.product.salePrice,
-            },
-          ];
-        });
+        addToCart(result.product);
       } else {
         setError("Producto no encontrado: " + result.barcode);
       }
@@ -282,6 +312,16 @@ export default function WorkerScreen() {
       setError(msg);
     },
   });
+
+  // Search filtered products
+  const searchResults = useMemo(() => {
+    if (!searchQuery.trim()) return visibleProducts;
+    const q = searchQuery.toLowerCase().trim();
+    return visibleProducts.filter(
+      (p) =>
+        p.name.toLowerCase().includes(q) || p.barcode.toLowerCase().includes(q),
+    );
+  }, [visibleProducts, searchQuery]);
 
   // Cart helpers
   const cartTotal = useMemo(
@@ -416,10 +456,30 @@ export default function WorkerScreen() {
             </XStack>
           )}
 
-          {/* Scan button */}
-          <Button size="$5" theme="green" icon={ScanLine} onPress={scan}>
-            Escanear producto
-          </Button>
+          {/* Action buttons */}
+          <XStack gap="$3">
+            <Button
+              flex={1}
+              size="$5"
+              theme="green"
+              icon={ScanLine}
+              onPress={scan}
+            >
+              Escanear
+            </Button>
+            <Button
+              flex={1}
+              size="$5"
+              theme="blue"
+              icon={Search}
+              onPress={() => {
+                setSearchQuery("");
+                setShowSearchSheet(true);
+              }}
+            >
+              Buscar
+            </Button>
+          </XStack>
 
           {/* Cart */}
           {cart.length > 0 && (
@@ -520,13 +580,205 @@ export default function WorkerScreen() {
                   fontSize="$3"
                   style={{ textAlign: "center" }}
                 >
-                  Escanea productos para agregarlos al carrito
+                  Escanea o busca productos para agregarlos al carrito
                 </Text>
               </YStack>
             </Card>
           )}
         </YStack>
       </ScrollView>
+
+      {/* ── Product search sheet ──────────────────────────────────────────── */}
+      <Sheet
+        open={showSearchSheet}
+        onOpenChange={setShowSearchSheet}
+        modal
+        snapPoints={[85]}
+        dismissOnSnapToBottom
+      >
+        <Sheet.Overlay
+          enterStyle={{ opacity: 0 }}
+          exitStyle={{ opacity: 0 }}
+          backgroundColor="rgba(0,0,0,0.5)"
+        />
+        <Sheet.Frame theme={themeName as any}>
+          <Sheet.Handle />
+          <YStack flex={1} p="$4" gap="$3">
+            <Text fontSize="$5" fontWeight="bold" color="$color">
+              Buscar producto
+            </Text>
+
+            {/* Search input */}
+            <XStack
+              bg="$color3"
+              borderWidth={1}
+              borderColor="$borderColor"
+              style={{ borderRadius: 12, alignItems: "center" }}
+              px="$3"
+              gap="$2"
+              height={44}
+            >
+              <Search size={18} color="$color10" />
+              <Input
+                flex={1}
+                size="$3"
+                bg="transparent"
+                borderWidth={0}
+                color="$color"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholder="Nombre o código de barras…"
+                placeholderTextColor="$color8"
+                returnKeyType="search"
+                autoCorrect={false}
+                autoCapitalize="none"
+                autoFocus
+                px={0}
+              />
+              {searchQuery.length > 0 && (
+                <Button
+                  size="$2"
+                  chromeless
+                  circular
+                  icon={<X size={14} color="$color10" />}
+                  onPress={() => setSearchQuery("")}
+                />
+              )}
+            </XStack>
+
+            {/* Cart badge */}
+            {cart.length > 0 && (
+              <XStack
+                style={{
+                  alignItems: "center",
+                  borderRadius: 8,
+                  backgroundColor: "rgba(59,130,246,0.1)",
+                }}
+                px="$3"
+                py="$2"
+                gap="$2"
+              >
+                <ShoppingCart size={14} color="$blue10" />
+                <Text fontSize="$2" color="$blue10" fontWeight="600">
+                  {cart.length} producto{cart.length !== 1 ? "s" : ""} en
+                  carrito
+                </Text>
+              </XStack>
+            )}
+
+            {/* Results */}
+            <FlatList
+              data={searchResults}
+              keyExtractor={(item) => String(item.id)}
+              keyboardShouldPersistTaps="handled"
+              renderItem={({ item: p }) => {
+                const inCart = !!cart.find((c) => c.product.id === p.id);
+                return (
+                  <Pressable
+                    onPress={() => toggleCartItem(p)}
+                    style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+                  >
+                    <XStack
+                      px="$3"
+                      py="$3"
+                      style={{
+                        alignItems: "center",
+                        borderRadius: inCart ? 10 : 0,
+                      }}
+                      gap="$3"
+                      borderBottomWidth={1}
+                      borderColor="$borderColor"
+                      bg={inCart ? "$green3" : "transparent"}
+                    >
+                      {p.photoUri ? (
+                        <Image
+                          source={{ uri: p.photoUri }}
+                          style={{ width: 44, height: 44, borderRadius: 10 }}
+                          resizeMode="cover"
+                        />
+                      ) : (
+                        <YStack
+                          width={44}
+                          height={44}
+                          bg="$color3"
+                          style={{
+                            borderRadius: 10,
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                        >
+                          <Package size={20} color="$color8" />
+                        </YStack>
+                      )}
+                      <YStack flex={1} gap="$0.5">
+                        <Text
+                          fontSize="$3"
+                          fontWeight="600"
+                          color="$color"
+                          numberOfLines={1}
+                        >
+                          {p.name}
+                        </Text>
+                        <XStack gap="$2" style={{ alignItems: "center" }}>
+                          <Text fontSize="$3" fontWeight="bold" color="$blue10">
+                            ${p.salePrice.toFixed(2)}
+                          </Text>
+                          <Text fontSize="$2" color="$color10">
+                            Stock: {p.stockBaseQty}
+                          </Text>
+                        </XStack>
+                      </YStack>
+                      {inCart ? (
+                        <XStack
+                          px="$2"
+                          py="$1.5"
+                          bg="$green9"
+                          style={{
+                            borderRadius: 8,
+                            alignItems: "center",
+                          }}
+                          gap="$1"
+                        >
+                          <ShoppingCart size={14} color="white" />
+                          <Text fontSize="$2" fontWeight="bold" color="white">
+                            Añadido
+                          </Text>
+                        </XStack>
+                      ) : (
+                        <XStack
+                          px="$2"
+                          py="$1.5"
+                          bg="$color3"
+                          style={{
+                            borderRadius: 8,
+                            alignItems: "center",
+                          }}
+                        >
+                          <Text fontSize="$2" fontWeight="500" color="$color10">
+                            Agregar
+                          </Text>
+                        </XStack>
+                      )}
+                    </XStack>
+                  </Pressable>
+                );
+              }}
+              ListEmptyComponent={
+                <YStack p="$6" style={{ alignItems: "center" }} gap="$2">
+                  <Search size={40} color="$color8" />
+                  <Text color="$color10" fontSize="$3">
+                    {searchQuery.trim()
+                      ? "No se encontraron productos"
+                      : "Escribe para buscar productos"}
+                  </Text>
+                </YStack>
+              }
+              style={{ flex: 1 }}
+              contentContainerStyle={{ paddingBottom: 20 }}
+            />
+          </YStack>
+        </Sheet.Frame>
+      </Sheet>
 
       {/* ── Checkout sheet ────────────────────────────────────────────────── */}
       <Sheet

@@ -8,6 +8,7 @@ import {
 import { StatCard } from "@/components/admin/stat-card";
 import { StockRow } from "@/components/admin/stock-row";
 import { ProductDetail } from "@/components/product/product-detail";
+import { SearchInput } from "@/components/ui/search-input";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useProductRepository } from "@/hooks/use-product-repository";
 import { usePurchaseRepository } from "@/hooks/use-purchase-repository";
@@ -76,6 +77,7 @@ export function InventorySection() {
   const [calendarOpen, setCalendarOpen] = useState(false);
 
   const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const [allUnits, setAllUnits] = useState<Unit[]>([]);
   const [allCategories, setAllCategories] = useState<UnitCategory[]>([]);
   const [loading, setLoading] = useState(true);
@@ -316,7 +318,14 @@ export function InventorySection() {
       </Card>
 
       <FlatList
-        data={allProducts}
+        data={allProducts.filter((p) => {
+          if (!searchQuery.trim()) return true;
+          const q = searchQuery.toLowerCase().trim();
+          return (
+            p.name.toLowerCase().includes(q) ||
+            p.barcode.toLowerCase().includes(q)
+          );
+        })}
         keyExtractor={(item) => String(item.id)}
         ListHeaderComponent={
           <YStack p="$4" gap="$4">
@@ -649,13 +658,18 @@ export function InventorySection() {
               </Card>
             </YStack>
 
-            {/* All Products header */}
+            {/* All Products header + Search */}
             <XStack gap="$2" style={{ alignItems: "center" }}>
               <Package size={18} color="$blue10" />
               <Text fontSize="$4" fontWeight="bold" color="$color">
                 Todos los productos ({allProducts.length})
               </Text>
             </XStack>
+            <SearchInput
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder="Buscar por nombre o código…"
+            />
           </YStack>
         }
         renderItem={({ item: p }) => {

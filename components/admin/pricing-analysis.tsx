@@ -1,3 +1,4 @@
+import { SearchInput } from "@/components/ui/search-input";
 import { useProductRepository } from "@/hooks/use-product-repository";
 import { fmtMoney } from "@/utils/format";
 import type {
@@ -283,6 +284,7 @@ export function PricingAnalysisSection({
   const [sortKey, setSortKey] = useState<SortKey>("sales");
   const [sortAsc, setSortAsc] = useState(false);
   const [filterClass, setFilterClass] = useState<ProductClass | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const analyse = useCallback(async () => {
     const margin = parseFloat(marginInput) / 100;
@@ -301,12 +303,20 @@ export function PricingAnalysisSection({
     }
   }, [db, marginInput]);
 
-  // Sort + filter
+  // Sort + filter + search
   const sortedProducts = useMemo(() => {
     if (!report) return [];
     let items = [...report.products];
     if (filterClass) {
       items = items.filter((i) => i.classification === filterClass);
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      items = items.filter(
+        (i) =>
+          i.product.name.toLowerCase().includes(q) ||
+          i.product.barcode.toLowerCase().includes(q),
+      );
     }
     items.sort((a, b) => {
       let cmp = 0;
@@ -337,7 +347,7 @@ export function PricingAnalysisSection({
       return sortAsc ? cmp : -cmp;
     });
     return items;
-  }, [report, sortKey, sortAsc, filterClass]);
+  }, [report, sortKey, sortAsc, filterClass, searchQuery]);
 
   // Classification summary
   const classCounts = useMemo(() => {
@@ -541,6 +551,15 @@ export function PricingAnalysisSection({
               ),
             )}
           </XStack>
+
+          {/* Search */}
+          <YStack px="$4" pb="$2">
+            <SearchInput
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder="Buscar producto…"
+            />
+          </YStack>
 
           {/* Sort row */}
           <XStack px="$4" pb="$2" gap="$1.5" flexWrap="wrap">
