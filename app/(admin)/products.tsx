@@ -548,7 +548,9 @@ export default function ProductsScreen() {
       {section === "purchases" && <PurchaseSuggestionsSection />}
 
       {/* ── Sales analysis tab ──────────────────────────────────────── */}
-      {section === "sales" && <SalesAnalysisSection />}
+      {section === "sales" && (
+        <SalesAnalysisSection onPricesUpdated={loadData} />
+      )}
 
       {/* Create product sheet */}
       <Sheet

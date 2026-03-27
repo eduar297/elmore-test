@@ -477,6 +477,318 @@ const EXPENSE_DESCS: Record<string, string[]> = {
   OTHER: ["Propina ayudante", "Limpieza", "Agua garrafón oficina"],
 };
 
+// ── Product profiles (control simulation behavior) ───────────────────────────
+
+type ProductProfile = {
+  /** Base popularity weight: 0 = never sell, 0.5 = low, 1 = normal, 2+ = high */
+  pop: number;
+  /** How sales evolve over time */
+  trend: "stable" | "rise" | "fall" | "crash" | "dead";
+  /** Cost as fraction of sale price (0.50 = 50% margin, 0.85 = 15% margin) */
+  costPct: number;
+  /** Continue restocking beyond initial purchase? */
+  restock: boolean;
+  /** Index into PRODUCTS_DATA of a product frequently bought together */
+  combo?: number;
+};
+
+const PROFILES: ProductProfile[] = [
+  /* 0  Coca-Cola 600ml    */ {
+    pop: 2.5,
+    trend: "stable",
+    costPct: 0.55,
+    restock: true,
+    combo: 10,
+  },
+  /* 1  Coca-Cola 2L       */ {
+    pop: 1.5,
+    trend: "stable",
+    costPct: 0.6,
+    restock: true,
+  },
+  /* 2  Pepsi 600ml        */ {
+    pop: 1.2,
+    trend: "stable",
+    costPct: 0.58,
+    restock: true,
+  },
+  /* 3  Agua Bonafont 1L   */ {
+    pop: 1.8,
+    trend: "stable",
+    costPct: 0.8,
+    restock: true,
+  },
+  /* 4  Agua Bonafont 1.5L */ {
+    pop: 1.0,
+    trend: "rise",
+    costPct: 0.75,
+    restock: true,
+  },
+  /* 5  Jugo Del Valle     */ {
+    pop: 0.8,
+    trend: "stable",
+    costPct: 0.65,
+    restock: true,
+  },
+  /* 6  Gatorade 600ml     */ {
+    pop: 0,
+    trend: "dead",
+    costPct: 0.7,
+    restock: false,
+  },
+  /* 7  Sprite 600ml       */ {
+    pop: 0.7,
+    trend: "stable",
+    costPct: 0.6,
+    restock: true,
+  },
+  /* 8  Fanta Naranja      */ {
+    pop: 1.0,
+    trend: "fall",
+    costPct: 0.6,
+    restock: true,
+  },
+  /* 9  Red Bull 250ml     */ {
+    pop: 1.2,
+    trend: "crash",
+    costPct: 0.5,
+    restock: false,
+  },
+  /* 10 Sabritas Original  */ {
+    pop: 2.0,
+    trend: "stable",
+    costPct: 0.55,
+    restock: true,
+    combo: 0,
+  },
+  /* 11 Doritos Nacho      */ {
+    pop: 1.0,
+    trend: "rise",
+    costPct: 0.58,
+    restock: true,
+  },
+  /* 12 Cheetos Flamin Hot */ {
+    pop: 1.5,
+    trend: "stable",
+    costPct: 0.55,
+    restock: true,
+  },
+  /* 13 Ruffles Queso      */ {
+    pop: 0.8,
+    trend: "stable",
+    costPct: 0.6,
+    restock: true,
+  },
+  /* 14 Galletas Marías    */ {
+    pop: 0.8,
+    trend: "fall",
+    costPct: 0.75,
+    restock: true,
+  },
+  /* 15 Galletas Oreo      */ {
+    pop: 1.0,
+    trend: "stable",
+    costPct: 0.65,
+    restock: true,
+  },
+  /* 16 Chocolate Carlos V */ {
+    pop: 0.6,
+    trend: "stable",
+    costPct: 0.5,
+    restock: true,
+  },
+  /* 17 Chicles Trident    */ {
+    pop: 0.5,
+    trend: "stable",
+    costPct: 0.82,
+    restock: true,
+  },
+  /* 18 Mazapán De La Rosa */ {
+    pop: 0.7,
+    trend: "stable",
+    costPct: 0.6,
+    restock: true,
+  },
+  /* 19 Paleta Payaso      */ {
+    pop: 0.6,
+    trend: "fall",
+    costPct: 0.65,
+    restock: true,
+  },
+  /* 20 Leche Lala Entera  */ {
+    pop: 2.0,
+    trend: "stable",
+    costPct: 0.82,
+    restock: true,
+    combo: 40,
+  },
+  /* 21 Leche Lala Light   */ {
+    pop: 0.8,
+    trend: "stable",
+    costPct: 0.8,
+    restock: true,
+  },
+  /* 22 Yogurt Yoplait     */ {
+    pop: 0.8,
+    trend: "crash",
+    costPct: 0.55,
+    restock: false,
+  },
+  /* 23 Queso Oaxaca       */ {
+    pop: 1.2,
+    trend: "stable",
+    costPct: 0.5,
+    restock: true,
+    combo: 39,
+  },
+  /* 24 Crema Lala         */ {
+    pop: 0.9,
+    trend: "stable",
+    costPct: 0.7,
+    restock: true,
+  },
+  /* 25 Mantequilla Gloria */ {
+    pop: 0.7,
+    trend: "crash",
+    costPct: 0.65,
+    restock: false,
+  },
+  /* 26 Aceite 123         */ {
+    pop: 1.0,
+    trend: "stable",
+    costPct: 0.7,
+    restock: true,
+  },
+  /* 27 Arroz Verde Valle  */ {
+    pop: 1.5,
+    trend: "stable",
+    costPct: 0.75,
+    restock: true,
+    combo: 28,
+  },
+  /* 28 Frijol Negro       */ {
+    pop: 1.3,
+    trend: "stable",
+    costPct: 0.72,
+    restock: true,
+    combo: 27,
+  },
+  /* 29 Azúcar Morena      */ {
+    pop: 1.2,
+    trend: "stable",
+    costPct: 0.8,
+    restock: true,
+  },
+  /* 30 Sal de Mesa        */ {
+    pop: 0.4,
+    trend: "stable",
+    costPct: 0.85,
+    restock: true,
+  },
+  /* 31 Harina Maseca      */ {
+    pop: 1.0,
+    trend: "stable",
+    costPct: 0.75,
+    restock: true,
+  },
+  /* 32 Pasta Spaghetti    */ {
+    pop: 0.5,
+    trend: "stable",
+    costPct: 0.82,
+    restock: true,
+  },
+  /* 33 Atún Dolores       */ {
+    pop: 0.7,
+    trend: "rise",
+    costPct: 0.65,
+    restock: true,
+  },
+  /* 34 Salsa Valentina    */ {
+    pop: 1.0,
+    trend: "stable",
+    costPct: 0.68,
+    restock: true,
+  },
+  /* 35 Papel Higiénico    */ {
+    pop: 1.5,
+    trend: "stable",
+    costPct: 0.7,
+    restock: true,
+  },
+  /* 36 Jabón Zote         */ {
+    pop: 0.6,
+    trend: "stable",
+    costPct: 0.75,
+    restock: true,
+  },
+  /* 37 Detergente Roma    */ {
+    pop: 0.6,
+    trend: "stable",
+    costPct: 0.72,
+    restock: true,
+  },
+  /* 38 Huevo Blanco       */ {
+    pop: 2.5,
+    trend: "stable",
+    costPct: 0.85,
+    restock: true,
+  },
+  /* 39 Tortillas de Maíz  */ {
+    pop: 2.5,
+    trend: "stable",
+    costPct: 0.85,
+    restock: true,
+    combo: 23,
+  },
+  /* 40 Pan Bimbo          */ {
+    pop: 1.8,
+    trend: "stable",
+    costPct: 0.72,
+    restock: true,
+    combo: 20,
+  },
+  /* 41 Café Nescafé       */ {
+    pop: 0.7,
+    trend: "stable",
+    costPct: 0.5,
+    restock: true,
+  },
+  /* 42 Cereal Zucaritas   */ {
+    pop: 0,
+    trend: "dead",
+    costPct: 0.65,
+    restock: false,
+  },
+];
+
+/** Returns a multiplier based on trend and position in the timeline (0=start, 1=end) */
+function trendFactor(trend: ProductProfile["trend"], t: number): number {
+  switch (trend) {
+    case "stable":
+      return 1.0;
+    case "rise":
+      return 0.3 + 1.7 * t; // 0.3 → 2.0
+    case "fall":
+      return 1.5 * (1 - t * 0.85); // 1.5 → 0.225
+    case "crash":
+      return t < 0.5 ? 1.2 : 0.02; // normal → near-zero
+    case "dead":
+      return 0;
+  }
+}
+
+/** Pick a random index using weights (higher weight = more likely) */
+function weightedPick(indices: number[], weights: number[]): number {
+  const total = weights.reduce((s, w) => s + w, 0);
+  if (total <= 0) return indices[0];
+  let r = rand() * total;
+  for (let i = 0; i < indices.length; i++) {
+    r -= weights[i];
+    if (r <= 0) return indices[i];
+  }
+  return indices[indices.length - 1];
+}
+
 // ── Reset function ───────────────────────────────────────────────────────────
 
 /**
@@ -567,17 +879,21 @@ export async function seedSimulation(
   const productPrices: number[] = [];
   const productNames: string[] = [];
   const productSupplierIdx: number[] = [];
-  for (const p of PRODUCTS_DATA) {
+  for (let pi = 0; pi < PRODUCTS_DATA.length; pi++) {
+    const p = PRODUCTS_DATA[pi];
+    const profile = PROFILES[pi];
     // salePrice = costPrice * (1.25 to 1.55) — random realistic markup
     const markup = 1.25 + rand() * 0.3;
     const salePx = Math.round(p.price * markup * 100) / 100;
+    // costPrice based on profile margin
+    const costPx = Math.round(salePx * profile.costPct * 100) / 100;
     const result = await db.runAsync(
       `INSERT INTO products (name, barcode, pricePerBaseUnit, costPrice, salePrice, visible, baseUnitId, stockBaseQty, saleMode)
        VALUES (?, ?, ?, ?, ?, 1, ?, 0, ?)`,
       p.name,
       p.barcode,
       p.price,
-      p.price,
+      costPx,
       salePx,
       p.unit,
       p.mode,
@@ -631,8 +947,8 @@ export async function seedSimulation(
     const teamB = [2, 3]; // José, Ana
     const todayTeam = weekNum % 2 === 0 ? teamA : teamB;
 
-    // ── Replenishment purchase every 8 working days ──────────────────────
-    if (purchaseDayCounter >= 8) {
+    // ── Replenishment purchase every 18 working days (~monthly) ─────────
+    if (purchaseDayCounter >= 18) {
       purchaseDayCounter = 0;
       const purchaseHour = 8 + randInt(0, 1);
       const purchaseTime = new Date(day);
@@ -683,18 +999,32 @@ export async function seedSimulation(
       const wId = workerIds[wIdx];
       const wName = workerNames[wIdx];
 
-      // Build cart: 1-6 items per ticket
+      // Build cart: 1-6 items per ticket (weighted by popularity + trend)
       const numItems = randInt(1, 6);
       const cartProductIdxs: number[] = [];
+      const timePos = dayCount / workingDays.length; // 0 → 1
       const available = productIds.map((_, i) => i).filter((i) => stock[i] > 0);
+      const weights = available.map(
+        (i) => PROFILES[i].pop * trendFactor(PROFILES[i].trend, timePos),
+      );
 
       if (available.length === 0) continue; // no stock at all, skip
 
       for (let ci = 0; ci < numItems; ci++) {
         if (available.length === 0) break;
-        const pIdx = pick(available);
+        const pIdx = weightedPick(available, weights);
         if (!cartProductIdxs.includes(pIdx)) {
           cartProductIdxs.push(pIdx);
+          // Combo: frequently bought together
+          const comboIdx = PROFILES[pIdx].combo;
+          if (
+            comboIdx !== undefined &&
+            stock[comboIdx] > 0 &&
+            !cartProductIdxs.includes(comboIdx) &&
+            rand() < 0.55
+          ) {
+            cartProductIdxs.push(comboIdx);
+          }
         }
       }
 
@@ -880,16 +1210,16 @@ async function insertPurchaseBatch(
       unitCost: number;
     }[] = [];
 
-    // Pick products to restock
+    // Pick products to restock (respect profile)
     const toRestock = initial
-      ? pIdxs // all products on initial stock
-      : pIdxs.filter((i) => stock[i] < 30 || rand() < 0.5);
+      ? pIdxs // all products on initial stock (even dead — creates capital locked)
+      : pIdxs.filter((i) => PROFILES[i].restock && stock[i] < 10);
 
     for (const pIdx of toRestock) {
-      // Cost is ~60-75% of sale price (markup margin)
-      const costRatio = 0.6 + rand() * 0.15;
-      const unitCost = Math.round(productPrices[pIdx] * costRatio * 100) / 100;
-      const qty = initial ? randInt(40, 80) : randInt(15, 50);
+      // Cost based on profile margin ± small random variation
+      const costPct = PROFILES[pIdx].costPct + (rand() - 0.5) * 0.04;
+      const unitCost = Math.round(productPrices[pIdx] * costPct * 100) / 100;
+      const qty = initial ? randInt(30, 60) : randInt(8, 25);
 
       items.push({
         productId: productIds[pIdx],

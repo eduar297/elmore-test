@@ -1,4 +1,5 @@
 import { SearchInput } from "@/components/ui/search-input";
+import { useProductRepository } from "@/hooks/use-product-repository";
 import { fmtMoney } from "@/utils/format";
 import type {
     ComboAffinity,
@@ -11,13 +12,15 @@ import type {
 import { comboAffinity, runSalesAnalysis } from "@/utils/sales-analysis";
 import {
     ArrowUpDown,
+    Check,
+    CheckCircle,
     ChevronDown,
     Package,
     TrendingDown,
 } from "@tamagui/lucide-icons";
 import { useSQLiteContext } from "expo-sqlite";
 import { useCallback, useMemo, useState } from "react";
-import { Image, ScrollView } from "react-native";
+import { Alert, Image, ScrollView } from "react-native";
 import {
     Accordion,
     Button,
@@ -208,7 +211,15 @@ function KpiCard({
 
 // ── Row: Stagnant ─────────────────────────────────────────────────────────────
 
-function StagnantRow({ item }: { item: StagnantProduct }) {
+function StagnantRow({
+  item,
+  discount,
+  onApply,
+}: {
+  item: StagnantProduct;
+  discount?: DiscountOpportunity;
+  onApply?: () => void;
+}) {
   const p = item.product;
   const daysLabel =
     item.daysSinceLastSale === null
@@ -301,6 +312,34 @@ function StagnantRow({ item }: { item: StagnantProduct }) {
               color="#ef4444"
             />
           )}
+          {discount && discount.viability !== "none" && (
+            <>
+              <Separator my="$1" />
+              <DetailRow
+                label="Precio sugerido"
+                value={`$${fmtMoney(discount.suggestedPrice)}`}
+                color="#22c55e"
+              />
+              <DetailRow
+                label="Descuento"
+                value={`${Math.round(discount.discountPct * 100)}%`}
+                color="#f97316"
+              />
+              <DetailRow
+                label="Margen restante"
+                value={`${Math.round(discount.remainingMargin * 100)}%`}
+              />
+              <Button
+                size="$3"
+                theme="blue"
+                mt="$1"
+                icon={Check}
+                onPress={onApply}
+              >
+                <Text>{`Aplicar $${fmtMoney(discount.suggestedPrice)}`}</Text>
+              </Button>
+            </>
+          )}
         </YStack>
       </Accordion.Content>
     </Accordion.Item>
@@ -309,7 +348,13 @@ function StagnantRow({ item }: { item: StagnantProduct }) {
 
 // ── Row: Discount ─────────────────────────────────────────────────────────────
 
-function DiscountRow({ item }: { item: DiscountOpportunity }) {
+function DiscountRow({
+  item,
+  onApply,
+}: {
+  item: DiscountOpportunity;
+  onApply: () => void;
+}) {
   const p = item.product;
   return (
     <Accordion.Item
@@ -405,6 +450,18 @@ function DiscountRow({ item }: { item: DiscountOpportunity }) {
             value={`$${fmtMoney(item.potentialMonthlyRevenue)}`}
             color="#22c55e"
           />
+
+          {item.viability !== "none" && (
+            <Button
+              size="$3"
+              theme="blue"
+              mt="$1"
+              icon={Check}
+              onPress={onApply}
+            >
+              <Text>{`Aplicar $${fmtMoney(item.suggestedPrice)}`}</Text>
+            </Button>
+          )}
         </YStack>
       </Accordion.Content>
     </Accordion.Item>
@@ -520,7 +577,15 @@ type ComboSort = "affinity" | "discount" | "name";
 
 // ── Section: Stagnant ─────────────────────────────────────────────────────────
 
-function StagnantSection({ items }: { items: StagnantProduct[] }) {
+function StagnantSection({
+  items,
+  discountMap,
+  onApply,
+}: {
+  items: StagnantProduct[];
+  discountMap: Map<number, DiscountOpportunity>;
+  onApply: (item: DiscountOpportunity) => void;
+}) {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<StagnantStatus | "all">("all");
   const [sortKey, setSortKey] = useState<StagnantSort>("capital");
@@ -643,9 +708,17 @@ function StagnantSection({ items }: { items: StagnantProduct[] }) {
         contentContainerStyle={{ paddingBottom: 40 }}
       >
         <Accordion type="single" collapsible overflow="hidden">
-          {filtered.map((item) => (
-            <StagnantRow key={item.product.id} item={item} />
-          ))}
+          {filtered.map((item) => {
+            const disc = discountMap.get(item.product.id);
+            return (
+              <StagnantRow
+                key={item.product.id}
+                item={item}
+                discount={disc}
+                onApply={disc ? () => onApply(disc) : undefined}
+              />
+            );
+          })}
         </Accordion>
       </ScrollView>
     </YStack>
@@ -654,7 +727,13 @@ function StagnantSection({ items }: { items: StagnantProduct[] }) {
 
 // ── Section: Discounts ────────────────────────────────────────────────────────
 
-function DiscountSection({ items }: { items: DiscountOpportunity[] }) {
+function DiscountSection({
+  items,
+  onApply,
+}: {
+  items: DiscountOpportunity[];
+  onApply: (item: DiscountOpportunity) => void;
+}) {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"all" | "possible" | "tight" | "none">(
     "all",
@@ -780,7 +859,11 @@ function DiscountSection({ items }: { items: DiscountOpportunity[] }) {
       >
         <Accordion type="single" collapsible overflow="hidden">
           {filtered.map((item) => (
-            <DiscountRow key={item.product.id} item={item} />
+            <DiscountRow
+              key={item.product.id}
+              item={item}
+              onApply={() => onApply(item)}
+            />
           ))}
         </Accordion>
       </ScrollView>
@@ -907,12 +990,23 @@ const INNER_TABS: { key: InnerTab; label: string; emoji: string }[] = [
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export function SalesAnalysisSection() {
+export function SalesAnalysisSection({
+  onPricesUpdated,
+}: {
+  onPricesUpdated: () => void;
+}) {
   const db = useSQLiteContext();
+  const productRepo = useProductRepository();
   const [report, setReport] = useState<SalesReport | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<InnerTab>("stagnant");
+  const [applying, setApplying] = useState(false);
+
+  const discountMap = useMemo(() => {
+    if (!report) return new Map<number, DiscountOpportunity>();
+    return new Map(report.discounts.map((d) => [d.product.id, d]));
+  }, [report]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -926,6 +1020,78 @@ export function SalesAnalysisSection() {
       setLoading(false);
     }
   }, [db]);
+
+  const applyDiscount = useCallback(
+    async (item: DiscountOpportunity) => {
+      await productRepo.bulkUpdateSalePrice([
+        { id: item.product.id, salePrice: item.suggestedPrice },
+      ]);
+      if (report) {
+        setReport({
+          ...report,
+          discounts: report.discounts.map((d) =>
+            d.product.id === item.product.id
+              ? {
+                  ...d,
+                  product: { ...d.product, salePrice: item.suggestedPrice },
+                  currentPrice: item.suggestedPrice,
+                }
+              : d,
+          ),
+        });
+      }
+      onPricesUpdated();
+      Alert.alert(
+        "Listo",
+        `Precio de ${item.product.name} actualizado a $${fmtMoney(item.suggestedPrice)}`,
+      );
+    },
+    [productRepo, report, onPricesUpdated],
+  );
+
+  const applyAllDiscounts = useCallback(async () => {
+    if (!report) return;
+    const updates = report.discounts
+      .filter(
+        (d) =>
+          d.viability !== "none" &&
+          Math.abs(d.suggestedPrice - d.currentPrice) > 0.01,
+      )
+      .map((d) => ({ id: d.product.id, salePrice: d.suggestedPrice }));
+
+    if (updates.length === 0) {
+      Alert.alert("Info", "No hay descuentos aplicables.");
+      return;
+    }
+
+    Alert.alert(
+      "Aplicar descuentos",
+      `Se actualizará el precio de ${updates.length} producto${updates.length > 1 ? "s" : ""}. ¿Continuar?`,
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Aplicar",
+          onPress: async () => {
+            setApplying(true);
+            try {
+              await productRepo.bulkUpdateSalePrice(updates);
+              const r = await runSalesAnalysis(db);
+              setReport(r);
+              onPricesUpdated();
+              Alert.alert(
+                "Listo",
+                `${updates.length} precio${updates.length > 1 ? "s" : ""} actualizado${updates.length > 1 ? "s" : ""}.`,
+              );
+            } catch (e) {
+              Alert.alert("Error", (e as Error).message);
+            } finally {
+              setApplying(false);
+            }
+          },
+        },
+      ],
+    );
+  }, [report, productRepo, db, onPricesUpdated]);
 
   // Auto-load on mount
   useMemo(() => {
@@ -1017,8 +1183,58 @@ export function SalesAnalysisSection() {
       </XStack>
 
       {/* Section content */}
-      {tab === "stagnant" && <StagnantSection items={report.stagnant} />}
-      {tab === "discounts" && <DiscountSection items={report.discounts} />}
+      {tab === "stagnant" && (
+        <>
+          <StagnantSection
+            items={report.stagnant}
+            discountMap={discountMap}
+            onApply={applyDiscount}
+          />
+          {report.discounts.some((d) => d.viability !== "none") && (
+            <YStack
+              px="$4"
+              py="$3"
+              borderTopWidth={1}
+              borderColor="$borderColor"
+              bg="$background"
+            >
+              <Button
+                size="$4"
+                theme="green"
+                icon={applying ? <Spinner /> : CheckCircle}
+                disabled={applying}
+                onPress={applyAllDiscounts}
+              >
+                <Text>Aplicar todos los descuentos</Text>
+              </Button>
+            </YStack>
+          )}
+        </>
+      )}
+      {tab === "discounts" && (
+        <>
+          <DiscountSection items={report.discounts} onApply={applyDiscount} />
+          {report.discounts.some((d) => d.viability !== "none") && (
+            <YStack
+              px="$4"
+              py="$3"
+              borderTopWidth={1}
+              borderColor="$borderColor"
+              bg="$background"
+            >
+              <Button
+                size="$4"
+                theme="green"
+                icon={applying ? <Spinner /> : CheckCircle}
+                disabled={applying}
+                onPress={applyAllDiscounts}
+              >
+                <Text>Aplicar todos los descuentos</Text>
+              </Button>
+            </YStack>
+          )}
+        </>
+      )}
       {tab === "combos" && <ComboSection items={report.combos} />}
     </YStack>
   );
