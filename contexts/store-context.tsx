@@ -38,10 +38,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const refreshStores = useCallback(async () => {
     const list = await repo.findAll();
     setStores(list);
-    // Auto-select the first store if none selected or current was deleted
+    // Always use the fresh object from list so color/name changes propagate
     if (list.length > 0) {
       setCurrentStoreState((prev) => {
-        if (prev && list.some((s) => s.id === prev.id)) return prev;
+        if (prev) return list.find((s) => s.id === prev.id) ?? list[0];
         return list[0];
       });
     } else {

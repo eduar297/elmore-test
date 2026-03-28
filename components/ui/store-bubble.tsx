@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: BUBBLE_SIZE + 2,
     backgroundColor: "rgba(0,0,0,0.7)",
-    paddingHorizontal: 6,
+    paddingHorizontal: 4,
     paddingVertical: 2,
     borderRadius: 6,
     maxWidth: 100,
