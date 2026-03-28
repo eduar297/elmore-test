@@ -7,8 +7,8 @@ import {
   LayoutDashboard,
   PackageSearch,
   Receipt,
+  Settings,
   ShoppingBag,
-  Users,
 } from "@tamagui/lucide-icons";
 import { useTheme } from "tamagui";
 
@@ -69,14 +69,17 @@ export default function AdminLayout() {
         }}
       />
       <Tabs.Screen
-        name="team"
+        name="setting"
         options={{
-          title: "Equipo",
-          tabBarIcon: ({ color }) => <Users size={26} color={color as any} />,
+          title: "Ajustes",
+          tabBarIcon: ({ color }) => (
+            <Settings size={26} color={color as any} />
+          ),
         }}
       />
       {/* Hidden routes */}
       <Tabs.Screen name="suppliers" options={{ href: null }} />
+      <Tabs.Screen name="stores" options={{ href: null }} />
     </Tabs>
   );
 }

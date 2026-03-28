@@ -1,4 +1,5 @@
 import { AuthProvider } from "@/contexts/auth-context";
+import { StoreProvider } from "@/contexts/store-context";
 import {
   DarkTheme,
   DefaultTheme,
@@ -53,9 +54,11 @@ export default function RootLayout() {
     <TamaguiProvider config={config} defaultTheme="light">
       <Theme name={colorScheme === "dark" ? "dark" : "light"}>
         <SQLiteProvider databaseName="elmore.db" onInit={migrateDbIfNeeded}>
-          <AuthProvider>
-            <AppStack />
-          </AuthProvider>
+          <StoreProvider>
+            <AuthProvider>
+              <AppStack />
+            </AuthProvider>
+          </StoreProvider>
         </SQLiteProvider>
       </Theme>
     </TamaguiProvider>

@@ -6,6 +6,7 @@ export interface User {
   role: UserRole;
   pinHash: string;
   photoUri: string | null;
+  storeId: number;
   createdAt: string;
 }
 

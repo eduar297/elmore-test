@@ -1,16 +1,26 @@
 import { useAuth } from "@/contexts/auth-context";
+import { useStore } from "@/contexts/store-context";
 import { useColorScheme } from "@/hooks/use-color-scheme";
-import { useUserRepository } from "@/hooks/use-user-repository";
+import type { Store } from "@/models/store";
 import type { User, UserRole } from "@/models/user";
+import { UserRepository } from "@/repositories/user.repository";
 import { hashPin } from "@/utils/auth";
 import {
   AlertCircle,
   ChevronDown,
   Lock,
+  Store as StoreIcon,
   User as UserIcon,
   Users,
 } from "@tamagui/lucide-icons";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import { useSQLiteContext } from "expo-sqlite";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   ActivityIndicator,
   Animated,
@@ -42,8 +52,16 @@ export function LoginSheet({
   onSuccess,
 }: LoginSheetProps) {
   const colorScheme = useColorScheme();
-  const userRepo = useUserRepository();
+  const db = useSQLiteContext();
+  const { stores, setCurrentStore } = useStore();
   const { setUser } = useAuth();
+
+  const [selectedStore, setSelectedStore] = useState<Store | null>(null);
+  const [showStorePicker, setShowStorePicker] = useState(false);
+  const userRepo = useMemo(
+    () => new UserRepository(db, selectedStore?.id),
+    [db, selectedStore?.id],
+  );
 
   const [users, setUsers] = useState<User[]>([]);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -84,20 +102,25 @@ export function LoginSheet({
   };
 
   const roleLabel = role === "ADMIN" ? "Administrador" : "Vendedor";
+  const multiStore = stores.length > 1;
 
   const loadUsers = useCallback(async () => {
+    if (!selectedStore) {
+      setUsers([]);
+      setLoadingUsers(false);
+      return;
+    }
     setLoadingUsers(true);
     try {
       const list = await userRepo.findByRole(role);
       setUsers(list);
-      // Auto-select if only one user
       if (list.length === 1) setSelectedUser(list[0]);
     } catch {
       // ignore
     } finally {
       setLoadingUsers(false);
     }
-  }, [userRepo, role]);
+  }, [userRepo, role, selectedStore]);
 
   // Focus PIN when a user is selected
   useEffect(() => {
@@ -132,13 +155,30 @@ export function LoginSheet({
       setPin("");
       setError("");
       setSelectedUser(null);
+      setShowStorePicker(false);
       setFailedAttempts(0);
       setLockoutUntil(null);
       setLockoutSecsLeft(0);
       if (lockoutTimerRef.current) clearInterval(lockoutTimerRef.current);
+      // Auto-select if only one store
+      if (stores.length === 1) {
+        setSelectedStore(stores[0]);
+      } else {
+        setSelectedStore(null);
+        setUsers([]);
+      }
+    }
+  }, [open, stores]);
+
+  // Load users when selected store changes
+  useEffect(() => {
+    if (open && selectedStore) {
+      setSelectedUser(null);
+      setPin("");
+      setError("");
       loadUsers();
     }
-  }, [open, loadUsers]);
+  }, [open, selectedStore, loadUsers]);
 
   const triggerShake = useCallback(() => {
     Vibration.vibrate(300);
@@ -185,6 +225,7 @@ export function LoginSheet({
         const ok = await userRepo.verifyPin(user.id, pinH);
         if (ok) {
           setFailedAttempts(0);
+          if (selectedStore) setCurrentStore(selectedStore);
           setUser({
             id: user.id,
             name: user.name,
@@ -218,12 +259,22 @@ export function LoginSheet({
         setVerifying(false);
       }
     },
-    [userRepo, setUser, onSuccess, triggerShake],
+    [
+      userRepo,
+      setUser,
+      setCurrentStore,
+      selectedStore,
+      onSuccess,
+      triggerShake,
+    ],
   );
 
   const isLocked = lockoutUntil !== null && Date.now() < lockoutUntil;
   const pinDisabled =
-    verifying || isLocked || (role === "WORKER" && !selectedUser);
+    verifying ||
+    isLocked ||
+    !selectedStore ||
+    (role === "WORKER" && !selectedUser);
 
   const handlePinChange = useCallback(
     (value: string) => {
@@ -289,8 +340,151 @@ export function LoginSheet({
                   </Text>
                 </View>
 
+                {/* ── Store selector ── */}
+                {multiStore && (
+                  <View style={styles.section}>
+                    <Text style={[styles.label, { color: c.muted }]}>
+                      Tienda
+                    </Text>
+                    <View style={styles.selectWrapper}>
+                      <TouchableOpacity
+                        style={[
+                          styles.selectTrigger,
+                          {
+                            backgroundColor: c.input,
+                            borderColor: selectedStore ? c.accent : c.border,
+                          },
+                        ]}
+                        onPress={() => setShowStorePicker((v) => !v)}
+                        activeOpacity={0.7}
+                      >
+                        {selectedStore ? (
+                          <View style={styles.selectTriggerContent}>
+                            <View
+                              style={[
+                                styles.avatar,
+                                { backgroundColor: c.accentLight },
+                              ]}
+                            >
+                              <StoreIcon size={16} color={c.accent as any} />
+                            </View>
+                            <Text
+                              style={[styles.userName, { color: c.text }]}
+                              numberOfLines={1}
+                            >
+                              {selectedStore.name}
+                            </Text>
+                          </View>
+                        ) : (
+                          <Text
+                            style={[
+                              styles.selectPlaceholder,
+                              { color: c.muted },
+                            ]}
+                          >
+                            Seleccionar tienda…
+                          </Text>
+                        )}
+                        <ChevronDown
+                          size={16}
+                          color={c.muted as any}
+                          style={{
+                            transform: [
+                              { rotate: showStorePicker ? "180deg" : "0deg" },
+                            ],
+                          }}
+                        />
+                      </TouchableOpacity>
+
+                      {showStorePicker && (
+                        <View
+                          style={[
+                            styles.dropdown,
+                            { backgroundColor: c.bg, borderColor: c.border },
+                          ]}
+                        >
+                          {stores.map((s) => {
+                            const active = selectedStore?.id === s.id;
+                            return (
+                              <TouchableOpacity
+                                key={s.id}
+                                style={[
+                                  styles.dropdownItem,
+                                  {
+                                    backgroundColor: active
+                                      ? c.userRowSelected
+                                      : c.userRow,
+                                    borderBottomColor: c.userRowBorder,
+                                  },
+                                ]}
+                                onPress={() => {
+                                  setSelectedStore(s);
+                                  setShowStorePicker(false);
+                                }}
+                                activeOpacity={0.7}
+                              >
+                                <View
+                                  style={[
+                                    styles.avatar,
+                                    { backgroundColor: c.accentLight },
+                                  ]}
+                                >
+                                  <StoreIcon
+                                    size={16}
+                                    color={c.accent as any}
+                                  />
+                                </View>
+                                <View style={{ flex: 1, gap: 1 }}>
+                                  <Text
+                                    style={[styles.userName, { color: c.text }]}
+                                  >
+                                    {s.name}
+                                  </Text>
+                                  {s.address && (
+                                    <Text
+                                      style={{
+                                        fontSize: 11,
+                                        color: c.muted,
+                                      }}
+                                    >
+                                      {s.address}
+                                    </Text>
+                                  )}
+                                </View>
+                                {active && (
+                                  <View
+                                    style={[
+                                      styles.dot,
+                                      { backgroundColor: c.accent },
+                                    ]}
+                                  />
+                                )}
+                              </TouchableOpacity>
+                            );
+                          })}
+                        </View>
+                      )}
+                    </View>
+                  </View>
+                )}
+
                 {/* User picker (hidden if only 1 user and auto-selected) */}
-                {loadingUsers ? (
+                {!selectedStore ? (
+                  multiStore ? (
+                    <View style={styles.section}>
+                      <Text
+                        style={{
+                          fontSize: 13,
+                          color: c.muted,
+                          textAlign: "center",
+                          paddingVertical: 8,
+                        }}
+                      >
+                        Selecciona una tienda para continuar
+                      </Text>
+                    </View>
+                  ) : null
+                ) : loadingUsers ? (
                   <View style={styles.loaderRow}>
                     <ActivityIndicator color={c.accent} />
                   </View>

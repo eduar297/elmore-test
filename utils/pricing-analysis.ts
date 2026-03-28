@@ -71,6 +71,7 @@ function monthsBetween(from: string, to: string): number {
 export async function runPricingAnalysis(
   db: SQLiteDatabase,
   targetMargin: number,
+  storeId?: number,
 ): Promise<PricingReport> {
   // ── Auto-detect date range from earliest data ───────────────────────────
   const now = new Date();
@@ -78,9 +79,9 @@ export async function runPricingAnalysis(
 
   const earliest = await db.getFirstAsync<{ d: string | null }>(
     `SELECT MIN(d) AS d FROM (
-       SELECT MIN(date(createdAt)) AS d FROM tickets
+       SELECT MIN(date(createdAt)) AS d FROM tickets${storeId !== undefined ? " WHERE storeId = " + Number(storeId) : ""}
        UNION ALL
-       SELECT MIN(date(createdAt)) AS d FROM purchases
+       SELECT MIN(date(createdAt)) AS d FROM purchases${storeId !== undefined ? " WHERE storeId = " + Number(storeId) : ""}
      )`,
   );
 
@@ -95,8 +96,11 @@ export async function runPricingAnalysis(
   const analysedMonths = monthsBetween(from, to);
 
   // ── All products ────────────────────────────────────────────────────────
+  const sFilter = storeId !== undefined ? " WHERE storeId = ?" : "";
+  const sParams = storeId !== undefined ? [storeId] : [];
   const products = await db.getAllAsync<Product>(
-    "SELECT * FROM products ORDER BY name ASC",
+    `SELECT * FROM products${sFilter} ORDER BY name ASC`,
+    sParams,
   );
 
   // ── Weighted-average purchase cost per product ──────────────────────────
@@ -110,9 +114,9 @@ export async function runPricingAnalysis(
             SUM(quantity)                 AS totalQty
      FROM purchase_items pi
      JOIN purchases p ON p.id = pi.purchaseId
-     WHERE date(p.createdAt) >= ? AND date(p.createdAt) <= ?
+     WHERE date(p.createdAt) >= ? AND date(p.createdAt) <= ?${storeId !== undefined ? " AND p.storeId = ?" : ""}
      GROUP BY productId`,
-    [from, to],
+    storeId !== undefined ? [from, to, storeId] : [from, to],
   );
   const costMap = new Map(purchaseCosts.map((r) => [r.productId, r]));
 
@@ -127,9 +131,9 @@ export async function runPricingAnalysis(
             SUM(subtotal) AS totalRevenue
      FROM ticket_items ti
      JOIN tickets t ON t.id = ti.ticketId
-     WHERE date(t.createdAt) >= ? AND date(t.createdAt) <= ?
+     WHERE date(t.createdAt) >= ? AND date(t.createdAt) <= ?${storeId !== undefined ? " AND t.storeId = ?" : ""}
      GROUP BY productId`,
-    [from, to],
+    storeId !== undefined ? [from, to, storeId] : [from, to],
   );
   const salesMap = new Map(salesData.map((r) => [r.productId, r]));
 
@@ -137,8 +141,8 @@ export async function runPricingAnalysis(
   const expResult = await db.getFirstAsync<{ total: number }>(
     `SELECT COALESCE(SUM(amount), 0) AS total
      FROM expenses
-     WHERE date >= ? AND date <= ?`,
-    [from, to],
+     WHERE date >= ? AND date <= ?${storeId !== undefined ? " AND storeId = ?" : ""}`,
+    storeId !== undefined ? [from, to, storeId] : [from, to],
   );
   const totalExpenses = expResult?.total ?? 0;
   const avgMonthlyExpenses =

@@ -1,4 +1,5 @@
 import { SearchInput } from "@/components/ui/search-input";
+import { useStore } from "@/contexts/store-context";
 import { useProductRepository } from "@/hooks/use-product-repository";
 import { fmtMoney } from "@/utils/format";
 import type {
@@ -275,6 +276,7 @@ export function PricingAnalysisSection({
   onPricesUpdated: () => void;
 }) {
   const db = useSQLiteContext();
+  const { currentStore } = useStore();
   const productRepo = useProductRepository();
 
   const [marginInput, setMarginInput] = useState("30");
@@ -294,14 +296,14 @@ export function PricingAnalysisSection({
     }
     setLoading(true);
     try {
-      const r = await runPricingAnalysis(db, margin);
+      const r = await runPricingAnalysis(db, margin, currentStore?.id);
       setReport(r);
     } catch (e) {
       Alert.alert("Error", (e as Error).message);
     } finally {
       setLoading(false);
     }
-  }, [db, marginInput]);
+  }, [db, marginInput, currentStore]);
 
   // Sort + filter + search
   const sortedProducts = useMemo(() => {
@@ -410,7 +412,7 @@ export function PricingAnalysisSection({
               await productRepo.bulkUpdateSalePrice(updates);
               // Re-run analysis to refresh
               const margin = parseFloat(marginInput) / 100;
-              const r = await runPricingAnalysis(db, margin);
+              const r = await runPricingAnalysis(db, margin, currentStore?.id);
               setReport(r);
               onPricesUpdated();
               Alert.alert(

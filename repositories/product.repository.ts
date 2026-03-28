@@ -1,7 +1,7 @@
 import type {
-    CreateProductInput,
-    Product,
-    UpdateProductInput,
+  CreateProductInput,
+  Product,
+  UpdateProductInput,
 } from "@/models/product";
 import type { SQLiteDatabase } from "expo-sqlite";
 import { BaseRepository } from "./base.repository";
@@ -11,8 +11,8 @@ export class ProductRepository extends BaseRepository<
   CreateProductInput,
   UpdateProductInput
 > {
-  constructor(db: SQLiteDatabase) {
-    super(db, "products");
+  constructor(db: SQLiteDatabase, storeId?: number) {
+    super(db, "products", storeId);
   }
 
   /** Map SQLite integer (0/1) to boolean for `visible` field. */
@@ -21,6 +21,13 @@ export class ProductRepository extends BaseRepository<
   }
 
   async findAll(orderBy?: string): Promise<Product[]> {
+    if (this.storeId !== undefined) {
+      const rows = await this.db.getAllAsync<any>(
+        `SELECT * FROM products WHERE storeId = ? ORDER BY ${orderBy ?? "name ASC"}`,
+        [this.storeId],
+      );
+      return rows.map(this.mapRow);
+    }
     const rows = await this.db.getAllAsync<any>(
       `SELECT * FROM products ORDER BY ${orderBy ?? "name ASC"}`,
     );
@@ -29,6 +36,13 @@ export class ProductRepository extends BaseRepository<
 
   /** Only visible products, sorted by name. Used for worker views. */
   async findAllVisible(): Promise<Product[]> {
+    if (this.storeId !== undefined) {
+      const rows = await this.db.getAllAsync<any>(
+        "SELECT * FROM products WHERE visible = 1 AND storeId = ? ORDER BY name ASC",
+        [this.storeId],
+      );
+      return rows.map(this.mapRow);
+    }
     const rows = await this.db.getAllAsync<any>(
       "SELECT * FROM products WHERE visible = 1 ORDER BY name ASC",
     );
@@ -44,6 +58,13 @@ export class ProductRepository extends BaseRepository<
   }
 
   async findByBarcode(barcode: string): Promise<Product | null> {
+    if (this.storeId !== undefined) {
+      const row = await this.db.getFirstAsync<any>(
+        "SELECT * FROM products WHERE barcode = ? AND storeId = ?",
+        [barcode, this.storeId],
+      );
+      return row ? this.mapRow(row) : null;
+    }
     const row = await this.db.getFirstAsync<any>(
       "SELECT * FROM products WHERE barcode = ?",
       [barcode],
@@ -53,6 +74,13 @@ export class ProductRepository extends BaseRepository<
 
   /** Find a visible product by barcode (for worker scanner). */
   async findVisibleByBarcode(barcode: string): Promise<Product | null> {
+    if (this.storeId !== undefined) {
+      const row = await this.db.getFirstAsync<any>(
+        "SELECT * FROM products WHERE barcode = ? AND visible = 1 AND storeId = ?",
+        [barcode, this.storeId],
+      );
+      return row ? this.mapRow(row) : null;
+    }
     const row = await this.db.getFirstAsync<any>(
       "SELECT * FROM products WHERE barcode = ? AND visible = 1",
       [barcode],
@@ -62,8 +90,8 @@ export class ProductRepository extends BaseRepository<
 
   async create(input: CreateProductInput): Promise<Product> {
     await this.db.runAsync(
-      `INSERT INTO products (name, barcode, pricePerBaseUnit, costPrice, salePrice, visible, baseUnitId, stockBaseQty, saleMode, photoUri)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO products (name, barcode, pricePerBaseUnit, costPrice, salePrice, visible, baseUnitId, stockBaseQty, saleMode, photoUri, storeId)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       input.name,
       input.barcode,
       input.costPrice,
@@ -74,6 +102,7 @@ export class ProductRepository extends BaseRepository<
       input.stockBaseQty,
       input.saleMode,
       input.photoUri ?? null,
+      this.storeId ?? 1,
     );
     const created = await this.findByBarcode(input.barcode);
     if (!created) throw new Error("Producto creado pero no encontrado");

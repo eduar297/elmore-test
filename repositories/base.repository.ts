@@ -8,6 +8,7 @@ export abstract class BaseRepository<
   constructor(
     protected readonly db: SQLiteDatabase,
     protected readonly table: string,
+    protected readonly storeId?: number,
   ) {}
 
   findById(id: number): Promise<T | null> {
@@ -18,6 +19,12 @@ export abstract class BaseRepository<
   }
 
   findAll(orderBy = "id ASC"): Promise<T[]> {
+    if (this.storeId !== undefined) {
+      return this.db.getAllAsync<T>(
+        `SELECT * FROM ${this.table} WHERE storeId = ? ORDER BY ${orderBy}`,
+        [this.storeId],
+      );
+    }
     return this.db.getAllAsync<T>(
       `SELECT * FROM ${this.table} ORDER BY ${orderBy}`,
     );

@@ -10,6 +10,7 @@ export interface Purchase {
   /** Cost of transport for this purchase */
   transportCost: number;
   itemCount: number;
+  storeId: number;
   createdAt: string;
 }
 

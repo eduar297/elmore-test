@@ -88,12 +88,13 @@ function isoDate(d: Date): string {
 export async function runPurchaseSuggestions(
   db: SQLiteDatabase,
   targetDays = 15,
+  storeId?: number,
 ): Promise<PurchaseReport> {
   const now = new Date();
 
   // ── Auto-detect analysis period from earliest ticket ────────────────────
   const earliest = await db.getFirstAsync<{ d: string | null }>(
-    `SELECT MIN(date(createdAt)) AS d FROM tickets`,
+    `SELECT MIN(date(createdAt)) AS d FROM tickets${storeId !== undefined ? " WHERE storeId = " + Number(storeId) : ""}`,
   );
 
   let fromDate: Date;
@@ -119,11 +120,13 @@ export async function runPurchaseSuggestions(
   const mid = isoDate(midDate);
 
   // ── Working days ────────────────────────────────────────────────────────
+  const sTicketFilter = storeId !== undefined ? " AND storeId = ?" : "";
+  const sTicketParams = storeId !== undefined ? [storeId] : [];
   const workingDaysResult = await db.getFirstAsync<{ cnt: number }>(
     `SELECT COUNT(DISTINCT date(createdAt)) AS cnt
      FROM tickets
-     WHERE date(createdAt) >= ? AND date(createdAt) <= ?`,
-    [from, to],
+     WHERE date(createdAt) >= ? AND date(createdAt) <= ?${sTicketFilter}`,
+    [from, to, ...sTicketParams],
   );
   const workingDays = Math.max(1, workingDaysResult?.cnt ?? 1);
 
@@ -131,21 +134,22 @@ export async function runPurchaseSuggestions(
   const firstHalfDaysResult = await db.getFirstAsync<{ cnt: number }>(
     `SELECT COUNT(DISTINCT date(createdAt)) AS cnt
      FROM tickets
-     WHERE date(createdAt) >= ? AND date(createdAt) < ?`,
-    [from, mid],
+     WHERE date(createdAt) >= ? AND date(createdAt) < ?${sTicketFilter}`,
+    [from, mid, ...sTicketParams],
   );
   const secondHalfDaysResult = await db.getFirstAsync<{ cnt: number }>(
     `SELECT COUNT(DISTINCT date(createdAt)) AS cnt
      FROM tickets
-     WHERE date(createdAt) >= ? AND date(createdAt) <= ?`,
-    [mid, to],
+     WHERE date(createdAt) >= ? AND date(createdAt) <= ?${sTicketFilter}`,
+    [mid, to, ...sTicketParams],
   );
   const firstHalfDays = Math.max(1, firstHalfDaysResult?.cnt ?? 1);
   const secondHalfDays = Math.max(1, secondHalfDaysResult?.cnt ?? 1);
 
   // ── Products ────────────────────────────────────────────────────────────
   const products = await db.getAllAsync<Product>(
-    "SELECT * FROM products ORDER BY name ASC",
+    `SELECT * FROM products${storeId !== undefined ? " WHERE storeId = ?" : ""} ORDER BY name ASC`,
+    storeId !== undefined ? [storeId] : [],
   );
 
   // ── Sales: full period ──────────────────────────────────────────────────
@@ -157,9 +161,9 @@ export async function runPurchaseSuggestions(
     `SELECT productId, SUM(quantity) AS totalQty, SUM(subtotal) AS totalRevenue
      FROM ticket_items ti
      JOIN tickets t ON t.id = ti.ticketId
-     WHERE date(t.createdAt) >= ? AND date(t.createdAt) <= ?
+     WHERE date(t.createdAt) >= ? AND date(t.createdAt) <= ?${storeId !== undefined ? " AND t.storeId = ?" : ""}
      GROUP BY productId`,
-    [from, to],
+    storeId !== undefined ? [from, to, storeId] : [from, to],
   );
   const salesMap = new Map(salesData.map((r) => [r.productId, r]));
   const totalRevenue = salesData.reduce((s, r) => s + r.totalRevenue, 0);
@@ -172,9 +176,9 @@ export async function runPurchaseSuggestions(
     `SELECT productId, SUM(quantity) AS totalQty
      FROM ticket_items ti
      JOIN tickets t ON t.id = ti.ticketId
-     WHERE date(t.createdAt) >= ? AND date(t.createdAt) < ?
+     WHERE date(t.createdAt) >= ? AND date(t.createdAt) < ?${storeId !== undefined ? " AND t.storeId = ?" : ""}
      GROUP BY productId`,
-    [from, mid],
+    storeId !== undefined ? [from, mid, storeId] : [from, mid],
   );
   const firstHalfMap = new Map(
     salesFirstHalf.map((r) => [r.productId, r.totalQty]),
@@ -188,9 +192,9 @@ export async function runPurchaseSuggestions(
     `SELECT productId, SUM(quantity) AS totalQty
      FROM ticket_items ti
      JOIN tickets t ON t.id = ti.ticketId
-     WHERE date(t.createdAt) >= ? AND date(t.createdAt) <= ?
+     WHERE date(t.createdAt) >= ? AND date(t.createdAt) <= ?${storeId !== undefined ? " AND t.storeId = ?" : ""}
      GROUP BY productId`,
-    [mid, to],
+    storeId !== undefined ? [mid, to, storeId] : [mid, to],
   );
   const secondHalfMap = new Map(
     salesSecondHalf.map((r) => [r.productId, r.totalQty]),
@@ -204,9 +208,9 @@ export async function runPurchaseSuggestions(
     `SELECT productId, SUM(subtotal) / SUM(quantity) AS avgCost
      FROM purchase_items pi
      JOIN purchases p ON p.id = pi.purchaseId
-     WHERE date(p.createdAt) >= ? AND date(p.createdAt) <= ?
+     WHERE date(p.createdAt) >= ? AND date(p.createdAt) <= ?${storeId !== undefined ? " AND p.storeId = ?" : ""}
      GROUP BY productId`,
-    [from, to],
+    storeId !== undefined ? [from, to, storeId] : [from, to],
   );
   const costMap = new Map(costData.map((r) => [r.productId, r.avgCost]));
 

@@ -2,9 +2,12 @@ import { PhotoPicker } from "@/components/ui/photo-picker";
 import type { TabDef } from "@/components/ui/screen-tabs";
 import { ScreenTabs } from "@/components/ui/screen-tabs";
 import { useAuth } from "@/contexts/auth-context";
+import { useStore } from "@/contexts/store-context";
 import { resetDatabase, seedSimulation } from "@/database/seed-simulation";
 import { useColorScheme } from "@/hooks/use-color-scheme";
+import { useStoreRepository } from "@/hooks/use-store-repository";
 import { useUserRepository } from "@/hooks/use-user-repository";
+import type { CreateStoreInput, Store as StoreModel } from "@/models/store";
 import type { User } from "@/models/user";
 import { hashPin } from "@/utils/auth";
 import {
@@ -16,6 +19,7 @@ import {
   Lock,
   Play,
   Plus,
+  Store,
   Trash2,
   TriangleAlert,
   UserCog,
@@ -61,7 +65,7 @@ function useColors(isDark: boolean) {
 }
 
 type Colors = ReturnType<typeof useColors>;
-type TeamTab = "workers" | "profile";
+type SettingTab = "workers" | "profile" | "stores";
 
 // ── Workers section ───────────────────────────────────────────────────────────
 
@@ -932,28 +936,371 @@ function ProfileSection({ isDark, c }: { isDark: boolean; c: Colors }) {
   );
 }
 
+// ── Stores section ────────────────────────────────────────────────────────────
+
+function StoresSection({ isDark, c }: { isDark: boolean; c: Colors }) {
+  const storeRepo = useStoreRepository();
+  const { stores, refreshStores, currentStore } = useStore();
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [editing, setEditing] = useState<StoreModel | null>(null);
+  const [name, setName] = useState("");
+  const [address, setAddress] = useState("");
+  const [phone, setPhone] = useState("");
+  const [formError, setFormError] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const themeName = isDark ? "dark" : "light";
+
+  useFocusEffect(
+    useCallback(() => {
+      refreshStores();
+    }, [refreshStores]),
+  );
+
+  useEffect(() => {
+    if (sheetOpen) {
+      setName(editing?.name ?? "");
+      setAddress(editing?.address ?? "");
+      setPhone(editing?.phone ?? "");
+      setFormError("");
+    }
+  }, [sheetOpen, editing]);
+
+  const openCreate = useCallback(() => {
+    setEditing(null);
+    setSheetOpen(true);
+  }, []);
+
+  const openEdit = useCallback((s: StoreModel) => {
+    setEditing(s);
+    setSheetOpen(true);
+  }, []);
+
+  const handleSave = useCallback(async () => {
+    const trimName = name.trim();
+    if (!trimName) {
+      setFormError("El nombre es obligatorio");
+      return;
+    }
+    setSaving(true);
+    setFormError("");
+    try {
+      const data: CreateStoreInput = {
+        name: trimName,
+        address: address.trim() || null,
+        phone: phone.trim() || null,
+        logoUri: null,
+      };
+      if (editing) {
+        await storeRepo.update(editing.id, data);
+      } else {
+        await storeRepo.create(data);
+      }
+      setSheetOpen(false);
+      await refreshStores();
+    } catch (e) {
+      setFormError((e as Error).message ?? "Error al guardar");
+    } finally {
+      setSaving(false);
+    }
+  }, [name, address, phone, editing, storeRepo, refreshStores]);
+
+  const handleDelete = useCallback(
+    (s: StoreModel) => {
+      if (stores.length <= 1) {
+        Alert.alert("Error", "No puedes eliminar la única tienda.");
+        return;
+      }
+      Alert.alert(
+        "Eliminar tienda",
+        `¿Eliminar "${s.name}"? Los datos asociados permanecerán en la base de datos.`,
+        [
+          { text: "Cancelar", style: "cancel" },
+          {
+            text: "Eliminar",
+            style: "destructive",
+            onPress: async () => {
+              await storeRepo.delete(s.id);
+              await refreshStores();
+            },
+          },
+        ],
+      );
+    },
+    [storeRepo, refreshStores, stores.length],
+  );
+
+  return (
+    <View style={styles.sectionRoot}>
+      <View style={[styles.actionBar, { borderBottomColor: c.border }]}>
+        <Text style={[styles.statsText, { color: c.muted }]}>
+          {stores.length} tienda{stores.length !== 1 ? "s" : ""}
+        </Text>
+        <TouchableOpacity
+          style={[styles.addBtn, { backgroundColor: c.blue }]}
+          onPress={openCreate}
+          activeOpacity={0.8}
+        >
+          <Plus size={16} color="#fff" />
+          <Text style={styles.addBtnText}>Nueva</Text>
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView contentContainerStyle={styles.listContent}>
+        {stores.length === 0 ? (
+          <View style={styles.centerBox}>
+            <View style={[styles.emptyIcon, { backgroundColor: c.blueLight }]}>
+              <Store size={34} color={c.blue as any} />
+            </View>
+            <Text style={[styles.emptyTitle, { color: c.text }]}>
+              Sin tiendas
+            </Text>
+            <Text style={[styles.emptyDesc, { color: c.muted }]}>
+              Añade una tienda para comenzar a operar.
+            </Text>
+          </View>
+        ) : (
+          <View
+            style={[
+              styles.listCard,
+              { backgroundColor: c.rowBg, borderColor: c.border },
+            ]}
+          >
+            {stores.map((s, idx) => {
+              const isActive = currentStore?.id === s.id;
+              return (
+                <View key={s.id}>
+                  {idx > 0 && (
+                    <View
+                      style={[styles.divider, { backgroundColor: c.divider }]}
+                    />
+                  )}
+                  <View style={styles.workerRow}>
+                    <View
+                      style={[
+                        styles.avatar,
+                        {
+                          backgroundColor: isActive ? c.blueLight : c.editBg,
+                          overflow: "hidden",
+                        },
+                      ]}
+                    >
+                      <Store
+                        size={18}
+                        color={(isActive ? c.blue : c.muted) as any}
+                      />
+                    </View>
+                    <View style={styles.workerInfo}>
+                      <View
+                        style={{
+                          flexDirection: "row",
+                          alignItems: "center",
+                          gap: 6,
+                        }}
+                      >
+                        <Text style={[styles.workerName, { color: c.text }]}>
+                          {s.name}
+                        </Text>
+                        {isActive && (
+                          <Text
+                            style={{
+                              fontSize: 10,
+                              color: c.blue,
+                              fontWeight: "700",
+                            }}
+                          >
+                            ACTIVA
+                          </Text>
+                        )}
+                      </View>
+                      {s.address ? (
+                        <Text style={[styles.workerMeta, { color: c.muted }]}>
+                          {s.address}
+                        </Text>
+                      ) : null}
+                    </View>
+                    <View style={styles.rowActions}>
+                      <TouchableOpacity
+                        style={[styles.iconBtn, { backgroundColor: c.editBg }]}
+                        onPress={() => openEdit(s)}
+                        activeOpacity={0.7}
+                      >
+                        <Edit3 size={15} color={c.muted as any} />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[
+                          styles.iconBtn,
+                          { backgroundColor: c.dangerBg },
+                        ]}
+                        onPress={() => handleDelete(s)}
+                        activeOpacity={0.7}
+                      >
+                        <Trash2 size={15} color={c.danger as any} />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+        )}
+      </ScrollView>
+
+      {/* ── Store form Sheet ──────────────────────────────────────────── */}
+      <Sheet
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
+        modal
+        snapPoints={[65]}
+        dismissOnSnapToBottom
+      >
+        <Sheet.Overlay
+          enterStyle={{ opacity: 0 }}
+          exitStyle={{ opacity: 0 }}
+          backgroundColor="rgba(0,0,0,0.5)"
+        />
+        <Sheet.Frame theme={themeName as any} bg="$background">
+          <Sheet.Handle />
+          <Sheet.ScrollView keyboardShouldPersistTaps="handled">
+            <YStack gap="$3" p="$4">
+              <TText fontSize="$6" fontWeight="bold" color="$color">
+                {editing ? "Editar tienda" : "Nueva tienda"}
+              </TText>
+
+              <YStack gap="$1">
+                <TText
+                  fontSize="$2"
+                  fontWeight="600"
+                  color="$color10"
+                  textTransform="uppercase"
+                  letterSpacing={0.5}
+                >
+                  Nombre *
+                </TText>
+                <Input
+                  placeholder="Nombre de la tienda"
+                  value={name}
+                  onChangeText={(v: string) => {
+                    setName(v);
+                    setFormError("");
+                  }}
+                  autoCapitalize="words"
+                  returnKeyType="next"
+                  autoFocus={!editing}
+                  size="$4"
+                />
+              </YStack>
+
+              <YStack gap="$1">
+                <TText
+                  fontSize="$2"
+                  fontWeight="600"
+                  color="$color10"
+                  textTransform="uppercase"
+                  letterSpacing={0.5}
+                >
+                  Dirección
+                </TText>
+                <Input
+                  placeholder="Av. Principal, Local #12..."
+                  value={address}
+                  onChangeText={(v: string) => {
+                    setAddress(v);
+                    setFormError("");
+                  }}
+                  returnKeyType="next"
+                  size="$4"
+                />
+              </YStack>
+
+              <YStack gap="$1">
+                <TText
+                  fontSize="$2"
+                  fontWeight="600"
+                  color="$color10"
+                  textTransform="uppercase"
+                  letterSpacing={0.5}
+                >
+                  Teléfono
+                </TText>
+                <Input
+                  placeholder="+58 412..."
+                  value={phone}
+                  onChangeText={(v: string) => {
+                    setPhone(v);
+                    setFormError("");
+                  }}
+                  keyboardType="phone-pad"
+                  returnKeyType="done"
+                  size="$4"
+                />
+              </YStack>
+
+              {!!formError && (
+                <View
+                  style={[styles.feedbackRow, { backgroundColor: c.dangerBg }]}
+                >
+                  <AlertCircle size={15} color={c.danger as any} />
+                  <Text style={[styles.feedbackText, { color: c.danger }]}>
+                    {formError}
+                  </Text>
+                </View>
+              )}
+
+              <XStack gap="$2.5" mt="$1">
+                <Button
+                  flex={1}
+                  variant="outlined"
+                  onPress={() => setSheetOpen(false)}
+                  size="$4"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  flex={1}
+                  theme="blue"
+                  onPress={handleSave}
+                  disabled={saving}
+                  opacity={saving ? 0.7 : 1}
+                  size="$4"
+                  icon={
+                    saving ? (
+                      <ActivityIndicator color="#fff" size="small" />
+                    ) : undefined
+                  }
+                >
+                  Guardar
+                </Button>
+              </XStack>
+            </YStack>
+          </Sheet.ScrollView>
+        </Sheet.Frame>
+      </Sheet>
+    </View>
+  );
+}
+
 // ── Main screen ───────────────────────────────────────────────────────────────
 
-const TABS: TabDef<TeamTab>[] = [
+const TABS: TabDef<SettingTab>[] = [
   { key: "profile", label: "Mi Perfil", Icon: UserCog },
   { key: "workers", label: "Vendedores", Icon: Users },
+  { key: "stores", label: "Tiendas", Icon: Store },
 ];
 
-export default function TeamScreen() {
+export default function SettingScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
   const c = useColors(isDark);
-  const [activeTab, setActiveTab] = useState<TeamTab>("profile");
+  const [activeTab, setActiveTab] = useState<SettingTab>("profile");
 
   return (
     <View style={[styles.root, { backgroundColor: c.bg }]}>
       <ScreenTabs tabs={TABS} active={activeTab} onSelect={setActiveTab} />
 
-      {activeTab === "workers" ? (
-        <WorkersSection isDark={isDark} c={c} />
-      ) : (
-        <ProfileSection isDark={isDark} c={c} />
-      )}
+      {activeTab === "workers" && <WorkersSection isDark={isDark} c={c} />}
+      {activeTab === "profile" && <ProfileSection isDark={isDark} c={c} />}
+      {activeTab === "stores" && <StoresSection isDark={isDark} c={c} />}
     </View>
   );
 }

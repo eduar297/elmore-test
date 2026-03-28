@@ -16,7 +16,8 @@ export interface Product {
   stockBaseQty: number;
   saleMode: SaleMode;
   photoUri: string | null;
+  storeId: number;
 }
 
-export type CreateProductInput = Omit<Product, "id">;
-export type UpdateProductInput = Partial<Omit<Product, "id">>;
+export type CreateProductInput = Omit<Product, "id" | "storeId">;
+export type UpdateProductInput = Partial<Omit<Product, "id" | "storeId">>;

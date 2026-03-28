@@ -123,13 +123,14 @@ const NO_SALES_DAYS_THRESHOLD = 30;
  */
 export async function runSalesAnalysis(
   db: SQLiteDatabase,
+  storeId?: number,
 ): Promise<SalesReport> {
   const now = new Date();
   const todayStr = isoDate(now);
 
   // ── Auto-detect analysis start from earliest ticket ────────────────────
   const earliest = await db.getFirstAsync<{ d: string | null }>(
-    `SELECT MIN(date(createdAt)) AS d FROM tickets`,
+    `SELECT MIN(date(createdAt)) AS d FROM tickets${storeId !== undefined ? " WHERE storeId = " + Number(storeId) : ""}`,
   );
   const fallbackFrom = isoDate(new Date(now.getTime() - 180 * 86_400_000));
   const fromStr = earliest?.d ?? fallbackFrom;
@@ -143,15 +144,17 @@ export async function runSalesAnalysis(
 
   // ── Load all products with stock ────────────────────────────────────────
   const allProducts = await db.getAllAsync<Product>(
-    `SELECT * FROM products WHERE visible = 1`,
+    `SELECT * FROM products WHERE visible = 1${storeId !== undefined ? " AND storeId = ?" : ""}`,
+    storeId !== undefined ? [storeId] : [],
   );
 
   // ── Weighted-average cost per product ──────────────────────────────────
   const costRows = await db.getAllAsync<{ productId: number; avgCost: number }>(
     `SELECT productId,
             SUM(quantity * unitCost) / NULLIF(SUM(quantity), 0) AS avgCost
-     FROM purchase_items
+     FROM purchase_items${storeId !== undefined ? " pi JOIN purchases p ON p.id = pi.purchaseId WHERE p.storeId = ?" : ""}
      GROUP BY productId`,
+    storeId !== undefined ? [storeId] : [],
   );
   const costMap = new Map(costRows.map((r) => [r.productId, r.avgCost]));
 
@@ -173,9 +176,11 @@ export async function runSalesAnalysis(
        COALESCE(SUM(ti.subtotal), 0)                                           AS totalRevenue
      FROM ticket_items ti
      JOIN tickets t ON t.id = ti.ticketId
-     WHERE date(t.createdAt) >= ?
+     WHERE date(t.createdAt) >= ?${storeId !== undefined ? " AND t.storeId = ?" : ""}
      GROUP BY ti.productId`,
-    [halfStr, halfStr, fromStr],
+    storeId !== undefined
+      ? [halfStr, halfStr, fromStr, storeId]
+      : [halfStr, halfStr, fromStr],
   );
   const salesMap = new Map(salesRows.map((r) => [r.productId, r]));
 
@@ -319,11 +324,13 @@ export async function runSalesAnalysis(
        FROM ticket_items a
        JOIN ticket_items b ON b.ticketId = a.ticketId AND b.productId > a.productId
        JOIN tickets t ON t.id = a.ticketId
-       WHERE date(t.createdAt) >= ?
+       WHERE date(t.createdAt) >= ?${storeId !== undefined ? " AND t.storeId = ?" : ""}
        GROUP BY a.productId, b.productId
        HAVING COUNT(*) >= ?
        ORDER BY cnt DESC`,
-      [fromStr, MIN_CO_OCCUR],
+      storeId !== undefined
+        ? [fromStr, storeId, MIN_CO_OCCUR]
+        : [fromStr, MIN_CO_OCCUR],
     );
 
     // Count total tickets per product (to compute affinity %)
@@ -334,9 +341,9 @@ export async function runSalesAnalysis(
       `SELECT ti.productId, COUNT(DISTINCT ti.ticketId) AS cnt
        FROM ticket_items ti
        JOIN tickets t ON t.id = ti.ticketId
-       WHERE date(t.createdAt) >= ?
+       WHERE date(t.createdAt) >= ?${storeId !== undefined ? " AND t.storeId = ?" : ""}
        GROUP BY ti.productId`,
-      [fromStr],
+      storeId !== undefined ? [fromStr, storeId] : [fromStr],
     );
     const ticketCountMap = new Map(
       ticketCountRows.map((r) => [r.productId, r.cnt]),

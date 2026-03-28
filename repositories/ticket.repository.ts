@@ -12,8 +12,8 @@ export class TicketRepository extends BaseRepository<
   CreateTicketInput,
   Partial<Omit<Ticket, "id">>
 > {
-  constructor(db: SQLiteDatabase) {
-    super(db, "tickets");
+  constructor(db: SQLiteDatabase, storeId?: number) {
+    super(db, "tickets", storeId);
   }
 
   /** Create a ticket with its items and deduct stock, all in one transaction. */
@@ -27,12 +27,13 @@ export class TicketRepository extends BaseRepository<
 
     await this.db.withExclusiveTransactionAsync(async (tx) => {
       const ticketResult = await tx.runAsync(
-        `INSERT INTO tickets (paymentMethod, total, itemCount, workerId, workerName) VALUES (?, ?, ?, ?, ?)`,
+        `INSERT INTO tickets (paymentMethod, total, itemCount, workerId, workerName, storeId) VALUES (?, ?, ?, ?, ?, ?)`,
         input.paymentMethod,
         total,
         input.items.length,
         input.workerId ?? null,
         input.workerName ?? null,
+        this.storeId ?? 1,
       );
 
       ticketId = ticketResult.lastInsertRowId;
@@ -71,12 +72,16 @@ export class TicketRepository extends BaseRepository<
 
   /** Get tickets created today, newest first. */
   findToday(): Promise<Ticket[]> {
+    const sFilter = this.storeId !== undefined ? " AND t.storeId = ?" : "";
+    const params: SQLiteBindValue[] = [];
+    if (this.storeId !== undefined) params.push(this.storeId);
     return this.db.getAllAsync<Ticket>(
       `SELECT t.*, u.photoUri AS workerPhotoUri
        FROM tickets t
        LEFT JOIN users u ON u.id = t.workerId
-       WHERE date(t.createdAt) = date('now','localtime')
+       WHERE date(t.createdAt) = date('now','localtime')${sFilter}
        ORDER BY t.createdAt DESC`,
+      params,
     );
   }
 
@@ -93,12 +98,16 @@ export class TicketRepository extends BaseRepository<
 
   /** Get today's sales summary. */
   async todaySummary(): Promise<{ totalSales: number; ticketCount: number }> {
+    const sFilter = this.storeId !== undefined ? " AND storeId = ?" : "";
+    const params: SQLiteBindValue[] = [];
+    if (this.storeId !== undefined) params.push(this.storeId);
     const row = await this.db.getFirstAsync<{
       totalSales: number;
       ticketCount: number;
     }>(
       `SELECT COALESCE(SUM(total), 0) as totalSales, COUNT(*) as ticketCount
-       FROM tickets WHERE date(createdAt) = date('now','localtime')`,
+       FROM tickets WHERE date(createdAt) = date('now','localtime')${sFilter}`,
+      params,
     );
     return row ?? { totalSales: 0, ticketCount: 0 };
   }
@@ -110,15 +119,17 @@ export class TicketRepository extends BaseRepository<
   ): Promise<{ totalSales: number; ticketCount: number }> {
     const m = month ?? currentMonth();
     const wFilter = workerId ? " AND workerId = ?" : "";
+    const sFilter = this.storeId !== undefined ? " AND storeId = ?" : "";
     const params: SQLiteBindValue[] = [m];
     if (workerId) params.push(workerId);
+    if (this.storeId !== undefined) params.push(this.storeId);
     const row = await this.db.getFirstAsync<{
       totalSales: number;
       ticketCount: number;
     }>(
       `SELECT COALESCE(SUM(total), 0) as totalSales, COUNT(*) as ticketCount
        FROM tickets
-       WHERE strftime('%Y-%m', createdAt) = ?${wFilter}`,
+       WHERE strftime('%Y-%m', createdAt) = ?${wFilter}${sFilter}`,
       params,
     );
     return row ?? { totalSales: 0, ticketCount: 0 };
@@ -131,13 +142,15 @@ export class TicketRepository extends BaseRepository<
   ): Promise<{ day: number; total: number }[]> {
     const m = month ?? currentMonth();
     const wFilter = workerId ? " AND workerId = ?" : "";
+    const sFilter = this.storeId !== undefined ? " AND storeId = ?" : "";
     const params: SQLiteBindValue[] = [m];
     if (workerId) params.push(workerId);
+    if (this.storeId !== undefined) params.push(this.storeId);
     return this.db.getAllAsync<{ day: number; total: number }>(
       `SELECT CAST(strftime('%d', createdAt) AS INTEGER) as day,
               COALESCE(SUM(total), 0) as total
        FROM tickets
-       WHERE strftime('%Y-%m', createdAt) = ?${wFilter}
+       WHERE strftime('%Y-%m', createdAt) = ?${wFilter}${sFilter}
        GROUP BY day
        ORDER BY day`,
       params,
@@ -159,8 +172,10 @@ export class TicketRepository extends BaseRepository<
   > {
     const m = month ?? currentMonth();
     const wFilter = workerId ? " AND t.workerId = ?" : "";
+    const sFilter = this.storeId !== undefined ? " AND t.storeId = ?" : "";
     const params: SQLiteBindValue[] = [m];
     if (workerId) params.push(workerId);
+    if (this.storeId !== undefined) params.push(this.storeId);
     params.push(limit);
     return this.db.getAllAsync(
       `SELECT ti.productId, ti.productName,
@@ -168,7 +183,7 @@ export class TicketRepository extends BaseRepository<
               SUM(ti.subtotal) as totalRevenue
        FROM ticket_items ti
        JOIN tickets t ON ti.ticketId = t.id
-       WHERE strftime('%Y-%m', t.createdAt) = ?${wFilter}
+       WHERE strftime('%Y-%m', t.createdAt) = ?${wFilter}${sFilter}
        GROUP BY ti.productId, ti.productName
        ORDER BY totalRevenue DESC
        LIMIT ?`,
@@ -183,13 +198,15 @@ export class TicketRepository extends BaseRepository<
     workerId?: number | null,
   ): Promise<Ticket[]> {
     const wFilter = workerId ? " AND t.workerId = ?" : "";
+    const sFilter = this.storeId !== undefined ? " AND t.storeId = ?" : "";
     const params: SQLiteBindValue[] = [from, to];
     if (workerId) params.push(workerId);
+    if (this.storeId !== undefined) params.push(this.storeId);
     return this.db.getAllAsync<Ticket>(
       `SELECT t.*, u.photoUri AS workerPhotoUri
        FROM tickets t
        LEFT JOIN users u ON u.id = t.workerId
-       WHERE date(t.createdAt) >= ? AND date(t.createdAt) <= ?${wFilter}
+       WHERE date(t.createdAt) >= ? AND date(t.createdAt) <= ?${wFilter}${sFilter}
        ORDER BY t.createdAt DESC`,
       params,
     );
@@ -202,14 +219,16 @@ export class TicketRepository extends BaseRepository<
   ): Promise<{ week: number; total: number; tickets: number }[]> {
     const m = month ?? currentMonth();
     const wFilter = workerId ? " AND workerId = ?" : "";
+    const sFilter = this.storeId !== undefined ? " AND storeId = ?" : "";
     const params: SQLiteBindValue[] = [m];
     if (workerId) params.push(workerId);
+    if (this.storeId !== undefined) params.push(this.storeId);
     return this.db.getAllAsync(
       `SELECT ((CAST(strftime('%d', createdAt) AS INTEGER) - 1) / 7 + 1) as week,
               COALESCE(SUM(total), 0) as total,
               COUNT(*) as tickets
        FROM tickets
-       WHERE strftime('%Y-%m', createdAt) = ?${wFilter}
+       WHERE strftime('%Y-%m', createdAt) = ?${wFilter}${sFilter}
        GROUP BY week
        ORDER BY week`,
       params,
@@ -223,14 +242,16 @@ export class TicketRepository extends BaseRepository<
   ): Promise<{ month: number; total: number; tickets: number }[]> {
     const y = year ?? String(new Date().getFullYear());
     const wFilter = workerId ? " AND workerId = ?" : "";
+    const sFilter = this.storeId !== undefined ? " AND storeId = ?" : "";
     const params: SQLiteBindValue[] = [y];
     if (workerId) params.push(workerId);
+    if (this.storeId !== undefined) params.push(this.storeId);
     return this.db.getAllAsync(
       `SELECT CAST(strftime('%m', createdAt) AS INTEGER) as month,
               COALESCE(SUM(total), 0) as total,
               COUNT(*) as tickets
        FROM tickets
-       WHERE strftime('%Y', createdAt) = ?${wFilter}
+       WHERE strftime('%Y', createdAt) = ?${wFilter}${sFilter}
        GROUP BY month
        ORDER BY month`,
       params,
@@ -244,14 +265,16 @@ export class TicketRepository extends BaseRepository<
   ): Promise<{ method: string; total: number; count: number }[]> {
     const m = month ?? currentMonth();
     const wFilter = workerId ? " AND workerId = ?" : "";
+    const sFilter = this.storeId !== undefined ? " AND storeId = ?" : "";
     const params: SQLiteBindValue[] = [m];
     if (workerId) params.push(workerId);
+    if (this.storeId !== undefined) params.push(this.storeId);
     return this.db.getAllAsync(
       `SELECT paymentMethod as method,
               COALESCE(SUM(total), 0) as total,
               COUNT(*) as count
        FROM tickets
-       WHERE strftime('%Y-%m', createdAt) = ?${wFilter}
+       WHERE strftime('%Y-%m', createdAt) = ?${wFilter}${sFilter}
        GROUP BY paymentMethod`,
       params,
     );
@@ -263,8 +286,10 @@ export class TicketRepository extends BaseRepository<
     workerId?: number | null,
   ): Promise<{ totalSales: number; ticketCount: number; avgTicket: number }> {
     const wFilter = workerId ? " AND workerId = ?" : "";
+    const sFilter = this.storeId !== undefined ? " AND storeId = ?" : "";
     const params: SQLiteBindValue[] = [date];
     if (workerId) params.push(workerId);
+    if (this.storeId !== undefined) params.push(this.storeId);
     const row = await this.db.getFirstAsync<{
       totalSales: number;
       ticketCount: number;
@@ -274,7 +299,7 @@ export class TicketRepository extends BaseRepository<
               COUNT(*) as ticketCount,
               COALESCE(AVG(total), 0) as avgTicket
        FROM tickets
-       WHERE date(createdAt) = ?${wFilter}`,
+       WHERE date(createdAt) = ?${wFilter}${sFilter}`,
       params,
     );
     return row ?? { totalSales: 0, ticketCount: 0, avgTicket: 0 };
@@ -286,14 +311,16 @@ export class TicketRepository extends BaseRepository<
     workerId?: number | null,
   ): Promise<{ hour: number; total: number; tickets: number }[]> {
     const wFilter = workerId ? " AND workerId = ?" : "";
+    const sFilter = this.storeId !== undefined ? " AND storeId = ?" : "";
     const params: SQLiteBindValue[] = [date];
     if (workerId) params.push(workerId);
+    if (this.storeId !== undefined) params.push(this.storeId);
     return this.db.getAllAsync(
       `SELECT CAST(strftime('%H', createdAt) AS INTEGER) as hour,
               COALESCE(SUM(total), 0) as total,
               COUNT(*) as tickets
        FROM tickets
-       WHERE date(createdAt) = ?${wFilter}
+       WHERE date(createdAt) = ?${wFilter}${sFilter}
        GROUP BY hour
        ORDER BY hour`,
       params,
@@ -308,13 +335,16 @@ export class TicketRepository extends BaseRepository<
     from: string,
     to: string,
   ): Promise<Ticket[]> {
+    const sFilter = this.storeId !== undefined ? " AND t.storeId = ?" : "";
+    const params: SQLiteBindValue[] = [workerId, from, to];
+    if (this.storeId !== undefined) params.push(this.storeId);
     return this.db.getAllAsync<Ticket>(
       `SELECT t.*, u.photoUri AS workerPhotoUri
        FROM tickets t
        LEFT JOIN users u ON u.id = t.workerId
-       WHERE t.workerId = ? AND date(t.createdAt) >= ? AND date(t.createdAt) <= ?
+       WHERE t.workerId = ? AND date(t.createdAt) >= ? AND date(t.createdAt) <= ?${sFilter}
        ORDER BY t.createdAt DESC`,
-      [workerId, from, to],
+      params,
     );
   }
 
@@ -324,14 +354,17 @@ export class TicketRepository extends BaseRepository<
     from: string,
     to: string,
   ): Promise<{ totalSales: number; ticketCount: number }> {
+    const sFilter = this.storeId !== undefined ? " AND storeId = ?" : "";
+    const params: SQLiteBindValue[] = [workerId, from, to];
+    if (this.storeId !== undefined) params.push(this.storeId);
     const row = await this.db.getFirstAsync<{
       totalSales: number;
       ticketCount: number;
     }>(
       `SELECT COALESCE(SUM(total), 0) as totalSales, COUNT(*) as ticketCount
        FROM tickets
-       WHERE workerId = ? AND date(createdAt) >= ? AND date(createdAt) <= ?`,
-      [workerId, from, to],
+       WHERE workerId = ? AND date(createdAt) >= ? AND date(createdAt) <= ?${sFilter}`,
+      params,
     );
     return row ?? { totalSales: 0, ticketCount: 0 };
   }

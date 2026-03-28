@@ -1,32 +1,33 @@
 import { SearchInput } from "@/components/ui/search-input";
+import { useStore } from "@/contexts/store-context";
 import { fmtMoney } from "@/utils/format";
 import type {
-    PurchaseReport,
-    PurchaseSuggestion,
-    SalesTrend,
-    Urgency,
+  PurchaseReport,
+  PurchaseSuggestion,
+  SalesTrend,
+  Urgency,
 } from "@/utils/purchase-suggestions";
 import { runPurchaseSuggestions } from "@/utils/purchase-suggestions";
 import {
-    ArrowUpDown,
-    ChevronDown,
-    Package,
-    ShoppingCart,
+  ArrowUpDown,
+  ChevronDown,
+  Package,
+  ShoppingCart,
 } from "@tamagui/lucide-icons";
 import { useSQLiteContext } from "expo-sqlite";
 import { useCallback, useMemo, useState } from "react";
 import { Image, ScrollView } from "react-native";
 import {
-    Accordion,
-    Button,
-    Card,
-    Input,
-    Label,
-    Separator,
-    Spinner,
-    Text,
-    XStack,
-    YStack,
+  Accordion,
+  Button,
+  Card,
+  Input,
+  Label,
+  Separator,
+  Spinner,
+  Text,
+  XStack,
+  YStack,
 } from "tamagui";
 
 // ── Urgency helpers ──────────────────────────────────────────────────────────
@@ -350,6 +351,7 @@ const TREND_ORDER: Record<SalesTrend, number> = {
 
 export function PurchaseSuggestionsSection() {
   const db = useSQLiteContext();
+  const { currentStore } = useStore();
 
   const [targetDaysInput, setTargetDaysInput] = useState("15");
   const [report, setReport] = useState<PurchaseReport | null>(null);
@@ -364,14 +366,14 @@ export function PurchaseSuggestionsSection() {
     if (isNaN(targetDays) || targetDays < 1) return;
     setLoading(true);
     try {
-      const r = await runPurchaseSuggestions(db, targetDays);
+      const r = await runPurchaseSuggestions(db, targetDays, currentStore?.id);
       setReport(r);
     } catch {
       setReport(null);
     } finally {
       setLoading(false);
     }
-  }, [db, targetDaysInput]);
+  }, [db, targetDaysInput, currentStore]);
 
   // Sort + filter + search
   const sorted = useMemo(() => {

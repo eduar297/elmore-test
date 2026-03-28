@@ -9,6 +9,7 @@ export interface Ticket {
   workerId: number | null;
   workerName: string | null;
   workerPhotoUri: string | null;
+  storeId: number;
 }
 
 export interface TicketItem {

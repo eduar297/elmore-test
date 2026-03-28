@@ -1,35 +1,36 @@
 import { SearchInput } from "@/components/ui/search-input";
+import { useStore } from "@/contexts/store-context";
 import { useProductRepository } from "@/hooks/use-product-repository";
 import { fmtMoney } from "@/utils/format";
 import type {
-    ComboAffinity,
-    ComboSuggestion,
-    DiscountOpportunity,
-    SalesReport,
-    StagnantProduct,
-    StagnantStatus,
+  ComboAffinity,
+  ComboSuggestion,
+  DiscountOpportunity,
+  SalesReport,
+  StagnantProduct,
+  StagnantStatus,
 } from "@/utils/sales-analysis";
 import { comboAffinity, runSalesAnalysis } from "@/utils/sales-analysis";
 import {
-    ArrowUpDown,
-    Check,
-    CheckCircle,
-    ChevronDown,
-    Package,
-    TrendingDown,
+  ArrowUpDown,
+  Check,
+  CheckCircle,
+  ChevronDown,
+  Package,
+  TrendingDown,
 } from "@tamagui/lucide-icons";
 import { useSQLiteContext } from "expo-sqlite";
 import { useCallback, useMemo, useState } from "react";
 import { Alert, Image, ScrollView } from "react-native";
 import {
-    Accordion,
-    Button,
-    Card,
-    Separator,
-    Spinner,
-    Text,
-    XStack,
-    YStack,
+  Accordion,
+  Button,
+  Card,
+  Separator,
+  Spinner,
+  Text,
+  XStack,
+  YStack,
 } from "tamagui";
 
 // ── Badge helpers ────────────────────────────────────────────────────────────
@@ -996,6 +997,7 @@ export function SalesAnalysisSection({
   onPricesUpdated: () => void;
 }) {
   const db = useSQLiteContext();
+  const { currentStore } = useStore();
   const productRepo = useProductRepository();
   const [report, setReport] = useState<SalesReport | null>(null);
   const [loading, setLoading] = useState(false);
@@ -1012,14 +1014,14 @@ export function SalesAnalysisSection({
     setLoading(true);
     setError(null);
     try {
-      const r = await runSalesAnalysis(db);
+      const r = await runSalesAnalysis(db, currentStore?.id);
       setReport(r);
     } catch (e) {
       setError((e as Error).message);
     } finally {
       setLoading(false);
     }
-  }, [db]);
+  }, [db, currentStore]);
 
   const applyDiscount = useCallback(
     async (item: DiscountOpportunity) => {
@@ -1075,7 +1077,7 @@ export function SalesAnalysisSection({
             setApplying(true);
             try {
               await productRepo.bulkUpdateSalePrice(updates);
-              const r = await runSalesAnalysis(db);
+              const r = await runSalesAnalysis(db, currentStore?.id);
               setReport(r);
               onPricesUpdated();
               Alert.alert(

@@ -16,7 +16,8 @@ export interface Expense {
   amount: number;
   /** Date the expense occurred (YYYY-MM-DD) */
   date: string;
+  storeId: number;
   createdAt: string;
 }
 
-export type CreateExpenseInput = Omit<Expense, "id" | "createdAt">;
+export type CreateExpenseInput = Omit<Expense, "id" | "createdAt" | "storeId">;

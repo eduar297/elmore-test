@@ -32,6 +32,15 @@ export async function seedUnits(db: SQLiteDatabase) {
   `);
 }
 
+export async function seedDefaultStore(db: SQLiteDatabase) {
+  const count = await db.getFirstAsync<{ count: number }>(
+    "SELECT COUNT(*) as count FROM stores",
+  );
+  if ((count?.count ?? 0) > 0) return;
+
+  await db.runAsync("INSERT INTO stores (name) VALUES (?)", "Mi Tienda");
+}
+
 export async function seedDefaultAdmin(db: SQLiteDatabase) {
   const count = await db.getFirstAsync<{ count: number }>(
     "SELECT COUNT(*) as count FROM users WHERE role = 'ADMIN'",
@@ -43,7 +52,7 @@ export async function seedDefaultAdmin(db: SQLiteDatabase) {
     "1234",
   );
   await db.runAsync(
-    `INSERT INTO users (name, role, pinHash) VALUES (?, 'ADMIN', ?)`,
+    `INSERT INTO users (name, role, pinHash, storeId) VALUES (?, 'ADMIN', ?, 1)`,
     "Administrador",
     pinHash,
   );

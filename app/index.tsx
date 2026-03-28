@@ -3,25 +3,25 @@ import { useAuth } from "@/contexts/auth-context";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import type { UserRole } from "@/models/user";
 import {
-  ChevronRight,
-  LayoutDashboard,
-  Monitor,
-  Package,
-  Receipt,
-  ScanLine,
-  ShieldCheck,
-  TrendingUp
+    ChevronRight,
+    LayoutDashboard,
+    Monitor,
+    Package,
+    Receipt,
+    ScanLine,
+    ShieldCheck,
+    TrendingUp,
 } from "@tamagui/lucide-icons";
 import { useRouter } from "expo-router";
 import React, { useCallback, useRef, useState } from "react";
 import {
-  Dimensions,
-  FlatList,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    Dimensions,
+    FlatList,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 
 const { width: SCREEN_W } = Dimensions.get("window");

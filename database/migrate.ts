@@ -1,5 +1,5 @@
 import type { SQLiteDatabase } from "expo-sqlite";
-import { seedDefaultAdmin, seedUnits } from "./seed";
+import { seedDefaultAdmin, seedDefaultStore, seedUnits } from "./seed";
 
 /**
  * Safety net: create all tables with IF NOT EXISTS.
@@ -8,6 +8,15 @@ import { seedDefaultAdmin, seedUnits } from "./seed";
  */
 async function ensureTables(db: SQLiteDatabase) {
   await db.execAsync(`
+    CREATE TABLE IF NOT EXISTS stores (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      address TEXT,
+      phone TEXT,
+      logoUri TEXT,
+      createdAt TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+    );
+
     CREATE TABLE IF NOT EXISTS unit_categories (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL
@@ -34,6 +43,7 @@ async function ensureTables(db: SQLiteDatabase) {
       stockBaseQty REAL NOT NULL DEFAULT 0,
       saleMode TEXT CHECK (saleMode IN ('UNIT','VARIABLE')) NOT NULL,
       photoUri TEXT,
+      storeId INTEGER NOT NULL DEFAULT 1 REFERENCES stores(id),
       FOREIGN KEY (baseUnitId) REFERENCES units(id)
     );
 
@@ -45,6 +55,7 @@ async function ensureTables(db: SQLiteDatabase) {
       itemCount INTEGER NOT NULL,
       workerId INTEGER,
       workerName TEXT,
+      storeId INTEGER NOT NULL DEFAULT 1 REFERENCES stores(id),
       FOREIGN KEY (workerId) REFERENCES users(id)
     );
 
@@ -68,6 +79,7 @@ async function ensureTables(db: SQLiteDatabase) {
       email TEXT,
       notes TEXT,
       address TEXT,
+      storeId INTEGER NOT NULL DEFAULT 1 REFERENCES stores(id),
       createdAt TEXT NOT NULL DEFAULT (datetime('now','localtime'))
     );
 
@@ -79,6 +91,7 @@ async function ensureTables(db: SQLiteDatabase) {
       total REAL NOT NULL,
       transportCost REAL NOT NULL DEFAULT 0,
       itemCount INTEGER NOT NULL,
+      storeId INTEGER NOT NULL DEFAULT 1 REFERENCES stores(id),
       createdAt TEXT NOT NULL DEFAULT (datetime('now','localtime')),
       FOREIGN KEY (supplierId) REFERENCES suppliers(id)
     );
@@ -101,6 +114,7 @@ async function ensureTables(db: SQLiteDatabase) {
       description TEXT NOT NULL,
       amount REAL NOT NULL,
       date TEXT NOT NULL,
+      storeId INTEGER NOT NULL DEFAULT 1 REFERENCES stores(id),
       createdAt TEXT NOT NULL DEFAULT (datetime('now','localtime'))
     );
 
@@ -110,13 +124,14 @@ async function ensureTables(db: SQLiteDatabase) {
       role TEXT CHECK (role IN ('ADMIN', 'WORKER')) NOT NULL,
       pinHash TEXT NOT NULL,
       photoUri TEXT,
+      storeId INTEGER NOT NULL DEFAULT 1 REFERENCES stores(id),
       createdAt TEXT NOT NULL DEFAULT (datetime('now','localtime'))
     );
   `);
 }
 
 export async function migrateDbIfNeeded(db: SQLiteDatabase) {
-  const DATABASE_VERSION = 10;
+  const DATABASE_VERSION = 11;
 
   const result = await db.getFirstAsync<{ user_version: number }>(
     "PRAGMA user_version",
@@ -126,6 +141,9 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase) {
 
   if (currentVersion >= DATABASE_VERSION) {
     await ensureTables(db);
+    await seedUnits(db);
+    await seedDefaultStore(db);
+    await seedDefaultAdmin(db);
     return;
   }
 
@@ -291,7 +309,41 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase) {
     currentVersion = 10;
   }
 
+  if (currentVersion === 10) {
+    await db.execAsync(`
+      CREATE TABLE IF NOT EXISTS stores (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        address TEXT,
+        phone TEXT,
+        logoUri TEXT,
+        createdAt TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+      );
+    `);
+
+    // Insert default store for existing data
+    const storeCount = await db.getFirstAsync<{ count: number }>(
+      "SELECT COUNT(*) as count FROM stores",
+    );
+    if ((storeCount?.count ?? 0) === 0) {
+      await db.runAsync("INSERT INTO stores (name) VALUES (?)", "Mi Tienda");
+    }
+
+    // Add storeId to all scoped tables
+    await db.execAsync(`
+      ALTER TABLE products ADD COLUMN storeId INTEGER NOT NULL DEFAULT 1 REFERENCES stores(id);
+      ALTER TABLE tickets ADD COLUMN storeId INTEGER NOT NULL DEFAULT 1 REFERENCES stores(id);
+      ALTER TABLE suppliers ADD COLUMN storeId INTEGER NOT NULL DEFAULT 1 REFERENCES stores(id);
+      ALTER TABLE purchases ADD COLUMN storeId INTEGER NOT NULL DEFAULT 1 REFERENCES stores(id);
+      ALTER TABLE expenses ADD COLUMN storeId INTEGER NOT NULL DEFAULT 1 REFERENCES stores(id);
+      ALTER TABLE users ADD COLUMN storeId INTEGER NOT NULL DEFAULT 1 REFERENCES stores(id);
+    `);
+
+    currentVersion = 11;
+  }
+
   await seedUnits(db);
+  await seedDefaultStore(db);
   await seedDefaultAdmin(db);
   await db.execAsync(`PRAGMA user_version = ${DATABASE_VERSION}`);
   return;

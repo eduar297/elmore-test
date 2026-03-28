@@ -6,8 +6,12 @@ export interface Supplier {
   email: string | null;
   address: string | null;
   notes: string | null;
+  storeId: number;
   createdAt: string;
 }
 
-export type CreateSupplierInput = Omit<Supplier, "id" | "createdAt">;
+export type CreateSupplierInput = Omit<
+  Supplier,
+  "id" | "createdAt" | "storeId"
+>;
 export type UpdateSupplierInput = Partial<CreateSupplierInput>;

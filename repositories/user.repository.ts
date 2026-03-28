@@ -1,8 +1,8 @@
 import type {
-    CreateUserInput,
-    UpdateUserInput,
-    User,
-    UserRole,
+  CreateUserInput,
+  UpdateUserInput,
+  User,
+  UserRole,
 } from "@/models/user";
 import type { SQLiteDatabase } from "expo-sqlite";
 import { BaseRepository } from "./base.repository";
@@ -12,8 +12,8 @@ export class UserRepository extends BaseRepository<
   CreateUserInput,
   UpdateUserInput
 > {
-  constructor(db: SQLiteDatabase) {
-    super(db, "users");
+  constructor(db: SQLiteDatabase, storeId?: number) {
+    super(db, "users", storeId);
   }
 
   findAll(): Promise<User[]> {
@@ -21,6 +21,12 @@ export class UserRepository extends BaseRepository<
   }
 
   findByRole(role: UserRole): Promise<User[]> {
+    if (this.storeId !== undefined) {
+      return this.db.getAllAsync<User>(
+        "SELECT * FROM users WHERE role = ? AND storeId = ? ORDER BY name ASC",
+        [role, this.storeId],
+      );
+    }
     return this.db.getAllAsync<User>(
       "SELECT * FROM users WHERE role = ? ORDER BY name ASC",
       [role],
@@ -29,10 +35,11 @@ export class UserRepository extends BaseRepository<
 
   async create(input: CreateUserInput): Promise<User> {
     const result = await this.db.runAsync(
-      "INSERT INTO users (name, role, pinHash) VALUES (?, ?, ?)",
+      "INSERT INTO users (name, role, pinHash, storeId) VALUES (?, ?, ?, ?)",
       input.name,
       input.role,
       input.pinHash,
+      this.storeId ?? 1,
     );
     const created = await this.findById(result.lastInsertRowId);
     if (!created) throw new Error("Usuario creado pero no encontrado");

@@ -1,7 +1,7 @@
 import type {
-    CreatePurchaseInput,
-    Purchase,
-    PurchaseItem,
+  CreatePurchaseInput,
+  Purchase,
+  PurchaseItem,
 } from "@/models/purchase";
 import type { SQLiteDatabase } from "expo-sqlite";
 import { BaseRepository } from "./base.repository";
@@ -16,8 +16,8 @@ export class PurchaseRepository extends BaseRepository<
   CreatePurchaseInput,
   Partial<Omit<Purchase, "id">>
 > {
-  constructor(db: SQLiteDatabase) {
-    super(db, "purchases");
+  constructor(db: SQLiteDatabase, storeId?: number) {
+    super(db, "purchases", storeId);
   }
 
   /** All purchases, newest first. */
@@ -37,14 +37,15 @@ export class PurchaseRepository extends BaseRepository<
 
     await this.db.withExclusiveTransactionAsync(async (tx) => {
       const result = await tx.runAsync(
-        `INSERT INTO purchases (supplierId, supplierName, notes, total, transportCost, itemCount)
-         VALUES (?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO purchases (supplierId, supplierName, notes, total, transportCost, itemCount, storeId)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
         input.supplierId ?? null,
         input.supplierName,
         input.notes ?? null,
         total,
         transportCost,
         input.items.length,
+        this.storeId ?? 1,
       );
       purchaseId = result.lastInsertRowId;
 
@@ -88,6 +89,9 @@ export class PurchaseRepository extends BaseRepository<
     purchaseCount: number;
   }> {
     const m = month ?? currentMonth();
+    const sFilter = this.storeId !== undefined ? " AND storeId = ?" : "";
+    const params: any[] = [m];
+    if (this.storeId !== undefined) params.push(this.storeId);
     const row = await this.db.getFirstAsync<{
       totalSpent: number;
       totalTransport: number;
@@ -97,8 +101,8 @@ export class PurchaseRepository extends BaseRepository<
               COALESCE(SUM(transportCost), 0) as totalTransport,
               COUNT(*) as purchaseCount
        FROM purchases
-       WHERE strftime('%Y-%m', createdAt) = ?`,
-      [m],
+       WHERE strftime('%Y-%m', createdAt) = ?${sFilter}`,
+      params,
     );
     return row ?? { totalSpent: 0, totalTransport: 0, purchaseCount: 0 };
   }
@@ -109,6 +113,9 @@ export class PurchaseRepository extends BaseRepository<
     totalTransport: number;
     purchaseCount: number;
   }> {
+    const sFilter = this.storeId !== undefined ? " AND storeId = ?" : "";
+    const params: any[] = [date];
+    if (this.storeId !== undefined) params.push(this.storeId);
     const row = await this.db.getFirstAsync<{
       totalSpent: number;
       totalTransport: number;
@@ -118,8 +125,8 @@ export class PurchaseRepository extends BaseRepository<
               COALESCE(SUM(transportCost), 0) as totalTransport,
               COUNT(*) as purchaseCount
        FROM purchases
-       WHERE strftime('%Y-%m-%d', createdAt) = ?`,
-      [date],
+       WHERE strftime('%Y-%m-%d', createdAt) = ?${sFilter}`,
+      params,
     );
     return row ?? { totalSpent: 0, totalTransport: 0, purchaseCount: 0 };
   }
@@ -133,6 +140,9 @@ export class PurchaseRepository extends BaseRepository<
     totalTransport: number;
     purchaseCount: number;
   }> {
+    const sFilter = this.storeId !== undefined ? " AND storeId = ?" : "";
+    const params: any[] = [from, to];
+    if (this.storeId !== undefined) params.push(this.storeId);
     const row = await this.db.getFirstAsync<{
       totalSpent: number;
       totalTransport: number;
@@ -142,8 +152,8 @@ export class PurchaseRepository extends BaseRepository<
               COALESCE(SUM(transportCost), 0) as totalTransport,
               COUNT(*) as purchaseCount
        FROM purchases
-       WHERE date(createdAt) BETWEEN ? AND ?`,
-      [from, to],
+       WHERE date(createdAt) BETWEEN ? AND ?${sFilter}`,
+      params,
     );
     return row ?? { totalSpent: 0, totalTransport: 0, purchaseCount: 0 };
   }
@@ -153,47 +163,62 @@ export class PurchaseRepository extends BaseRepository<
     year?: string,
   ): Promise<{ month: number; total: number; transport: number }[]> {
     const y = year ?? String(new Date().getFullYear());
+    const sFilter = this.storeId !== undefined ? " AND storeId = ?" : "";
+    const params: any[] = [y];
+    if (this.storeId !== undefined) params.push(this.storeId);
     return this.db.getAllAsync(
       `SELECT CAST(strftime('%m', createdAt) AS INTEGER) as month,
               COALESCE(SUM(total), 0) as total,
               COALESCE(SUM(transportCost), 0) as transport
        FROM purchases
-       WHERE strftime('%Y', createdAt) = ?
+       WHERE strftime('%Y', createdAt) = ?${sFilter}
        GROUP BY month
        ORDER BY month`,
-      [y],
+      params,
     );
   }
 
   /** Purchases for a specific day. */
   findByDay(date: string): Promise<Purchase[]> {
+    const sFilter = this.storeId !== undefined ? " AND storeId = ?" : "";
+    const params: any[] = [date];
+    if (this.storeId !== undefined) params.push(this.storeId);
     return this.db.getAllAsync<Purchase>(
-      `SELECT * FROM purchases WHERE date(createdAt) = ? ORDER BY createdAt DESC`,
-      [date],
+      `SELECT * FROM purchases WHERE date(createdAt) = ?${sFilter} ORDER BY createdAt DESC`,
+      params,
     );
   }
 
   /** Purchases for a specific month (YYYY-MM). */
   findByMonth(month: string): Promise<Purchase[]> {
+    const sFilter = this.storeId !== undefined ? " AND storeId = ?" : "";
+    const params: any[] = [month];
+    if (this.storeId !== undefined) params.push(this.storeId);
     return this.db.getAllAsync<Purchase>(
-      `SELECT * FROM purchases WHERE strftime('%Y-%m', createdAt) = ? ORDER BY createdAt DESC`,
-      [month],
+      `SELECT * FROM purchases WHERE strftime('%Y-%m', createdAt) = ?${sFilter} ORDER BY createdAt DESC`,
+      params,
     );
   }
 
   /** Purchases for a specific year. */
   findByYear(year: string): Promise<Purchase[]> {
+    const sFilter = this.storeId !== undefined ? " AND storeId = ?" : "";
+    const params: any[] = [year];
+    if (this.storeId !== undefined) params.push(this.storeId);
     return this.db.getAllAsync<Purchase>(
-      `SELECT * FROM purchases WHERE strftime('%Y', createdAt) = ? ORDER BY createdAt DESC`,
-      [year],
+      `SELECT * FROM purchases WHERE strftime('%Y', createdAt) = ?${sFilter} ORDER BY createdAt DESC`,
+      params,
     );
   }
 
   /** Purchases in a date range [from, to] inclusive (YYYY-MM-DD). */
   findByDateRange(from: string, to: string): Promise<Purchase[]> {
+    const sFilter = this.storeId !== undefined ? " AND storeId = ?" : "";
+    const params: any[] = [from, to];
+    if (this.storeId !== undefined) params.push(this.storeId);
     return this.db.getAllAsync<Purchase>(
-      `SELECT * FROM purchases WHERE date(createdAt) >= ? AND date(createdAt) <= ? ORDER BY createdAt DESC`,
-      [from, to],
+      `SELECT * FROM purchases WHERE date(createdAt) >= ? AND date(createdAt) <= ?${sFilter} ORDER BY createdAt DESC`,
+      params,
     );
   }
 }
