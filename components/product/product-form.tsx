@@ -5,16 +5,8 @@ import type { CreateProductInput, Product, SaleMode } from "@/models/product";
 import type { Unit } from "@/models/unit";
 import { Eye, EyeOff } from "@tamagui/lucide-icons";
 import { useId, useState } from "react";
-import {
-    Button,
-    Input,
-    Label,
-    Spinner,
-    Switch,
-    Text,
-    XStack,
-    YStack,
-} from "tamagui";
+import { Switch } from "react-native";
+import { Button, Input, Label, Spinner, Text, XStack, YStack } from "tamagui";
 
 // ── ProductForm (create + edit) ───────────────────────────────────────────────
 // Pass `product` to enter edit mode. Omit it for create mode.
@@ -50,6 +42,7 @@ export function ProductForm({
   const [salePrice, setSalePrice] = useState(
     isEdit ? String(product.salePrice) : "",
   );
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [stock, setStock] = useState(
     isEdit ? String(product.stockBaseQty) : "0",
   );
@@ -212,19 +205,25 @@ export function ProductForm({
           gap="$3"
           style={{ alignItems: "center", justifyContent: "space-between" }}
         >
-          <XStack gap="$2" style={{ alignItems: "center" }}>
+          <XStack gap="$2" style={{ alignItems: "center", flex: 1 }}>
             {visible ? (
               <Eye size={18} color="$green10" />
             ) : (
               <EyeOff size={18} color="$color8" />
             )}
-            <Label color="$color10" fontSize="$3">
+            <Label
+              color="$color10"
+              fontSize="$3"
+              style={{ margin: 0, lineHeight: 18 }}
+            >
               Visible para vendedores
             </Label>
           </XStack>
-          <Switch size="$3" checked={visible} onCheckedChange={setVisible}>
-            <Switch.Thumb />
-          </Switch>
+          <Switch
+            value={visible}
+            onValueChange={setVisible}
+            trackColor={{ false: "#e5e7eb", true: "#3b82f6" }}
+          />
         </XStack>
       )}
 

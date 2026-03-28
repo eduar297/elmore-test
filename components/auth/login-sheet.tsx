@@ -486,7 +486,8 @@ export function LoginSheet({
               outputRange: [0.5, 1, 0.5],
               extrapolate: "clamp",
             });
-            const paletteColor = STORE_PALETTE[index % STORE_PALETTE.length];
+            const cardColor =
+              item.color ?? STORE_PALETTE[index % STORE_PALETTE.length];
             return (
               <TouchableOpacity
                 activeOpacity={0.85}
@@ -497,7 +498,7 @@ export function LoginSheet({
                   style={[
                     styles.storeCard,
                     {
-                      backgroundColor: paletteColor,
+                      backgroundColor: cardColor,
                       transform: [{ scale }],
                       opacity: itemOpacity,
                     },
@@ -564,14 +565,26 @@ export function LoginSheet({
               </Text>
             </TouchableOpacity>
           )}
-          <View style={[styles.iconCircle, { backgroundColor: c.accentLight }]}>
+          <View
+            style={[
+              styles.iconCircle,
+              {
+                backgroundColor: selectedStore?.color
+                  ? `${selectedStore.color}22`
+                  : c.accentLight,
+              },
+            ]}
+          >
             {selectedStore?.logoUri ? (
               <Image
                 source={{ uri: selectedStore.logoUri }}
                 style={{ width: 52, height: 52, borderRadius: 26 }}
               />
             ) : (
-              <Lock size={22} color={c.accent as any} />
+              <Lock
+                size={22}
+                color={(selectedStore?.color ?? c.accent) as any}
+              />
             )}
           </View>
           <Text style={[styles.title, { color: c.text }]}>
@@ -722,7 +735,8 @@ export function LoginSheet({
               outputRange: [0.5, 1, 0.5],
               extrapolate: "clamp",
             });
-            const paletteColor = STORE_PALETTE[index % STORE_PALETTE.length];
+            const cardColor =
+              item.color ?? STORE_PALETTE[index % STORE_PALETTE.length];
             return (
               <TouchableOpacity
                 activeOpacity={0.85}
@@ -733,7 +747,7 @@ export function LoginSheet({
                   style={[
                     styles.storeCard,
                     {
-                      backgroundColor: paletteColor,
+                      backgroundColor: cardColor,
                       transform: [{ scale }],
                       opacity: itemOpacity,
                     },

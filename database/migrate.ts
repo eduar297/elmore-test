@@ -14,6 +14,7 @@ async function ensureTables(db: SQLiteDatabase) {
       address TEXT,
       phone TEXT,
       logoUri TEXT,
+      color TEXT NOT NULL DEFAULT '#3b82f6',
       createdAt TEXT NOT NULL DEFAULT (datetime('now','localtime'))
     );
 
@@ -127,11 +128,16 @@ async function ensureTables(db: SQLiteDatabase) {
       storeId INTEGER REFERENCES stores(id),
       createdAt TEXT NOT NULL DEFAULT (datetime('now','localtime'))
     );
+
+    CREATE TABLE IF NOT EXISTS app_settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL
+    );
   `);
 }
 
 export async function migrateDbIfNeeded(db: SQLiteDatabase) {
-  const DATABASE_VERSION = 12;
+  const DATABASE_VERSION = 13;
 
   const result = await db.getFirstAsync<{ user_version: number }>(
     "PRAGMA user_version",
@@ -361,6 +367,17 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase) {
       UPDATE users SET storeId = NULL WHERE role = 'ADMIN';
     `);
     currentVersion = 12;
+  }
+
+  if (currentVersion === 12) {
+    await db.execAsync(`
+      ALTER TABLE stores ADD COLUMN color TEXT NOT NULL DEFAULT '#3b82f6';
+      CREATE TABLE IF NOT EXISTS app_settings (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+      );
+    `);
+    currentVersion = 13;
   }
 
   await seedUnits(db);

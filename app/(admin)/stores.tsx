@@ -101,6 +101,7 @@ function StoreForm({ initial, onSubmit, loading }: StoreFormProps) {
             address: address.trim() || null,
             phone: phone.trim() || null,
             logoUri: null,
+            color: "#3b82f6",
           })
         }
       >

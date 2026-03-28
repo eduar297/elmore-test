@@ -2,6 +2,7 @@ import { PhotoPicker } from "@/components/ui/photo-picker";
 import type { TabDef } from "@/components/ui/screen-tabs";
 import { ScreenTabs } from "@/components/ui/screen-tabs";
 import { useAuth } from "@/contexts/auth-context";
+import { usePreferences } from "@/contexts/preferences-context";
 import { useStore } from "@/contexts/store-context";
 import { resetDatabase, seedSimulation } from "@/database/seed-simulation";
 import { useColorScheme } from "@/hooks/use-color-scheme";
@@ -13,17 +14,19 @@ import { hashPin } from "@/utils/auth";
 import {
   AlertCircle,
   Camera,
+  Check,
   CheckCircle,
   Database,
   Edit3,
   Lock,
   Play,
   Plus,
+  Settings,
   Store,
   Trash2,
   TriangleAlert,
   UserCog,
-  Users,
+  Users
 } from "@tamagui/lucide-icons";
 import { useFocusEffect } from "expo-router";
 import { useSQLiteContext } from "expo-sqlite";
@@ -34,6 +37,7 @@ import {
   Image,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   TouchableOpacity,
@@ -65,7 +69,24 @@ function useColors(isDark: boolean) {
 }
 
 type Colors = ReturnType<typeof useColors>;
-type SettingTab = "workers" | "profile" | "stores";
+type SettingTab = "workers" | "profile" | "stores" | "prefs";
+
+// ── Store color palette ───────────────────────────────────────────────────────
+
+const STORE_COLORS = [
+  "#3b82f6",
+  "#8b5cf6",
+  "#ec4899",
+  "#f59e0b",
+  "#10b981",
+  "#ef4444",
+  "#6366f1",
+  "#14b8a6",
+  "#f97316",
+  "#a855f7",
+  "#06b6d4",
+  "#84cc16",
+];
 
 // ── Workers section ───────────────────────────────────────────────────────────
 
@@ -943,13 +964,16 @@ function ProfileSection({ isDark, c }: { isDark: boolean; c: Colors }) {
 
 function StoresSection({ isDark, c }: { isDark: boolean; c: Colors }) {
   const storeRepo = useStoreRepository();
-  const { stores, refreshStores, currentStore } = useStore();
+  const { stores, refreshStores, currentStore, setCurrentStore } = useStore();
+  const { user } = useAuth();
+  const userRepo = useUserRepository();
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editing, setEditing] = useState<StoreModel | null>(null);
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
   const [phone, setPhone] = useState("");
   const [logoUri, setLogoUri] = useState<string | null>(null);
+  const [color, setColor] = useState("#3b82f6");
   const [formError, setFormError] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -967,6 +991,7 @@ function StoresSection({ isDark, c }: { isDark: boolean; c: Colors }) {
     setAddress("");
     setPhone("");
     setLogoUri(null);
+    setColor("#3b82f6");
     setFormError("");
     setSheetOpen(true);
   }, []);
@@ -977,6 +1002,7 @@ function StoresSection({ isDark, c }: { isDark: boolean; c: Colors }) {
     setAddress(s.address ?? "");
     setPhone(s.phone ?? "");
     setLogoUri(s.logoUri ?? null);
+    setColor(s.color ?? "#3b82f6");
     setFormError("");
     setSheetOpen(true);
   }, []);
@@ -995,6 +1021,7 @@ function StoresSection({ isDark, c }: { isDark: boolean; c: Colors }) {
         address: address.trim() || null,
         phone: phone.trim() || null,
         logoUri,
+        color,
       };
       if (editing) {
         await storeRepo.update(editing.id, data);
@@ -1008,7 +1035,16 @@ function StoresSection({ isDark, c }: { isDark: boolean; c: Colors }) {
     } finally {
       setSaving(false);
     }
-  }, [name, address, phone, logoUri, editing, storeRepo, refreshStores]);
+  }, [name, address, phone, logoUri, color, editing, storeRepo, refreshStores]);
+
+  const verifyAdminPin = useCallback(
+    async (pin: string): Promise<boolean> => {
+      if (!user) return false;
+      const valid = await userRepo.verifyPin(user.id, await hashPin(pin));
+      return valid;
+    },
+    [user, userRepo],
+  );
 
   const handleDelete = useCallback(
     (s: StoreModel) => {
@@ -1016,23 +1052,32 @@ function StoresSection({ isDark, c }: { isDark: boolean; c: Colors }) {
         Alert.alert("Error", "No puedes eliminar la única tienda.");
         return;
       }
-      Alert.alert(
-        "Eliminar tienda",
-        `¿Eliminar "${s.name}"? Los datos asociados permanecerán en la base de datos.`,
-        [
-          { text: "Cancelar", style: "cancel" },
-          {
-            text: "Eliminar",
-            style: "destructive",
-            onPress: async () => {
-              await storeRepo.delete(s.id);
-              await refreshStores();
-            },
-          },
-        ],
+      Alert.prompt(
+        "🔐 Confirmar identidad",
+        `Ingresa tu PIN de administrador para eliminar "${s.name}"`,
+        async (pin) => {
+          if (!pin) return;
+          const valid = await verifyAdminPin(pin);
+          if (!valid) {
+            Alert.alert("Error", "PIN incorrecto");
+            return;
+          }
+          await storeRepo.delete(s.id);
+          await refreshStores();
+        },
+        "secure-text",
+        "",
+        "numeric",
       );
     },
-    [storeRepo, refreshStores, stores.length],
+    [storeRepo, refreshStores, stores.length, verifyAdminPin],
+  );
+
+  const handleSwitchStore = useCallback(
+    (s: StoreModel) => {
+      setCurrentStore(s);
+    },
+    [setCurrentStore],
   );
 
   return (
@@ -1080,13 +1125,23 @@ function StoresSection({ isDark, c }: { isDark: boolean; c: Colors }) {
                       style={[styles.divider, { backgroundColor: c.divider }]}
                     />
                   )}
-                  <View style={styles.workerRow}>
+                  <TouchableOpacity
+                    style={styles.workerRow}
+                    onPress={() => handleSwitchStore(s)}
+                    activeOpacity={0.7}
+                  >
                     <View
                       style={[
                         styles.avatar,
                         {
-                          backgroundColor: isActive ? c.blueLight : c.editBg,
+                          backgroundColor: s.color
+                            ? `${s.color}22`
+                            : isActive
+                              ? c.blueLight
+                              : c.editBg,
                           overflow: "hidden",
+                          borderWidth: isActive ? 2 : 0,
+                          borderColor: s.color ?? c.blue,
                         },
                       ]}
                     >
@@ -1098,7 +1153,9 @@ function StoresSection({ isDark, c }: { isDark: boolean; c: Colors }) {
                       ) : (
                         <Store
                           size={18}
-                          color={(isActive ? c.blue : c.muted) as any}
+                          color={
+                            (s.color ?? (isActive ? c.blue : c.muted)) as any
+                          }
                         />
                       )}
                     </View>
@@ -1110,6 +1167,14 @@ function StoresSection({ isDark, c }: { isDark: boolean; c: Colors }) {
                           gap: 6,
                         }}
                       >
+                        <View
+                          style={{
+                            width: 8,
+                            height: 8,
+                            borderRadius: 4,
+                            backgroundColor: s.color ?? c.blue,
+                          }}
+                        />
                         <Text style={[styles.workerName, { color: c.text }]}>
                           {s.name}
                         </Text>
@@ -1117,7 +1182,7 @@ function StoresSection({ isDark, c }: { isDark: boolean; c: Colors }) {
                           <Text
                             style={{
                               fontSize: 10,
-                              color: c.blue,
+                              color: s.color ?? c.blue,
                               fontWeight: "700",
                             }}
                           >
@@ -1150,7 +1215,7 @@ function StoresSection({ isDark, c }: { isDark: boolean; c: Colors }) {
                         <Trash2 size={15} color={c.danger as any} />
                       </TouchableOpacity>
                     </View>
-                  </View>
+                  </TouchableOpacity>
                 </View>
               );
             })}
@@ -1184,6 +1249,40 @@ function StoresSection({ isDark, c }: { isDark: boolean; c: Colors }) {
 
               {/* Photo picker */}
               <PhotoPicker uri={logoUri} onChange={setLogoUri} />
+
+              {/* Color picker */}
+              <YStack gap="$1">
+                <TText
+                  fontSize="$2"
+                  fontWeight="600"
+                  color="$color10"
+                  textTransform="uppercase"
+                  letterSpacing={0.5}
+                >
+                  Color
+                </TText>
+                <XStack flexWrap="wrap" gap="$2">
+                  {STORE_COLORS.map((clr) => (
+                    <TouchableOpacity
+                      key={clr}
+                      onPress={() => setColor(clr)}
+                      activeOpacity={0.7}
+                      style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: 18,
+                        backgroundColor: clr,
+                        alignItems: "center",
+                        justifyContent: "center",
+                        borderWidth: color === clr ? 3 : 0,
+                        borderColor: isDark ? "#fff" : "#18181b",
+                      }}
+                    >
+                      {color === clr && <Check size={16} color="white" />}
+                    </TouchableOpacity>
+                  ))}
+                </XStack>
+              </YStack>
 
               <YStack gap="$1">
                 <TText
@@ -1298,12 +1397,51 @@ function StoresSection({ isDark, c }: { isDark: boolean; c: Colors }) {
   );
 }
 
+// ── Preferences section ───────────────────────────────────────────────────────
+
+function PreferencesSection({ isDark, c }: { isDark: boolean; c: Colors }) {
+  const { showStoreBubble, setShowStoreBubble } = usePreferences();
+
+  return (
+    <ScrollView contentContainerStyle={styles.profileContent}>
+      <View
+        style={[
+          styles.profileCard,
+          { backgroundColor: c.card, borderColor: c.border },
+        ]}
+      >
+        <View style={styles.cardTitleRow}>
+          <Store size={14} color={c.blue as any} />
+          <Text style={[styles.cardTitle, { color: c.text }]}>Tienda</Text>
+        </View>
+
+        <View style={styles.prefRow}>
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text style={[styles.workerName, { color: c.text }]}>
+              Burbuja de tienda activa
+            </Text>
+            <Text style={[styles.workerMeta, { color: c.muted }]}>
+              Muestra un indicador flotante con la tienda actual en toda la app
+            </Text>
+          </View>
+          <Switch
+            value={showStoreBubble}
+            onValueChange={setShowStoreBubble}
+            trackColor={{ false: c.border, true: c.blue }}
+          />
+        </View>
+      </View>
+    </ScrollView>
+  );
+}
+
 // ── Main screen ───────────────────────────────────────────────────────────────
 
 const TABS: TabDef<SettingTab>[] = [
   { key: "profile", label: "Mi Perfil", Icon: UserCog },
   { key: "workers", label: "Vendedores", Icon: Users },
   { key: "stores", label: "Tiendas", Icon: Store },
+  { key: "prefs", label: "Preferencias", Icon: Settings },
 ];
 
 export default function SettingScreen() {
@@ -1319,6 +1457,7 @@ export default function SettingScreen() {
       {activeTab === "workers" && <WorkersSection isDark={isDark} c={c} />}
       {activeTab === "profile" && <ProfileSection isDark={isDark} c={c} />}
       {activeTab === "stores" && <StoresSection isDark={isDark} c={c} />}
+      {activeTab === "prefs" && <PreferencesSection isDark={isDark} c={c} />}
     </View>
   );
 }
@@ -1492,5 +1631,10 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingVertical: 12,
     borderRadius: 12,
+  },
+  prefRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
   },
 });

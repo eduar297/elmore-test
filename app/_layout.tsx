@@ -1,4 +1,6 @@
+import { StoreBubble } from "@/components/ui/store-bubble";
 import { AuthProvider } from "@/contexts/auth-context";
+import { PreferencesProvider } from "@/contexts/preferences-context";
 import { StoreProvider } from "@/contexts/store-context";
 import {
   DarkTheme,
@@ -55,9 +57,12 @@ export default function RootLayout() {
       <Theme name={colorScheme === "dark" ? "dark" : "light"}>
         <SQLiteProvider databaseName="elmore.db" onInit={migrateDbIfNeeded}>
           <StoreProvider>
-            <AuthProvider>
-              <AppStack />
-            </AuthProvider>
+            <PreferencesProvider>
+              <AuthProvider>
+                <AppStack />
+                <StoreBubble />
+              </AuthProvider>
+            </PreferencesProvider>
           </StoreProvider>
         </SQLiteProvider>
       </Theme>

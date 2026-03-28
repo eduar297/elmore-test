@@ -17,11 +17,12 @@ export class StoreRepository extends BaseRepository<
 
   async create(input: CreateStoreInput): Promise<Store> {
     const result = await this.db.runAsync(
-      `INSERT INTO stores (name, address, phone, logoUri) VALUES (?, ?, ?, ?)`,
+      `INSERT INTO stores (name, address, phone, logoUri, color) VALUES (?, ?, ?, ?, ?)`,
       input.name,
       input.address ?? null,
       input.phone ?? null,
       input.logoUri ?? null,
+      input.color ?? "#3b82f6",
     );
     const created = await this.findById(result.lastInsertRowId);
     if (!created) throw new Error("Tienda creada pero no encontrada");

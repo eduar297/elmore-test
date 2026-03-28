@@ -4,6 +4,7 @@ export interface Store {
   address: string | null;
   phone: string | null;
   logoUri: string | null;
+  color: string;
   createdAt: string;
 }
 
