@@ -26,7 +26,7 @@ import {
   Trash2,
   TriangleAlert,
   UserCog,
-  Users
+  Users,
 } from "@tamagui/lucide-icons";
 import { useFocusEffect } from "expo-router";
 import { useSQLiteContext } from "expo-sqlite";
@@ -462,6 +462,7 @@ function ProfileSection({ isDark, c }: { isDark: boolean; c: Colors }) {
   const { user, setUser } = useAuth();
   const userRepo = useUserRepository();
   const db = useSQLiteContext();
+  const { refreshStores, setCurrentStore, currentStore } = useStore();
 
   const [name, setName] = useState(user?.name ?? "");
   const [photoUri, setPhotoUri] = useState<string | null>(
@@ -533,6 +534,8 @@ function ProfileSection({ isDark, c }: { isDark: boolean; c: Colors }) {
                 setSuccess("");
                 try {
                   await resetDatabase(db);
+                  setCurrentStore(null);
+                  await refreshStores();
                   setSuccess("Base de datos limpiada correctamente");
                 } catch (e) {
                   setError((e as Error).message ?? "Error al limpiar");
@@ -548,6 +551,7 @@ function ProfileSection({ isDark, c }: { isDark: boolean; c: Colors }) {
       "",
       "numeric",
     );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [verifyAdminPin, db]);
 
   const handleSeed = useCallback(() => {
@@ -574,7 +578,9 @@ function ProfileSection({ isDark, c }: { isDark: boolean; c: Colors }) {
                 setSuccess("");
                 setSeedProgress("Iniciando...");
                 try {
-                  await seedSimulation(db, (msg) => setSeedProgress(msg));
+                  await seedSimulation(db, currentStore!.id, (msg) =>
+                    setSeedProgress(msg),
+                  );
                   setSuccess("Simulación completada exitosamente");
                   setSeedProgress("");
                 } catch (e) {
@@ -592,6 +598,7 @@ function ProfileSection({ isDark, c }: { isDark: boolean; c: Colors }) {
       "",
       "numeric",
     );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [verifyAdminPin, db]);
 
   const handleSave = useCallback(async () => {

@@ -818,18 +818,13 @@ export async function resetDatabase(db: SQLiteDatabase) {
 
 export async function seedSimulation(
   db: SQLiteDatabase,
+  storeId: number,
   onProgress?: (msg: string) => void,
 ) {
   const now = new Date();
   const startDate = new Date(now.getFullYear() - 1, 0, 1);
 
   onProgress?.("Creando trabajadores...");
-
-  // Obtener el storeId dinámicamente
-  const firstStore = await db.getFirstAsync<{ id: number }>(
-    "SELECT id FROM stores ORDER BY id ASC LIMIT 1",
-  );
-  const defaultStoreId = firstStore?.id ?? 1;
 
   // ── 1. Create workers ──────────────────────────────────────────────────────
   const workerIds: number[] = [];
@@ -842,7 +837,7 @@ export async function seedSimulation(
       `INSERT INTO users (name, role, pinHash, storeId, createdAt) VALUES (?, 'WORKER', ?, ?, ?)`,
       w.name,
       pinHash,
-      defaultStoreId,
+      storeId,
       fmtDatetime(startDate),
     );
     // Para SQLite via expo-sqlite, runAsync devuelve un objeto con lastInsertRowId
@@ -864,7 +859,7 @@ export async function seedSimulation(
       s.phone,
       s.email,
       s.address,
-      defaultStoreId,
+      storeId,
       fmtDatetime(startDate),
     );
     supplierIds.push(result.lastInsertRowId);
@@ -895,7 +890,7 @@ export async function seedSimulation(
       salePx,
       p.unit,
       p.mode,
-      defaultStoreId,
+      storeId,
     );
     productIds.push(result.lastInsertRowId);
     productPrices.push(salePx);
@@ -929,7 +924,7 @@ export async function seedSimulation(
     productSupplierIdx,
     stock,
     true,
-    defaultStoreId, // <--- Pasamos el storeId
+    storeId, // <--- Pasamos el storeId
   );
 
   // ── 6. Day-by-day simulation ───────────────────────────────────────────────
@@ -960,7 +955,7 @@ export async function seedSimulation(
         productSupplierIdx,
         stock,
         false,
-        defaultStoreId, // <--- Pasamos el storeId
+        storeId, // <--- Pasamos el storeId
       );
     }
 
@@ -1050,7 +1045,7 @@ export async function seedSimulation(
         items.length,
         wId,
         wName,
-        defaultStoreId,
+        storeId, // <--- Pasamos el storeId
       );
       const ticketId = ticketResult.lastInsertRowId;
 
@@ -1087,7 +1082,7 @@ export async function seedSimulation(
        VALUES ('RENT', 'Renta del local mes', ?, ?, ?, ?)`,
       randInt(8000, 12000),
       `${ym.slice(0, 7)}-01`,
-      defaultStoreId,
+      storeId,
       `${ym.slice(0, 7)}-01 09:00:00`,
     );
 
@@ -1097,7 +1092,7 @@ export async function seedSimulation(
          VALUES ('ELECTRICITY', 'Pago de luz bimestral', ?, ?, ?, ?)`,
         randInt(1500, 3500),
         `${ym.slice(0, 7)}-15`,
-        defaultStoreId,
+        storeId,
         `${ym.slice(0, 7)}-15 10:00:00`,
       );
     }
@@ -1112,7 +1107,7 @@ export async function seedSimulation(
         pick(EXPENSE_DESCS.TRANSPORT),
         randInt(150, 800),
         dateStr,
-        defaultStoreId,
+        storeId,
         `${dateStr} 12:00:00`,
       );
     }
@@ -1127,7 +1122,7 @@ export async function seedSimulation(
         pick(EXPENSE_DESCS.SUPPLIES),
         randInt(80, 400),
         dateStr,
-        defaultStoreId,
+        storeId,
         `${dateStr} 14:00:00`,
       );
     }
@@ -1141,7 +1136,7 @@ export async function seedSimulation(
         pick(EXPENSE_DESCS.REPAIRS),
         randInt(300, 3000),
         dateStr,
-        defaultStoreId,
+        storeId,
         `${dateStr} 16:00:00`,
       );
     }
@@ -1155,7 +1150,7 @@ export async function seedSimulation(
         pick(EXPENSE_DESCS.OTHER),
         randInt(50, 300),
         dateStr,
-        defaultStoreId,
+        storeId,
         `${dateStr} 11:00:00`,
       );
     }
