@@ -117,12 +117,18 @@ export function LoginSheet({
     muted: theme.color8?.val as string,
     border: theme.borderColor?.val as string,
     input: theme.color2?.val as string,
-    accent: (role === "ADMIN" ? theme.blue10?.val : theme.green10?.val) as string,
-    accentLight: (role === "ADMIN" ? theme.blue3?.val : theme.green3?.val) as string,
+    accent: (role === "ADMIN"
+      ? theme.blue10?.val
+      : theme.green10?.val) as string,
+    accentLight: (role === "ADMIN"
+      ? theme.blue3?.val
+      : theme.green3?.val) as string,
     error: theme.red10?.val as string,
     errorBg: theme.red3?.val as string,
     cardBg: theme.color2?.val as string,
-    cardBgSelected: (role === "ADMIN" ? theme.blue3?.val : theme.green3?.val) as string,
+    cardBgSelected: (role === "ADMIN"
+      ? theme.blue3?.val
+      : theme.green3?.val) as string,
   };
 
   const multiStore = stores.length > 1;

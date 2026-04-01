@@ -44,7 +44,15 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { Button, Input, Sheet, Text as TText, XStack, YStack, useTheme } from "tamagui";
+import {
+  Button,
+  Input,
+  Sheet,
+  Text as TText,
+  XStack,
+  YStack,
+  useTheme,
+} from "tamagui";
 
 // ── Colors ────────────────────────────────────────────────────────────────────
 
