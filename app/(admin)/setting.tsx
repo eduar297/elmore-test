@@ -35,7 +35,9 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   ScrollView,
   StyleSheet,
   Switch,
@@ -126,70 +128,77 @@ function PinPromptDialog({
       animationType="fade"
       onRequestClose={onCancel}
     >
-      <View style={styles.pinModalOverlay}>
-        <View
-          style={[
-            styles.pinModalCard,
-            { backgroundColor: c.card, borderColor: c.border },
-          ]}
-        >
-          <Text style={[styles.pinModalTitle, { color: c.text }]}>{title}</Text>
-          <Text style={[styles.pinModalDesc, { color: c.muted }]}>
-            {description}
-          </Text>
-          <TextInput
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
+        <View style={styles.pinModalOverlay}>
+          <View
             style={[
-              styles.input,
-              {
-                backgroundColor: c.input,
-                color: c.text,
-                borderColor: c.border,
-              },
+              styles.pinModalCard,
+              { backgroundColor: c.card, borderColor: c.border },
             ]}
-            placeholder="••••"
-            placeholderTextColor={c.muted}
-            value={pin}
-            onChangeText={setPin}
-            secureTextEntry
-            keyboardType="numeric"
-            maxLength={8}
-            autoFocus
-            returnKeyType="done"
-            onSubmitEditing={() => {
-              if (pin) onConfirm(pin);
-            }}
-          />
-          <View style={styles.pinModalActions}>
-            <TouchableOpacity
+          >
+            <Text style={[styles.pinModalTitle, { color: c.text }]}>
+              {title}
+            </Text>
+            <Text style={[styles.pinModalDesc, { color: c.muted }]}>
+              {description}
+            </Text>
+            <TextInput
               style={[
-                styles.pinModalBtn,
-                { borderWidth: 1, borderColor: c.border },
+                styles.input,
+                {
+                  backgroundColor: c.input,
+                  color: c.text,
+                  borderColor: c.border,
+                },
               ]}
-              onPress={onCancel}
-              activeOpacity={0.8}
-            >
-              <Text style={[styles.pinModalBtnText, { color: c.text }]}>
-                Cancelar
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.pinModalBtn,
-                { backgroundColor: c.blue, opacity: pin ? 1 : 0.5 },
-              ]}
-              onPress={() => {
+              placeholder="••••"
+              placeholderTextColor={c.muted}
+              value={pin}
+              onChangeText={setPin}
+              secureTextEntry
+              keyboardType="numeric"
+              maxLength={8}
+              autoFocus
+              returnKeyType="done"
+              onSubmitEditing={() => {
                 if (pin) onConfirm(pin);
               }}
-              disabled={!pin}
-              activeOpacity={0.8}
-            >
-              <Text style={[styles.pinModalBtnText, { color: "#fff" }]}>
-                Confirmar
-              </Text>
-            </TouchableOpacity>
+            />
+            <View style={styles.pinModalActions}>
+              <TouchableOpacity
+                style={[
+                  styles.pinModalBtn,
+                  { borderWidth: 1, borderColor: c.border },
+                ]}
+                onPress={onCancel}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.pinModalBtnText, { color: c.text }]}>
+                  Cancelar
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.pinModalBtn,
+                  { backgroundColor: c.blue, opacity: pin ? 1 : 0.5 },
+                ]}
+                onPress={() => {
+                  if (pin) onConfirm(pin);
+                }}
+                disabled={!pin}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.pinModalBtnText, { color: "#fff" }]}>
+                  Confirmar
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
