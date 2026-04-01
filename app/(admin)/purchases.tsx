@@ -4,11 +4,21 @@ import {
   Package,
   Plus,
   ScanLine,
+  Search,
   ShoppingBag,
+  ShoppingCart,
   Trash2,
+  X,
 } from "@tamagui/lucide-icons";
-import { useCallback, useEffect, useId, useState } from "react";
-import { Alert, FlatList, Image, StyleSheet } from "react-native";
+import { useCallback, useEffect, useId, useMemo, useState } from "react";
+import {
+  Alert,
+  FlatList,
+  Image,
+  Modal,
+  Pressable,
+  StyleSheet,
+} from "react-native";
 import {
   Button,
   Card,
@@ -31,6 +41,7 @@ import { usePeriodNavigation } from "@/hooks/use-period-navigation";
 import { useProductRepository } from "@/hooks/use-product-repository";
 import { usePurchaseRepository } from "@/hooks/use-purchase-repository";
 import { useSupplierRepository } from "@/hooks/use-supplier-repository";
+import type { Product } from "@/models/product";
 import type { Purchase, PurchaseItem } from "@/models/purchase";
 import type { Supplier } from "@/models/supplier";
 import { weekEndISO } from "@/utils/format";
@@ -203,6 +214,11 @@ export default function PurchasesScreen() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [creating, setCreating] = useState(false);
 
+  // ── product search ────────────────────────────────────────────────────────
+  const [showSearchSheet, setShowSearchSheet] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
+
   // ── scanner ───────────────────────────────────────────────────────────────
   const scan = useBarcodeScanner({
     onResult: (result) => {
@@ -232,7 +248,7 @@ export default function PurchasesScreen() {
             productName: p.name,
             photoUri: p.photoUri ?? null,
             qty: "1",
-            unitCost: "",
+            unitCost: String(p.costPrice),
           },
         ];
       });
@@ -316,14 +332,46 @@ export default function PurchasesScreen() {
   };
 
   const openCreate = async () => {
-    const list = await supplierRepo.findAll();
-    setSuppliers(list);
+    const [supplierList, productList] = await Promise.all([
+      supplierRepo.findAll(),
+      productRepo.findAll(),
+    ]);
+    setSuppliers(supplierList);
+    setAllProducts(productList);
     setSelectedSupplier(null);
     setPurchaseNotes("");
     setTransportCost("");
     setCart([]);
     setShowCreateSheet(true);
   };
+
+  const searchResults = useMemo(() => {
+    if (!searchQuery.trim()) return allProducts;
+    const q = searchQuery.toLowerCase().trim();
+    return allProducts.filter(
+      (p) =>
+        p.name.toLowerCase().includes(q) || p.barcode.toLowerCase().includes(q),
+    );
+  }, [allProducts, searchQuery]);
+
+  const toggleSearchItem = useCallback((product: Product) => {
+    setCart((prev) => {
+      const idx = prev.findIndex((i) => i.productId === product.id);
+      if (idx >= 0) {
+        return prev.filter((_, i) => i !== idx);
+      }
+      return [
+        ...prev,
+        {
+          productId: product.id,
+          productName: product.name,
+          photoUri: product.photoUri ?? null,
+          qty: "1",
+          unitCost: String(product.costPrice),
+        },
+      ];
+    });
+  }, []);
 
   // ── cart helpers ──────────────────────────────────────────────────────────
   const updateCartQty = (idx: number, val: string) => {
@@ -756,14 +804,27 @@ export default function PurchasesScreen() {
                 <Text fontSize="$4" fontWeight="600" color="$color">
                   Productos ({cart.length})
                 </Text>
-                <Button
-                  theme="blue"
-                  size="$3"
-                  icon={<ScanLine />}
-                  onPress={scan}
-                >
-                  Escanear
-                </Button>
+                <XStack gap="$2">
+                  <Button
+                    theme="blue"
+                    size="$3"
+                    icon={<ScanLine />}
+                    onPress={scan}
+                  >
+                    Escanear
+                  </Button>
+                  <Button
+                    theme="blue"
+                    size="$3"
+                    icon={<Search />}
+                    onPress={() => {
+                      setSearchQuery("");
+                      setShowSearchSheet(true);
+                    }}
+                  >
+                    Buscar
+                  </Button>
+                </XStack>
               </XStack>
 
               {/* Cart items */}
@@ -775,7 +836,7 @@ export default function PurchasesScreen() {
                     color="$color8"
                     style={{ textAlign: "center" }}
                   >
-                    Escanea los productos recibidos
+                    Escanea o busca los productos recibidos
                   </Text>
                 </YStack>
               ) : (
@@ -943,6 +1004,194 @@ export default function PurchasesScreen() {
           </Sheet.ScrollView>
         </Sheet.Frame>
       </Sheet>
+
+      {/* ── Product search modal ─────────────────────────────────────── */}
+      <Modal
+        visible={showSearchSheet}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowSearchSheet(false)}
+      >
+        <YStack
+          flex={1}
+          bg="$background"
+          theme={themeName as any}
+          pt="$6"
+          px="$4"
+          gap="$3"
+        >
+          <XStack
+            style={{
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <Text fontSize="$5" fontWeight="bold" color="$color">
+              Buscar producto
+            </Text>
+            <Button
+              size="$3"
+              circular
+              chromeless
+              icon={<X size={18} />}
+              onPress={() => setShowSearchSheet(false)}
+            />
+          </XStack>
+
+          <XStack
+            bg="$color3"
+            borderWidth={1}
+            borderColor="$borderColor"
+            style={{ borderRadius: 12, alignItems: "center" }}
+            px="$3"
+            gap="$2"
+            height={44}
+          >
+            <Search size={18} color="$color10" />
+            <Input
+              flex={1}
+              size="$3"
+              bg="transparent"
+              borderWidth={0}
+              color="$color"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder="Nombre o código de barras…"
+              placeholderTextColor="$color8"
+              returnKeyType="search"
+              autoCorrect={false}
+              autoCapitalize="none"
+              autoFocus
+              px={0}
+            />
+            {searchQuery.length > 0 && (
+              <Button
+                size="$2"
+                chromeless
+                circular
+                icon={<X size={14} color="$color10" />}
+                onPress={() => setSearchQuery("")}
+              />
+            )}
+          </XStack>
+
+          {cart.length > 0 && (
+            <XStack
+              bg="$blue3"
+              style={{ alignItems: "center", borderRadius: 8 }}
+              px="$3"
+              py="$2"
+              gap="$2"
+            >
+              <ShoppingCart size={14} color="$blue10" />
+              <Text fontSize="$2" color="$blue10" fontWeight="600">
+                {cart.length} producto{cart.length !== 1 ? "s" : ""} en carrito
+              </Text>
+            </XStack>
+          )}
+
+          <FlatList
+            data={searchResults}
+            keyExtractor={(item) => String(item.id)}
+            keyboardShouldPersistTaps="handled"
+            renderItem={({ item: p }) => {
+              const inCart = cart.some((c) => c.productId === p.id);
+              return (
+                <Pressable
+                  onPress={() => toggleSearchItem(p)}
+                  style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+                >
+                  <XStack
+                    px="$3"
+                    py="$3"
+                    style={{
+                      alignItems: "center",
+                      borderRadius: inCart ? 10 : 0,
+                    }}
+                    gap="$3"
+                    borderBottomWidth={1}
+                    borderColor="$borderColor"
+                    bg={inCart ? "$green3" : "transparent"}
+                  >
+                    {p.photoUri ? (
+                      <Image
+                        source={{ uri: p.photoUri }}
+                        style={{ width: 44, height: 44, borderRadius: 10 }}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <YStack
+                        width={44}
+                        height={44}
+                        bg="$color3"
+                        style={{
+                          borderRadius: 10,
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <Package size={20} color="$color8" />
+                      </YStack>
+                    )}
+                    <YStack flex={1} gap="$0.5">
+                      <Text
+                        fontSize="$3"
+                        fontWeight="600"
+                        color="$color"
+                        numberOfLines={1}
+                      >
+                        {p.name}
+                      </Text>
+                      <XStack gap="$2" style={{ alignItems: "center" }}>
+                        <Text fontSize="$2" color="$color10">
+                          Stock: {p.stockBaseQty}
+                        </Text>
+                      </XStack>
+                    </YStack>
+                    {inCart ? (
+                      <XStack
+                        px="$2"
+                        py="$1.5"
+                        bg="$green9"
+                        style={{ borderRadius: 8, alignItems: "center" }}
+                        gap="$1"
+                      >
+                        <ShoppingCart size={14} color="white" />
+                        <Text fontSize="$2" fontWeight="bold" color="white">
+                          Añadido
+                        </Text>
+                      </XStack>
+                    ) : (
+                      <XStack
+                        px="$2"
+                        py="$1.5"
+                        bg="$color3"
+                        style={{ borderRadius: 8, alignItems: "center" }}
+                      >
+                        <Text fontSize="$2" fontWeight="500" color="$color10">
+                          Agregar
+                        </Text>
+                      </XStack>
+                    )}
+                  </XStack>
+                </Pressable>
+              );
+            }}
+            ListEmptyComponent={
+              <YStack p="$6" style={{ alignItems: "center" }} gap="$2">
+                <Search size={40} color="$color8" />
+                <Text color="$color10" fontSize="$3">
+                  {searchQuery.trim()
+                    ? "No se encontraron productos"
+                    : "Escribe para buscar productos"}
+                </Text>
+              </YStack>
+            }
+            style={{ flex: 1 }}
+            contentContainerStyle={{ paddingBottom: 40 }}
+          />
+        </YStack>
+      </Modal>
     </YStack>
   );
 }
