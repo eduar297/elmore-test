@@ -8,6 +8,7 @@ import { useTicketRepository } from "@/hooks/use-ticket-repository";
 import {
   daysInMonth,
   fmtMoney,
+  fmtMoneyFull,
   MONTH_NAMES_SHORT,
   shiftDay,
   shortDayLabel,
@@ -286,6 +287,7 @@ export function OverviewSection() {
             <StatCard
               label="Ventas"
               value={`$${fmtMoney(salesTotal)}`}
+              detail={`$${fmtMoneyFull(salesTotal)}`}
               color="$green10"
               icon={<DollarSign size={16} color="$green10" />}
             />
@@ -298,6 +300,7 @@ export function OverviewSection() {
             <StatCard
               label="Promedio"
               value={`$${fmtMoney(avgTicket)}`}
+              detail={`$${fmtMoneyFull(avgTicket)}`}
               color="$purple10"
               icon={<TrendingUp size={16} color="$purple10" />}
             />
@@ -307,6 +310,7 @@ export function OverviewSection() {
             <StatCard
               label="Inventario"
               value={`$${fmtMoney(inventoryValue)}`}
+              detail={`$${fmtMoneyFull(inventoryValue)}`}
               color="$purple10"
               icon={<Package size={16} color="$purple10" />}
             />
@@ -367,8 +371,8 @@ export function OverviewSection() {
                 <Text fontSize="$3" color="$color10">
                   Ingresos (ventas)
                 </Text>
-                <Text fontSize="$4" fontWeight="600" color="$green10">
-                  +${fmtMoney(salesTotal)}
+                <Text fontSize="$3" fontWeight="600" color="$green10">
+                  +${fmtMoneyFull(salesTotal)}
                 </Text>
               </XStack>
 
@@ -382,8 +386,8 @@ export function OverviewSection() {
                   <Text fontSize="$3" color="$color10">
                     Compras
                   </Text>
-                  <Text fontSize="$4" fontWeight="600" color="$red10">
-                    -${fmtMoney(purchasesTotal)}
+                  <Text fontSize="$3" fontWeight="600" color="$red10">
+                    -${fmtMoneyFull(purchasesTotal)}
                   </Text>
                 </XStack>
               )}
@@ -398,8 +402,8 @@ export function OverviewSection() {
                   <Text fontSize="$3" color="$color10">
                     Gastos operativos
                   </Text>
-                  <Text fontSize="$4" fontWeight="600" color="$red10">
-                    -${fmtMoney(expensesTotal)}
+                  <Text fontSize="$3" fontWeight="600" color="$red10">
+                    -${fmtMoneyFull(expensesTotal)}
                   </Text>
                 </XStack>
               )}
@@ -416,7 +420,7 @@ export function OverviewSection() {
                   {profit >= 0 ? "Ganancia" : "Pérdida"}
                 </Text>
                 <Text
-                  fontSize="$6"
+                  fontSize="$5"
                   fontWeight="bold"
                   color={profit >= 0 ? "$green10" : "$red10"}
                   numberOfLines={1}
@@ -425,7 +429,7 @@ export function OverviewSection() {
                   text="right"
                   ml="$2"
                 >
-                  {profit >= 0 ? "+" : "-"}${fmtMoney(Math.abs(profit))}
+                  {profit >= 0 ? "+" : "-"}${fmtMoneyFull(Math.abs(profit))}
                 </Text>
               </XStack>
             </YStack>

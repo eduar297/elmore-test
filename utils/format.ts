@@ -7,6 +7,17 @@ export function fmtMoney(val: number): string {
   return abs.toFixed(2);
 }
 
+/** Full number with thousands separator, no abbreviation. */
+export function fmtMoneyFull(val: number): string {
+  const abs = Math.abs(val);
+  if (abs === 0) return "0.00";
+  if (abs < 1) return abs.toFixed(2);
+  const intPart = Math.floor(abs);
+  const decPart = (abs - intPart).toFixed(2).slice(1); // ".XX"
+  const formatted = intPart.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  return formatted + decPart;
+}
+
 // ── Date constants ────────────────────────────────────────────────────────────
 
 export const MONTH_NAMES_SHORT = [
@@ -43,7 +54,10 @@ export const MONTH_NAMES_FULL = [
 
 export function todayISO(): string {
   const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
+    2,
+    "0",
+  )}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 export function currentYearMonth(): string {

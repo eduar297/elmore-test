@@ -8,6 +8,7 @@ import { EXPENSE_CATEGORIES } from "@/models/expense";
 import {
   daysInMonth,
   fmtMoney,
+  fmtMoneyFull,
   MONTH_NAMES_SHORT,
   shiftDay,
   shortDayLabel,
@@ -658,8 +659,8 @@ export function FinanceSection() {
                 <Text fontSize="$4" color="$color10">
                   Ingresos (ventas)
                 </Text>
-                <Text fontSize="$4" fontWeight="600" color="$green10">
-                  +${fmtMoney(salesTotal)}
+                <Text fontSize="$3" fontWeight="600" color="$green10">
+                  +${fmtMoneyFull(salesTotal)}
                 </Text>
               </XStack>
               <Text fontSize="$2" color="$color8" ml="$4">
@@ -684,7 +685,7 @@ export function FinanceSection() {
                     Compras de mercancía
                   </Text>
                   <Text fontSize="$3" fontWeight="600" color="$red10">
-                    -${fmtMoney(purchaseMerchandise)}
+                    -${fmtMoneyFull(purchaseMerchandise)}
                   </Text>
                 </XStack>
               )}
@@ -701,7 +702,7 @@ export function FinanceSection() {
                     Transporte (compras)
                   </Text>
                   <Text fontSize="$3" fontWeight="600" color="$red10">
-                    -${fmtMoney(purchTransport)}
+                    -${fmtMoneyFull(purchTransport)}
                   </Text>
                 </XStack>
               )}
@@ -719,7 +720,7 @@ export function FinanceSection() {
                     {EXPENSE_CATEGORIES[ec.category]}
                   </Text>
                   <Text fontSize="$3" fontWeight="600" color="$red10">
-                    -${fmtMoney(ec.total)}
+                    -${fmtMoneyFull(ec.total)}
                   </Text>
                 </XStack>
               ))}
@@ -733,8 +734,8 @@ export function FinanceSection() {
                 <Text fontSize="$3" fontWeight="600" color="$color">
                   Total egresos
                 </Text>
-                <Text fontSize="$4" fontWeight="bold" color="$red10">
-                  -${fmtMoney(totalEgresos)}
+                <Text fontSize="$3" fontWeight="bold" color="$red10">
+                  -${fmtMoneyFull(totalEgresos)}
                 </Text>
               </XStack>
 
@@ -755,7 +756,7 @@ export function FinanceSection() {
                   </Text>
                 </YStack>
                 <Text
-                  fontSize="$6"
+                  fontSize="$5"
                   fontWeight="bold"
                   color={profit >= 0 ? "$green10" : "$red10"}
                   numberOfLines={1}
@@ -764,7 +765,7 @@ export function FinanceSection() {
                   text="right"
                   ml="$2"
                 >
-                  {profit >= 0 ? "+" : "-"}${fmtMoney(Math.abs(profit))}
+                  {profit >= 0 ? "+" : "-"}${fmtMoneyFull(Math.abs(profit))}
                 </Text>
               </XStack>
             </YStack>

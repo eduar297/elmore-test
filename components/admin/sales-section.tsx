@@ -8,6 +8,7 @@ import type { User as UserModel } from "@/models/user";
 import {
   daysInMonth,
   fmtMoney,
+  fmtMoneyFull,
   fmtTime,
   MONTH_NAMES_SHORT,
   shiftDay,
@@ -416,6 +417,7 @@ export function SalesSection() {
         <StatCard
           label="Total"
           value={`$${fmtMoney(summaryTotal)}`}
+          detail={`$${fmtMoneyFull(summaryTotal)}`}
           color="$green10"
           icon={<DollarSign size={16} color="$green10" />}
         />
@@ -428,6 +430,7 @@ export function SalesSection() {
         <StatCard
           label="Promedio"
           value={`$${fmtMoney(summaryAvg)}`}
+          detail={`$${fmtMoneyFull(summaryAvg)}`}
           color="$purple10"
           icon={<TrendingUp size={16} color="$purple10" />}
         />

@@ -12,7 +12,7 @@ import { useTicketRepository } from "@/hooks/use-ticket-repository";
 import { useUnitRepository } from "@/hooks/use-unit-repository";
 import type { Product } from "@/models/product";
 import type { Unit, UnitCategory } from "@/models/unit";
-import { fmtMoney, weekEndISO } from "@/utils/format";
+import { fmtMoney, fmtMoneyFull, weekEndISO } from "@/utils/format";
 import {
     AlertTriangle,
     ArrowDownToLine,
@@ -278,12 +278,14 @@ export function InventorySection() {
               <StatCard
                 label="Compras"
                 value={`$${fmtMoney(periodPurchases)}`}
+                detail={`$${fmtMoneyFull(periodPurchases)}`}
                 color="$blue10"
                 icon={<ArrowDownToLine size={16} color="$blue10" />}
               />
               <StatCard
                 label="Ventas"
                 value={`$${fmtMoney(periodSales)}`}
+                detail={`$${fmtMoneyFull(periodSales)}`}
                 color="$green10"
                 icon={<ArrowUpFromLine size={16} color="$green10" />}
               />
@@ -300,6 +302,7 @@ export function InventorySection() {
               <StatCard
                 label="Valor inv."
                 value={`$${fmtMoney(inventoryValue)}`}
+                detail={`$${fmtMoneyFull(inventoryValue)}`}
                 color="$green10"
                 icon={<DollarSign size={16} color="$green10" />}
               />
