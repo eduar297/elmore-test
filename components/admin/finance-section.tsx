@@ -61,20 +61,36 @@ export function FinanceSection() {
   const [monthDailySales, setMonthDailySales] = useState<
     { day: number; total: number }[]
   >([]);
+  const [monthDailyTrend, setMonthDailyTrend] = useState<
+    { day: number; income: number; outflow: number }[]
+  >([]);
   const [rangeDailyData, setRangeDailyData] = useState<
     { label: string; income: number; outflow: number }[]
+  >([]);
+  const [dayHourlyTrend, setDayHourlyTrend] = useState<
+    { hour: number; income: number; outflow: number }[]
   >([]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
       if (nav.period === "day") {
-        const [daySumm, dayP, dayE, dayExpCat, hourly] = await Promise.all([
+        const [
+          daySumm,
+          dayP,
+          dayE,
+          dayExpCat,
+          hourly,
+          dayPurchases,
+          dayExpenses,
+        ] = await Promise.all([
           ticketRepo.daySummary(nav.selectedDay),
           purchaseRepo.daySummary(nav.selectedDay),
           expenseRepo.dayTotal(nav.selectedDay),
           expenseRepo.daySummaryByCategory(nav.selectedDay),
           ticketRepo.hourlySales(nav.selectedDay),
+          purchaseRepo.findByDay(nav.selectedDay),
+          expenseRepo.findByDay(nav.selectedDay),
         ]);
         setSalesTotal(daySumm.totalSales);
         setSalesTickets(daySumm.ticketCount);
@@ -83,14 +99,36 @@ export function FinanceSection() {
         setExpenseTotal(dayE);
         setExpensesByCategory(dayExpCat);
         setHourlySales(hourly);
+        // Build hourly income/outflow for day trend
+        const hourMap = new Map(hourly.map((h) => [h.hour, h.total]));
+        const purchByHour = new Map<number, number>();
+        for (const p of dayPurchases) {
+          const h = new Date(p.createdAt).getHours();
+          purchByHour.set(h, (purchByHour.get(h) ?? 0) + p.total);
+        }
+        const expByHour = new Map<number, number>();
+        for (const e of dayExpenses) {
+          const h = new Date(e.createdAt).getHours();
+          expByHour.set(h, (expByHour.get(h) ?? 0) + e.amount);
+        }
+        setDayHourlyTrend(
+          Array.from({ length: 24 }, (_, i) => ({
+            hour: i,
+            income: hourMap.get(i) ?? 0,
+            outflow: (purchByHour.get(i) ?? 0) + (expByHour.get(i) ?? 0),
+          })).filter((d) => d.income > 0 || d.outflow > 0),
+        );
       } else if (nav.period === "week") {
         const wkEnd = weekEndISO(nav.selectedWeekStart);
-        const [wkTickets, wkPurch, wkExp, wkExpCat] = await Promise.all([
-          ticketRepo.findByDateRange(nav.selectedWeekStart, wkEnd),
-          purchaseRepo.rangeSummary(nav.selectedWeekStart, wkEnd),
-          expenseRepo.rangeTotal(nav.selectedWeekStart, wkEnd),
-          expenseRepo.rangeSummaryByCategory(nav.selectedWeekStart, wkEnd),
-        ]);
+        const [wkTickets, wkPurch, wkExp, wkExpCat, wkPurchases, wkExpenses] =
+          await Promise.all([
+            ticketRepo.findByDateRange(nav.selectedWeekStart, wkEnd),
+            purchaseRepo.rangeSummary(nav.selectedWeekStart, wkEnd),
+            expenseRepo.rangeTotal(nav.selectedWeekStart, wkEnd),
+            expenseRepo.rangeSummaryByCategory(nav.selectedWeekStart, wkEnd),
+            purchaseRepo.findByDateRange(nav.selectedWeekStart, wkEnd),
+            expenseRepo.findByDateRange(nav.selectedWeekStart, wkEnd),
+          ]);
         setSalesTotal(wkTickets.reduce((s, t) => s + t.total, 0));
         setSalesTickets(wkTickets.length);
         setPurchTotal(wkPurch.totalSpent);
@@ -99,24 +137,47 @@ export function FinanceSection() {
         setExpensesByCategory(wkExpCat);
         // Build daily income/outflow for week chart
         const DAY_LABELS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
+        const purchByDate = new Map<string, number>();
+        for (const p of wkPurchases) {
+          const dk = p.createdAt.slice(0, 10);
+          purchByDate.set(dk, (purchByDate.get(dk) ?? 0) + p.total);
+        }
+        const expByDate = new Map<string, number>();
+        for (const e of wkExpenses) {
+          expByDate.set(e.date, (expByDate.get(e.date) ?? 0) + e.amount);
+        }
         const daily = Array.from({ length: 7 }, (_, i) => {
           const dayKey = shiftDay(nav.selectedWeekStart, i);
           const dayIncome = wkTickets
             .filter((t) => t.createdAt.slice(0, 10) === dayKey)
             .reduce((s, t) => s + t.total, 0);
-          // Outflow distributed proportionally (we don't have daily purchase/expense breakdown for week)
-          return { label: DAY_LABELS[i], income: dayIncome, outflow: 0 };
+          const dayOutflow =
+            (purchByDate.get(dayKey) ?? 0) + (expByDate.get(dayKey) ?? 0);
+          return {
+            label: DAY_LABELS[i],
+            income: dayIncome,
+            outflow: dayOutflow,
+          };
         });
         setWeekDailyData(daily);
       } else if (nav.period === "month") {
-        const [monthS, monthP, monthE, expByCat, monthDaily] =
-          await Promise.all([
-            ticketRepo.monthlySummary(nav.selectedMonth),
-            purchaseRepo.monthlySummary(nav.selectedMonth),
-            expenseRepo.monthlyTotal(nav.selectedMonth),
-            expenseRepo.monthlySummaryByCategory(nav.selectedMonth),
-            ticketRepo.dailySales(nav.selectedMonth),
-          ]);
+        const [
+          monthS,
+          monthP,
+          monthE,
+          expByCat,
+          monthDaily,
+          monthPurchases,
+          monthExpenses,
+        ] = await Promise.all([
+          ticketRepo.monthlySummary(nav.selectedMonth),
+          purchaseRepo.monthlySummary(nav.selectedMonth),
+          expenseRepo.monthlyTotal(nav.selectedMonth),
+          expenseRepo.monthlySummaryByCategory(nav.selectedMonth),
+          ticketRepo.dailySales(nav.selectedMonth),
+          purchaseRepo.findByMonth(nav.selectedMonth),
+          expenseRepo.findByMonth(nav.selectedMonth),
+        ]);
         setSalesTotal(monthS.totalSales);
         setSalesTickets(monthS.ticketCount);
         setPurchTotal(monthP.totalSpent);
@@ -124,6 +185,25 @@ export function FinanceSection() {
         setExpenseTotal(monthE);
         setExpensesByCategory(expByCat);
         setMonthDailySales(monthDaily);
+        // Build daily income/outflow for the month
+        const numDays = daysInMonth(nav.selectedMonth);
+        const salesMap = new Map(monthDaily.map((d) => [d.day, d.total]));
+        const purchByDay = new Map<number, number>();
+        for (const p of monthPurchases) {
+          const d = new Date(p.createdAt).getDate();
+          purchByDay.set(d, (purchByDay.get(d) ?? 0) + p.total);
+        }
+        const expByDay = new Map<number, number>();
+        for (const e of monthExpenses) {
+          const d = new Date(e.date + "T12:00:00").getDate();
+          expByDay.set(d, (expByDay.get(d) ?? 0) + e.amount);
+        }
+        const trend = Array.from({ length: numDays }, (_, i) => ({
+          day: i + 1,
+          income: salesMap.get(i + 1) ?? 0,
+          outflow: (purchByDay.get(i + 1) ?? 0) + (expByDay.get(i + 1) ?? 0),
+        })).filter((d) => d.income > 0 || d.outflow > 0);
+        setMonthDailyTrend(trend);
       } else if (nav.period === "year") {
         const yearStart = `${nav.selectedYear}-01-01`;
         const yearEnd = `${nav.selectedYear}-12-31`;
@@ -181,19 +261,6 @@ export function FinanceSection() {
           };
         });
         setRangeDailyData(rangeDaily);
-      }
-
-      // Load yearly trends for month view
-      if (nav.period === "month") {
-        const yr = parseInt(nav.selectedMonth.slice(0, 4), 10);
-        const [ySales, yPurch, yExp] = await Promise.all([
-          ticketRepo.monthlySalesForYear(String(yr)),
-          purchaseRepo.monthlyTotalsForYear(String(yr)),
-          expenseRepo.monthlyTotalsForYear(String(yr)),
-        ]);
-        setYearSalesTrend(ySales);
-        setYearPurchaseTrend(yPurch);
-        setYearExpenseTrend(yExp);
       }
     } finally {
       setLoading(false);
@@ -300,6 +367,127 @@ export function FinanceSection() {
     [yearlyTrendData],
   );
 
+  // Monthly daily grouped bar data (Ingresos vs Egresos by day)
+  const monthGroupedBarData = useMemo(() => {
+    const data: {
+      value: number;
+      label?: string;
+      frontColor: string;
+      spacing?: number;
+      labelTextStyle?: object;
+      labelWidth?: number;
+    }[] = [];
+    for (const item of monthDailyTrend) {
+      data.push({
+        value: item.income,
+        label: String(item.day),
+        frontColor: "#22c55e",
+        spacing: 2,
+        labelTextStyle: { fontSize: 9, color: "#888" },
+      });
+      data.push({
+        value: item.outflow,
+        frontColor: "#ef4444",
+        spacing: 10,
+      });
+    }
+    return data;
+  }, [monthDailyTrend]);
+
+  // Monthly daily profit trend data
+  const monthProfitTrendData = useMemo(
+    () =>
+      monthDailyTrend.map((item) => ({
+        value: item.income - item.outflow,
+        label: String(item.day),
+        frontColor: item.income - item.outflow >= 0 ? "#22c55e" : "#ef4444",
+        labelTextStyle: { fontSize: 9, color: "#888" },
+      })),
+    [monthDailyTrend],
+  );
+
+  // Week daily grouped bar data (Ingresos vs Egresos by day)
+  const weekGroupedBarData = useMemo(() => {
+    if (!weekDailyData.some((d) => d.income > 0 || d.outflow > 0)) return [];
+    const data: {
+      value: number;
+      label?: string;
+      frontColor: string;
+      spacing?: number;
+      labelTextStyle?: object;
+      labelWidth?: number;
+    }[] = [];
+    for (const item of weekDailyData) {
+      data.push({
+        value: item.income,
+        label: item.label,
+        frontColor: "#22c55e",
+        spacing: 2,
+        labelTextStyle: { fontSize: 10, color: "#888" },
+        labelWidth: 30,
+      });
+      data.push({
+        value: item.outflow,
+        frontColor: "#ef4444",
+        spacing: 14,
+      });
+    }
+    return data;
+  }, [weekDailyData]);
+
+  // Week daily profit trend data
+  const weekProfitTrendData = useMemo(
+    () =>
+      weekDailyData.some((d) => d.income > 0 || d.outflow > 0)
+        ? weekDailyData.map((item) => ({
+            value: item.income - item.outflow,
+            label: item.label,
+            frontColor: item.income - item.outflow >= 0 ? "#22c55e" : "#ef4444",
+            labelTextStyle: { fontSize: 10, color: "#888" },
+            labelWidth: 30,
+          }))
+        : [],
+    [weekDailyData],
+  );
+
+  // Day hourly grouped bar data (Ingresos vs Egresos by hour)
+  const dayGroupedBarData = useMemo(() => {
+    const data: {
+      value: number;
+      label?: string;
+      frontColor: string;
+      spacing?: number;
+      labelTextStyle?: object;
+    }[] = [];
+    for (const item of dayHourlyTrend) {
+      data.push({
+        value: item.income,
+        label: `${item.hour}h`,
+        frontColor: "#22c55e",
+        spacing: 2,
+        labelTextStyle: { fontSize: 10, color: "#888" },
+      });
+      data.push({
+        value: item.outflow,
+        frontColor: "#ef4444",
+        spacing: 10,
+      });
+    }
+    return data;
+  }, [dayHourlyTrend]);
+
+  // Day hourly profit trend data
+  const dayProfitTrendData = useMemo(
+    () =>
+      dayHourlyTrend.map((item) => ({
+        value: item.income - item.outflow,
+        label: `${item.hour}h`,
+        frontColor: item.income - item.outflow >= 0 ? "#22c55e" : "#ef4444",
+        labelTextStyle: { fontSize: 10, color: "#888" },
+      })),
+    [dayHourlyTrend],
+  );
+
   // Hourly chart for day view
   const hourlyChartData = useMemo(() => {
     if (nav.period !== "day") return [];
@@ -353,13 +541,56 @@ export function FinanceSection() {
     });
   }, [nav.period, nav.selectedMonth, monthDailySales]);
 
-  const hasNegativeProfit = profitTrendData.some((d) => d.value < 0);
-  const hasPositiveProfit = profitTrendData.some((d) => d.value > 0);
+  // Select the active trend data based on period
+  const activeGroupedBarData = useMemo(() => {
+    switch (nav.period) {
+      case "day":
+        return dayGroupedBarData;
+      case "week":
+        return weekGroupedBarData;
+      case "month":
+        return monthGroupedBarData;
+      case "year":
+        return groupedBarData;
+      default:
+        return [];
+    }
+  }, [
+    nav.period,
+    dayGroupedBarData,
+    weekGroupedBarData,
+    monthGroupedBarData,
+    groupedBarData,
+  ]);
+
+  const activeProfitData = useMemo(() => {
+    switch (nav.period) {
+      case "day":
+        return dayProfitTrendData;
+      case "week":
+        return weekProfitTrendData;
+      case "month":
+        return monthProfitTrendData;
+      case "year":
+        return profitTrendData;
+      default:
+        return [];
+    }
+  }, [
+    nav.period,
+    dayProfitTrendData,
+    weekProfitTrendData,
+    monthProfitTrendData,
+    profitTrendData,
+  ]);
+
+  const hasNegativeProfit = activeProfitData.some((d) => d.value < 0);
+  const hasPositiveProfit = activeProfitData.some((d) => d.value > 0);
   const profitAbsMax =
-    profitTrendData.length > 0
+    activeProfitData.length > 0
       ? Math.max(
-          Math.abs(Math.max(0, ...profitTrendData.map((d) => d.value))),
-          Math.abs(Math.min(0, ...profitTrendData.map((d) => d.value))),
+          Math.abs(Math.max(0, ...activeProfitData.map((d) => d.value))),
+          Math.abs(Math.min(0, ...activeProfitData.map((d) => d.value))),
         )
       : 0;
   const profitStep = profitAbsMax > 0 ? Math.ceil(profitAbsMax / 3) : 1;
@@ -689,17 +920,21 @@ export function FinanceSection() {
             </Card>
           )}
 
-          {/* Yearly trends — show for month and year */}
-          {(nav.period === "month" || nav.period === "year") && (
+          {/* Tendencias — day: by hour, week: by day, month: by day, year: by month */}
+          {nav.period !== "range" && (
             <>
               <Text fontSize="$5" fontWeight="bold" color="$color" mt="$2">
                 {nav.period === "year"
                   ? `Tendencias ${nav.selectedYear}`
-                  : `Tendencias anuales ${nav.selectedMonth.slice(0, 4)}`}
+                  : nav.period === "month"
+                  ? "Tendencias del mes"
+                  : nav.period === "week"
+                  ? "Tendencias de la semana"
+                  : "Tendencias del día"}
               </Text>
 
               {/* Income vs Outflow bar chart */}
-              {groupedBarData.length > 0 && (
+              {activeGroupedBarData.length > 0 && (
                 <Card
                   bg="$color1"
                   borderWidth={1}
@@ -739,13 +974,16 @@ export function FinanceSection() {
                         </Text>
                       </XStack>
                     </XStack>
-                    <AdminBarChart data={groupedBarData} showLine={false} />
+                    <AdminBarChart
+                      data={activeGroupedBarData}
+                      showLine={false}
+                    />
                   </YStack>
                 </Card>
               )}
 
-              {/* Monthly profit trend */}
-              {profitTrendData.length > 0 && (
+              {/* Profit/Loss trend */}
+              {activeProfitData.length > 0 && (
                 <Card
                   bg="$color1"
                   borderWidth={1}
@@ -755,10 +993,14 @@ export function FinanceSection() {
                 >
                   <YStack gap="$2">
                     <Text fontSize="$3" fontWeight="600" color="$color10">
-                      Ganancia/Pérdida por mes
+                      {nav.period === "year"
+                        ? "Ganancia/Pérdida por mes"
+                        : nav.period === "day"
+                        ? "Ganancia/Pérdida por hora"
+                        : "Ganancia/Pérdida por día"}
                     </Text>
                     <AdminBarChart
-                      data={profitTrendData}
+                      data={activeProfitData}
                       stepValue={profitStep}
                       noOfSections={profitSectionsAbove}
                       mostNegativeValue={
