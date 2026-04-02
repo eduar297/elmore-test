@@ -202,7 +202,7 @@ export function FinanceSection() {
           day: i + 1,
           income: salesMap.get(i + 1) ?? 0,
           outflow: (purchByDay.get(i + 1) ?? 0) + (expByDay.get(i + 1) ?? 0),
-        })).filter((d) => d.income > 0 || d.outflow > 0);
+        }));
         setMonthDailyTrend(trend);
       } else if (nav.period === "year") {
         const yearStart = `${nav.selectedYear}-01-01`;
@@ -1019,7 +1019,7 @@ export function FinanceSection() {
 
           {/* Period-aware summary table */}
           {nav.period === "day" &&
-            hourlySales.some((h) => h.total > 0 || h.tickets > 0) && (
+            dayHourlyTrend.some((h) => h.income > 0 || h.outflow > 0) && (
               <Card
                 bg="$color1"
                 borderWidth={1}
@@ -1034,7 +1034,7 @@ export function FinanceSection() {
                 </YStack>
                 <XStack px="$4" py="$2" bg="$color2">
                   <Text
-                    flex={1}
+                    width={40}
                     fontSize="$2"
                     fontWeight="600"
                     color="$color10"
@@ -1042,48 +1042,81 @@ export function FinanceSection() {
                     Hora
                   </Text>
                   <Text
+                    flex={1}
                     fontSize="$2"
                     fontWeight="600"
                     color="$green10"
-                    style={{ width: 70, textAlign: "right" }}
+                    style={{ textAlign: "right" }}
                   >
-                    Ventas
+                    Ingreso
                   </Text>
                   <Text
+                    flex={1}
                     fontSize="$2"
                     fontWeight="600"
-                    color="$blue10"
-                    style={{ width: 50, textAlign: "right" }}
+                    color="$red10"
+                    style={{ textAlign: "right" }}
                   >
-                    Tickets
+                    Egreso
+                  </Text>
+                  <Text
+                    flex={1}
+                    fontSize="$2"
+                    fontWeight="600"
+                    color="$color"
+                    style={{ textAlign: "right" }}
+                  >
+                    Resultado
                   </Text>
                 </XStack>
-                {hourlySales
-                  .filter((h) => h.total > 0 || h.tickets > 0)
-                  .map((h) => (
-                    <YStack key={h.hour}>
-                      <Separator />
-                      <XStack px="$4" py="$2" style={{ alignItems: "center" }}>
-                        <Text flex={1} fontSize="$3" color="$color">
-                          {h.hour}:00
-                        </Text>
-                        <Text
-                          fontSize="$3"
-                          color="$green10"
-                          style={{ width: 70, textAlign: "right" }}
+                {dayHourlyTrend
+                  .filter((h) => h.income > 0 || h.outflow > 0)
+                  .map((h) => {
+                    const net = h.income - h.outflow;
+                    return (
+                      <YStack key={h.hour}>
+                        <Separator />
+                        <XStack
+                          px="$4"
+                          py="$2"
+                          style={{ alignItems: "center" }}
                         >
-                          ${fmtMoney(h.total)}
-                        </Text>
-                        <Text
-                          fontSize="$3"
-                          color="$blue10"
-                          style={{ width: 50, textAlign: "right" }}
-                        >
-                          {h.tickets}
-                        </Text>
-                      </XStack>
-                    </YStack>
-                  ))}
+                          <Text width={40} fontSize="$3" color="$color">
+                            {h.hour}:00
+                          </Text>
+                          <Text
+                            flex={1}
+                            fontSize="$3"
+                            color="$green10"
+                            style={{ textAlign: "right" }}
+                            numberOfLines={1}
+                          >
+                            ${fmtMoney(h.income)}
+                          </Text>
+                          <Text
+                            flex={1}
+                            fontSize="$3"
+                            color="$red10"
+                            style={{ textAlign: "right" }}
+                            numberOfLines={1}
+                          >
+                            ${fmtMoney(h.outflow)}
+                          </Text>
+                          <Text
+                            flex={1}
+                            fontSize="$3"
+                            fontWeight="bold"
+                            color={net >= 0 ? "$green10" : "$red10"}
+                            style={{ textAlign: "right" }}
+                            numberOfLines={1}
+                            adjustsFontSizeToFit
+                          >
+                            {net >= 0 ? "+" : "-"}${fmtMoney(Math.abs(net))}
+                          </Text>
+                        </XStack>
+                      </YStack>
+                    );
+                  })}
               </Card>
             )}
 
@@ -1101,40 +1134,90 @@ export function FinanceSection() {
                 </Text>
               </YStack>
               <XStack px="$4" py="$2" bg="$color2">
-                <Text flex={1} fontSize="$2" fontWeight="600" color="$color10">
+                <Text
+                  width={35}
+                  fontSize="$2"
+                  fontWeight="600"
+                  color="$color10"
+                >
                   Día
                 </Text>
                 <Text
+                  flex={1}
                   fontSize="$2"
                   fontWeight="600"
                   color="$green10"
-                  style={{ width: 80, textAlign: "right" }}
+                  style={{ textAlign: "right" }}
                 >
-                  Ingresos
+                  Ingreso
+                </Text>
+                <Text
+                  flex={1}
+                  fontSize="$2"
+                  fontWeight="600"
+                  color="$red10"
+                  style={{ textAlign: "right" }}
+                >
+                  Egreso
+                </Text>
+                <Text
+                  flex={1}
+                  fontSize="$2"
+                  fontWeight="600"
+                  color="$color"
+                  style={{ textAlign: "right" }}
+                >
+                  Resultado
                 </Text>
               </XStack>
-              {weekDailyData.map((d, idx) => (
-                <YStack key={idx}>
-                  <Separator />
-                  <XStack px="$4" py="$2" style={{ alignItems: "center" }}>
-                    <Text flex={1} fontSize="$3" color="$color">
-                      {d.label}
-                    </Text>
-                    <Text
-                      fontSize="$3"
-                      color="$green10"
-                      style={{ width: 80, textAlign: "right" }}
-                    >
-                      ${fmtMoney(d.income)}
-                    </Text>
-                  </XStack>
-                </YStack>
-              ))}
+              {weekDailyData.map((d, idx) => {
+                const net = d.income - d.outflow;
+                if (d.income === 0 && d.outflow === 0) return null;
+                return (
+                  <YStack key={idx}>
+                    <Separator />
+                    <XStack px="$4" py="$2" style={{ alignItems: "center" }}>
+                      <Text width={35} fontSize="$3" color="$color">
+                        {d.label}
+                      </Text>
+                      <Text
+                        flex={1}
+                        fontSize="$3"
+                        color="$green10"
+                        style={{ textAlign: "right" }}
+                        numberOfLines={1}
+                      >
+                        ${fmtMoney(d.income)}
+                      </Text>
+                      <Text
+                        flex={1}
+                        fontSize="$3"
+                        color="$red10"
+                        style={{ textAlign: "right" }}
+                        numberOfLines={1}
+                      >
+                        ${fmtMoney(d.outflow)}
+                      </Text>
+                      <Text
+                        flex={1}
+                        fontSize="$3"
+                        fontWeight="bold"
+                        color={net >= 0 ? "$green10" : "$red10"}
+                        style={{ textAlign: "right" }}
+                        numberOfLines={1}
+                        adjustsFontSizeToFit
+                      >
+                        {net >= 0 ? "+" : "-"}${fmtMoney(Math.abs(net))}
+                      </Text>
+                    </XStack>
+                  </YStack>
+                );
+              })}
             </Card>
           )}
 
           {nav.period === "month" &&
-            monthDailySales.some((d) => d.total > 0) && (
+            monthDailyTrend.some((d) => d.income > 0 || d.outflow > 0) && (
               <Card
                 bg="$color1"
                 borderWidth={1}
@@ -1149,7 +1232,7 @@ export function FinanceSection() {
                 </YStack>
                 <XStack px="$4" py="$2" bg="$color2">
                   <Text
-                    flex={1}
+                    width={35}
                     fontSize="$2"
                     fontWeight="600"
                     color="$color10"
@@ -1157,33 +1240,81 @@ export function FinanceSection() {
                     Día
                   </Text>
                   <Text
+                    flex={1}
                     fontSize="$2"
                     fontWeight="600"
                     color="$green10"
-                    style={{ width: 80, textAlign: "right" }}
+                    style={{ textAlign: "right" }}
                   >
-                    Ingresos
+                    Ingreso
+                  </Text>
+                  <Text
+                    flex={1}
+                    fontSize="$2"
+                    fontWeight="600"
+                    color="$red10"
+                    style={{ textAlign: "right" }}
+                  >
+                    Egreso
+                  </Text>
+                  <Text
+                    flex={1}
+                    fontSize="$2"
+                    fontWeight="600"
+                    color="$color"
+                    style={{ textAlign: "right" }}
+                  >
+                    Resultado
                   </Text>
                 </XStack>
-                {monthDailySales
-                  .filter((d) => d.total > 0)
-                  .map((d) => (
-                    <YStack key={d.day}>
-                      <Separator />
-                      <XStack px="$4" py="$2" style={{ alignItems: "center" }}>
-                        <Text flex={1} fontSize="$3" color="$color">
-                          {d.day}
-                        </Text>
-                        <Text
-                          fontSize="$3"
-                          color="$green10"
-                          style={{ width: 80, textAlign: "right" }}
+                {monthDailyTrend
+                  .filter((d) => d.income > 0 || d.outflow > 0)
+                  .map((d) => {
+                    const net = d.income - d.outflow;
+                    return (
+                      <YStack key={d.day}>
+                        <Separator />
+                        <XStack
+                          px="$4"
+                          py="$2"
+                          style={{ alignItems: "center" }}
                         >
-                          ${fmtMoney(d.total)}
-                        </Text>
-                      </XStack>
-                    </YStack>
-                  ))}
+                          <Text width={35} fontSize="$3" color="$color">
+                            {d.day}
+                          </Text>
+                          <Text
+                            flex={1}
+                            fontSize="$3"
+                            color="$green10"
+                            style={{ textAlign: "right" }}
+                            numberOfLines={1}
+                          >
+                            ${fmtMoney(d.income)}
+                          </Text>
+                          <Text
+                            flex={1}
+                            fontSize="$3"
+                            color="$red10"
+                            style={{ textAlign: "right" }}
+                            numberOfLines={1}
+                          >
+                            ${fmtMoney(d.outflow)}
+                          </Text>
+                          <Text
+                            flex={1}
+                            fontSize="$3"
+                            fontWeight="bold"
+                            color={net >= 0 ? "$green10" : "$red10"}
+                            style={{ textAlign: "right" }}
+                            numberOfLines={1}
+                            adjustsFontSizeToFit
+                          >
+                            {net >= 0 ? "+" : "-"}${fmtMoney(Math.abs(net))}
+                          </Text>
+                        </XStack>
+                      </YStack>
+                    );
+                  })}
               </Card>
             )}
 
