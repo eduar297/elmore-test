@@ -46,6 +46,7 @@ export function FinanceSection() {
 
   const nav = usePeriodNavigation();
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
 
   // P&L data
   const [salesTotal, setSalesTotal] = useState(0);
@@ -950,24 +951,37 @@ export function FinanceSection() {
             borderWidth={1}
             borderColor="$blue6"
             style={{ borderRadius: 12 }}
-            icon={<Download size={16} color="$blue10" />}
-            onPress={() =>
-              exportFinancePDF({
-                periodLabel: nav.periodLabel,
-                totalIncome: salesTotal,
-                totalPurchases: purchTotal,
-                totalExpenses: expenseTotal,
-                profit,
-                expensesByCategory: expensesByCategory.map((ec) => ({
-                  category: EXPENSE_CATEGORIES[ec.category],
-                  amount: ec.total,
-                })),
-                topProducts: [],
-              })
+            icon={
+              exporting ? (
+                <Spinner size="small" color="$blue10" />
+              ) : (
+                <Download size={16} color="$blue10" />
+              )
             }
+            disabled={exporting}
+            opacity={exporting ? 0.6 : 1}
+            onPress={async () => {
+              setExporting(true);
+              try {
+                await exportFinancePDF({
+                  periodLabel: nav.periodLabel,
+                  totalIncome: salesTotal,
+                  totalPurchases: purchTotal,
+                  totalExpenses: expenseTotal,
+                  profit,
+                  expensesByCategory: expensesByCategory.map((ec) => ({
+                    category: EXPENSE_CATEGORIES[ec.category],
+                    amount: ec.total,
+                  })),
+                  topProducts: [],
+                });
+              } finally {
+                setExporting(false);
+              }
+            }}
           >
             <Text fontSize="$3" fontWeight="600" color="$blue10">
-              Exportar reporte PDF
+              {exporting ? "Generando…" : "Exportar reporte PDF"}
             </Text>
           </Button>
 

@@ -6,7 +6,7 @@ import { useTicketRepository } from "@/hooks/use-ticket-repository";
 import { useUserRepository } from "@/hooks/use-user-repository";
 import type { Ticket, TicketItem } from "@/models/ticket";
 import type { User as UserModel } from "@/models/user";
-import { exportTicketsCSV } from "@/utils/export";
+import { exportTicketsPDF } from "@/utils/export";
 import {
   daysInMonth,
   fmtMoney,
@@ -24,7 +24,7 @@ import {
   ChevronRight,
   CreditCard,
   DollarSign,
-  Download,
+  Printer,
   Receipt,
   ShoppingCart,
   TrendingUp,
@@ -34,13 +34,7 @@ import {
 } from "@tamagui/lucide-icons";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  Alert,
-  FlatList,
-  Image,
-  Pressable,
-  ScrollView
-} from "react-native";
+import { Alert, FlatList, Image, Pressable, ScrollView } from "react-native";
 import { PieChart } from "react-native-gifted-charts";
 import {
   Button,
@@ -154,6 +148,7 @@ export function SalesSection() {
 
   const nav = usePeriodNavigation();
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
 
   // Worker filter
   const [workers, setWorkers] = useState<UserModel[]>([]);
@@ -295,14 +290,16 @@ export function SalesSection() {
       } else if (nav.period === "year") {
         const yearStart = `${nav.selectedYear}-01-01`;
         const yearEnd = `${nav.selectedYear}-12-31`;
-        const [yearly, top, payment] = await Promise.all([
+        const [yearly, top, payment, yearTickets] = await Promise.all([
           ticketRepo.monthlySalesForYear(nav.selectedYear, wId),
           ticketRepo.topProductsByRange(yearStart, yearEnd, 10, wId),
           ticketRepo.paymentMethodBreakdownByRange(yearStart, yearEnd, wId),
+          ticketRepo.findByDateRange(yearStart, yearEnd, wId),
         ]);
         setYearlySales(yearly);
         setTopProducts(top);
         setPaymentBreakdown(payment);
+        setTickets(yearTickets);
         setMonthlySummary({
           totalSales: yearly.reduce((s, y) => s + y.total, 0),
           ticketCount: yearly.reduce((s, y) => s + y.tickets, 0),
@@ -707,25 +704,40 @@ export function SalesSection() {
         </Card>
       )}
 
-      {/* Tickets header */}
-      {nav.period !== "year" && tickets.length > 0 && (
-        <XStack
-          style={{ alignItems: "center", justifyContent: "space-between" }}
-          mt="$2"
+      {/* Export tickets PDF button */}
+      {tickets.length > 0 && (
+        <Button
+          size="$3"
+          bg="$blue3"
+          borderWidth={1}
+          borderColor="$blue6"
+          style={{ borderRadius: 12 }}
+          icon={
+            exporting ? (
+              <Spinner size="small" color="$blue10" />
+            ) : (
+              <Printer size={16} color="$blue10" />
+            )
+          }
+          disabled={exporting}
+          opacity={exporting ? 0.6 : 1}
+          onPress={async () => {
+            setExporting(true);
+            try {
+              await exportTicketsPDF(
+                tickets,
+                nav.periodLabel,
+                ticketRepo.findItemsByTicketId.bind(ticketRepo),
+              );
+            } finally {
+              setExporting(false);
+            }
+          }}
         >
-          <XStack gap="$2" style={{ alignItems: "center" }}>
-            <Receipt size={18} color="$blue10" />
-            <Text fontSize="$4" fontWeight="bold" color="$color">
-              Tickets ({tickets.length})
-            </Text>
-          </XStack>
-          <Button
-            size="$2"
-            chromeless
-            icon={<Download size={16} color="$blue10" />}
-            onPress={() => exportTicketsCSV(tickets, nav.periodLabel)}
-          />
-        </XStack>
+          <Text fontSize="$3" fontWeight="600" color="$blue10">
+            {exporting ? "Generando…" : "Exportar ventas PDF"}
+          </Text>
+        </Button>
       )}
     </YStack>
   );
@@ -743,10 +755,7 @@ export function SalesSection() {
     );
   }
 
-  const showTickets =
-    nav.period !== "year" && nav.period !== "range"
-      ? tickets.length > 0
-      : nav.period === "range" && tickets.length > 0;
+  const showTickets = tickets.length > 0;
 
   return (
     <>

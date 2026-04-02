@@ -1,41 +1,10 @@
-import type { Ticket } from "@/models/ticket";
+import type { Ticket, TicketItem } from "@/models/ticket";
 import { fmtMoneyFull } from "@/utils/format";
-import { File, Paths } from "expo-file-system";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 
 // ── CSV Export ──────────────────────────────────────────────────────────────
-
-/** Generate a CSV string from ticket data. */
-function ticketsToCSV(tickets: Ticket[]): string {
-  const header = "Fecha,Ticket,Vendedor,Método de Pago,Total,Artículos,Estado";
-  const rows = tickets.map((t) => {
-    const date = t.createdAt.replace(",", "");
-    const worker = (t.workerName ?? "—").replace(",", " ");
-    const method = t.paymentMethod === "CASH" ? "Efectivo" : "Tarjeta";
-    const status = t.status === "VOIDED" ? "Anulado" : "Activo";
-    return `${date},#${t.id},${worker},${method},${t.total.toFixed(2)},${
-      t.itemCount
-    },${status}`;
-  });
-  return [header, ...rows].join("\n");
-}
-
-/** Export tickets as a CSV file and open the share sheet. */
-export async function exportTicketsCSV(
-  tickets: Ticket[],
-  periodLabel: string,
-): Promise<void> {
-  const csv = ticketsToCSV(tickets);
-  const fileName = `ventas_${periodLabel.replace(/\s+/g, "_")}.csv`;
-  const file = new File(Paths.cache, fileName);
-  file.create({ overwrite: true });
-  file.write(csv);
-  await Sharing.shareAsync(file.uri, {
-    mimeType: "text/csv",
-    UTI: "public.comma-separated-values-text",
-  });
-}
+// TODO!!!
 
 // ── PDF Export ──────────────────────────────────────────────────────────────
 
@@ -153,6 +122,167 @@ ${productRows}
 /** Generate a finance report PDF and open the share sheet. */
 export async function exportFinancePDF(data: FinanceReportData): Promise<void> {
   const html = buildFinanceHTML(data);
+  const { uri } = await Print.printToFileAsync({ html });
+  await Sharing.shareAsync(uri, {
+    mimeType: "application/pdf",
+    UTI: "com.adobe.pdf",
+  });
+}
+
+// ── Tickets PDF Export ──────────────────────────────────────────────────────
+
+interface TicketsReportData {
+  periodLabel: string;
+  tickets: Ticket[];
+  itemsByTicket: Map<number, TicketItem[]>;
+  totalSales: number;
+  ticketCount: number;
+  avgTicket: number;
+}
+
+function buildTicketsHTML(data: TicketsReportData): string {
+  const activeTickets = data.tickets.filter((t) => t.status === "ACTIVE");
+  const voidedTickets = data.tickets.filter((t) => t.status === "VOIDED");
+
+  const ticketBlocks = data.tickets
+    .map((t) => {
+      const date = t.createdAt.slice(0, 16).replace("T", " ");
+      const worker = t.workerName ?? "—";
+      const method = t.paymentMethod === "CASH" ? "Efectivo" : "Tarjeta";
+      const isVoided = t.status === "VOIDED";
+      const voidedClass = isVoided ? " voided" : "";
+      const badge = isVoided ? '<span class="badge-void">ANULADO</span>' : "";
+      const items = data.itemsByTicket.get(t.id) ?? [];
+
+      const itemRows = items
+        .map(
+          (it) =>
+            `<tr>
+              <td class="item-name">${it.productName}</td>
+              <td style="text-align:center">${it.quantity}</td>
+              <td style="text-align:right">$${fmtMoneyFull(it.unitPrice)}</td>
+              <td style="text-align:right">$${fmtMoneyFull(it.subtotal)}</td>
+            </tr>`,
+        )
+        .join("");
+
+      return `<div class="ticket${voidedClass}">
+        <div class="ticket-header">
+          <div class="ticket-id">#${t.id} ${badge}</div>
+          <div class="ticket-total">$${fmtMoneyFull(t.total)}</div>
+        </div>
+        <div class="ticket-meta">${date} · ${worker} · ${method}</div>
+        <table class="items-table">
+          <thead>
+            <tr>
+              <th>Producto</th>
+              <th style="text-align:center">Cant.</th>
+              <th style="text-align:right">Precio</th>
+              <th style="text-align:right">Subtotal</th>
+            </tr>
+          </thead>
+          <tbody>${itemRows}</tbody>
+        </table>
+      </div>`;
+    })
+    .join("");
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  body { font-family: -apple-system, Helvetica, Arial, sans-serif; padding: 20px; color: #1a1a1a; font-size: 11px; }
+  h1 { font-size: 20px; margin-bottom: 4px; }
+  .period { color: #666; font-size: 13px; margin-bottom: 16px; }
+  .summary { display: flex; gap: 10px; margin-bottom: 20px; }
+  .card { flex: 1; padding: 10px; border-radius: 8px; text-align: center; }
+  .card .label { font-size: 10px; color: #666; text-transform: uppercase; }
+  .card .value { font-size: 18px; font-weight: bold; margin-top: 2px; }
+  .card.green { background: #f0fdf4; }
+  .card.green .value { color: #16a34a; }
+  .card.blue { background: #eff6ff; }
+  .card.blue .value { color: #2563eb; }
+  .card.purple { background: #faf5ff; }
+  .card.purple .value { color: #9333ea; }
+  .ticket { border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 12px; padding: 10px; page-break-inside: avoid; }
+  .ticket.voided { opacity: 0.5; border-color: #fca5a5; }
+  .ticket-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+  .ticket-id { font-weight: bold; font-size: 13px; }
+  .ticket-total { font-weight: bold; font-size: 14px; color: #16a34a; }
+  .ticket.voided .ticket-total { color: #dc2626; text-decoration: line-through; }
+  .ticket-meta { font-size: 11px; color: #444; margin-bottom: 6px; }
+  .badge-void { background: #fef2f2; color: #dc2626; font-size: 9px; padding: 1px 5px; border-radius: 4px; margin-left: 6px; }
+  .items-table { width: 100%; border-collapse: collapse; font-size: 10px; }
+  .items-table th { text-align: left; font-weight: 600; color: #555; padding: 3px 4px; border-bottom: 1px solid #ddd; font-size: 9px; text-transform: uppercase; }
+  .items-table td { padding: 3px 4px; border-bottom: 1px solid #f5f5f5; }
+  .item-name { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .footer { text-align: center; color: #999; font-size: 10px; margin-top: 24px; }
+  .note { font-size: 10px; color: #888; margin-top: 12px; }
+</style>
+</head>
+<body>
+<h1>Reporte de Ventas</h1>
+<div class="period">${data.periodLabel}</div>
+
+<div class="summary">
+  <div class="card green">
+    <div class="label">Total ventas</div>
+    <div class="value">$${fmtMoneyFull(data.totalSales)}</div>
+  </div>
+  <div class="card blue">
+    <div class="label">Tickets</div>
+    <div class="value">${data.ticketCount}</div>
+  </div>
+  <div class="card purple">
+    <div class="label">Promedio</div>
+    <div class="value">$${fmtMoneyFull(data.avgTicket)}</div>
+  </div>
+</div>
+
+${ticketBlocks}
+
+${
+  voidedTickets.length > 0
+    ? `<div class="note">${voidedTickets.length} ticket(s) anulado(s) — no incluidos en los totales.</div>`
+    : ""
+}
+
+<div class="footer">Generado por MoreHub · ${new Date().toLocaleDateString(
+    "es",
+  )} · ${activeTickets.length} ventas activas</div>
+</body>
+</html>`;
+}
+
+/** Generate a tickets report PDF (with item details) and open the share sheet. */
+export async function exportTicketsPDF(
+  tickets: Ticket[],
+  periodLabel: string,
+  loadItems: (ticketId: number) => Promise<TicketItem[]>,
+): Promise<void> {
+  // Load items for every ticket in parallel
+  const entries = await Promise.all(
+    tickets.map(async (t) => {
+      const items = await loadItems(t.id);
+      return [t.id, items] as const;
+    }),
+  );
+  const itemsByTicket = new Map<number, TicketItem[]>(entries);
+
+  const active = tickets.filter((t) => t.status === "ACTIVE");
+  const totalSales = active.reduce((s, t) => s + t.total, 0);
+  const ticketCount = active.length;
+  const avgTicket = ticketCount > 0 ? totalSales / ticketCount : 0;
+
+  const html = buildTicketsHTML({
+    periodLabel,
+    tickets,
+    itemsByTicket,
+    totalSales,
+    ticketCount,
+    avgTicket,
+  });
   const { uri } = await Print.printToFileAsync({ html });
   await Sharing.shareAsync(uri, {
     mimeType: "application/pdf",
