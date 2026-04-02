@@ -46,27 +46,32 @@ export function StatCard({
       style={{ borderRadius: 12 }}
     >
       <YStack gap="$1">
-        {icon}
-        <XStack style={{ alignItems: "center" }} gap="$1">
-          <Text
-            fontSize="$3"
-            fontWeight="bold"
-            color={color as any}
-            numberOfLines={1}
-            style={{ flexShrink: 1 }}
-          >
-            {value}
-          </Text>
+        <XStack
+          style={{ alignItems: "center", justifyContent: "space-between" }}
+        >
+          <XStack style={{ alignItems: "center" }} gap="$1">
+            {icon}
+            <Text fontSize="$1" color="$color10" numberOfLines={1}>
+              {label}
+            </Text>
+          </XStack>
           {delta !== undefined && <DeltaBadge delta={delta} />}
         </XStack>
+        <Text
+          fontSize="$3"
+          fontWeight="bold"
+          color={color as any}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.7}
+        >
+          {value}
+        </Text>
         {detail && (
           <Text fontSize={10} color="$color8" numberOfLines={1}>
             {detail}
           </Text>
         )}
-        <Text fontSize="$1" color="$color10" numberOfLines={1}>
-          {label}
-        </Text>
       </YStack>
     </Card>
   );

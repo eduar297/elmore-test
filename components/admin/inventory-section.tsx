@@ -12,7 +12,14 @@ import { useTicketRepository } from "@/hooks/use-ticket-repository";
 import { useUnitRepository } from "@/hooks/use-unit-repository";
 import type { Product } from "@/models/product";
 import type { Unit, UnitCategory } from "@/models/unit";
-import { fmtMoney, fmtMoneyFull, weekEndISO } from "@/utils/format";
+import {
+    fmtMoney,
+    fmtMoneyFull,
+    shiftDay,
+    shiftMonth,
+    shiftWeek,
+    weekEndISO,
+} from "@/utils/format";
 import {
     AlertTriangle,
     ArrowDownToLine,
@@ -60,6 +67,10 @@ export function InventorySection() {
       totalRevenue: number;
     }[]
   >([]);
+
+  // Previous-period data for delta badges
+  const [prevSales, setPrevSales] = useState(0);
+  const [prevPurchases, setPrevPurchases] = useState(0);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -148,6 +159,63 @@ export function InventorySection() {
     useCallback(() => {
       loadData();
     }, [loadData]),
+  );
+
+  // Load previous-period data for delta comparison
+  useFocusEffect(
+    useCallback(() => {
+      (async () => {
+        try {
+          if (nav.period === "day") {
+            const prevDay = shiftDay(nav.selectedDay, -1);
+            const [pSales, pPurch] = await Promise.all([
+              ticketRepo.daySummary(prevDay),
+              purchaseRepo.daySummary(prevDay),
+            ]);
+            setPrevSales(pSales.totalSales);
+            setPrevPurchases(pPurch.totalSpent);
+          } else if (nav.period === "week") {
+            const prevWk = shiftWeek(nav.selectedWeekStart, -1);
+            const prevWkEnd = weekEndISO(prevWk);
+            const [pTkts, pPurch] = await Promise.all([
+              ticketRepo.findByDateRange(prevWk, prevWkEnd),
+              purchaseRepo.rangeSummary(prevWk, prevWkEnd),
+            ]);
+            setPrevSales(pTkts.reduce((s, t) => s + t.total, 0));
+            setPrevPurchases(pPurch.totalSpent);
+          } else if (nav.period === "month") {
+            const prevMo = shiftMonth(nav.selectedMonth, -1);
+            const [pSales, pPurch] = await Promise.all([
+              ticketRepo.monthlySummary(prevMo),
+              purchaseRepo.monthlySummary(prevMo),
+            ]);
+            setPrevSales(pSales.totalSales);
+            setPrevPurchases(pPurch.totalSpent);
+          } else if (nav.period === "year") {
+            const [pYearSales, pYearPurch] = await Promise.all([
+              ticketRepo.monthlySalesForYear(nav.selectedYear - 1),
+              purchaseRepo.monthlyTotalsForYear(nav.selectedYear - 1),
+            ]);
+            setPrevSales(pYearSales.reduce((s, y) => s + y.total, 0));
+            setPrevPurchases(pYearPurch.reduce((s, y) => s + y.total, 0));
+          } else {
+            setPrevSales(0);
+            setPrevPurchases(0);
+          }
+        } catch {
+          setPrevSales(0);
+          setPrevPurchases(0);
+        }
+      })();
+    }, [
+      nav.period,
+      nav.selectedDay,
+      nav.selectedWeekStart,
+      nav.selectedMonth,
+      nav.selectedYear,
+      ticketRepo,
+      purchaseRepo,
+    ]),
   );
 
   const unitMap = useMemo(
@@ -281,6 +349,11 @@ export function InventorySection() {
                 detail={`$${fmtMoneyFull(periodPurchases)}`}
                 color="$blue10"
                 icon={<ArrowDownToLine size={16} color="$blue10" />}
+                delta={
+                  nav.period !== "range" && prevPurchases > 0
+                    ? ((periodPurchases - prevPurchases) / prevPurchases) * 100
+                    : undefined
+                }
               />
               <StatCard
                 label="Ventas"
@@ -288,6 +361,11 @@ export function InventorySection() {
                 detail={`$${fmtMoneyFull(periodSales)}`}
                 color="$green10"
                 icon={<ArrowUpFromLine size={16} color="$green10" />}
+                delta={
+                  nav.period !== "range" && prevSales > 0
+                    ? ((periodSales - prevSales) / prevSales) * 100
+                    : undefined
+                }
               />
             </XStack>
 

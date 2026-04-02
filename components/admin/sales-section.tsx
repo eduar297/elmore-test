@@ -12,6 +12,8 @@ import {
   fmtTime,
   MONTH_NAMES_SHORT,
   shiftDay,
+  shiftMonth,
+  shiftWeek,
   shortDayLabel,
   weekEndISO,
 } from "@/utils/format";
@@ -161,6 +163,10 @@ export function SalesSection() {
   const [paymentBreakdown, setPaymentBreakdown] = useState<
     { method: string; total: number; count: number }[]
   >([]);
+
+  // Previous-period data for delta badges
+  const [prevTotal, setPrevTotal] = useState(0);
+  const [prevTickets, setPrevTickets] = useState(0);
 
   // Ticket detail sheet
   const [sheetTicket, setSheetTicket] = useState<Ticket | null>(null);
@@ -331,6 +337,58 @@ export function SalesSection() {
     }, [loadData]),
   );
 
+  // Load previous-period data for delta comparison
+  useFocusEffect(
+    useCallback(() => {
+      (async () => {
+        try {
+          if (nav.period === "day") {
+            const prevDay = shiftDay(nav.selectedDay, -1);
+            const prev = await ticketRepo.daySummary(prevDay, wId);
+            setPrevTotal(prev.totalSales);
+            setPrevTickets(prev.ticketCount);
+          } else if (nav.period === "week") {
+            const prevWkStart = shiftWeek(nav.selectedWeekStart, -1);
+            const prevWkEnd = weekEndISO(prevWkStart);
+            const prevTkts = await ticketRepo.findByDateRange(
+              prevWkStart,
+              prevWkEnd,
+              wId,
+            );
+            setPrevTotal(prevTkts.reduce((s, t) => s + t.total, 0));
+            setPrevTickets(prevTkts.length);
+          } else if (nav.period === "month") {
+            const prevMo = shiftMonth(nav.selectedMonth, -1);
+            const prev = await ticketRepo.monthlySummary(prevMo, wId);
+            setPrevTotal(prev.totalSales);
+            setPrevTickets(prev.ticketCount);
+          } else if (nav.period === "year") {
+            const prevYearSales = await ticketRepo.monthlySalesForYear(
+              String(Number(nav.selectedYear) - 1),
+              wId,
+            );
+            setPrevTotal(prevYearSales.reduce((s, y) => s + y.total, 0));
+            setPrevTickets(prevYearSales.reduce((s, y) => s + y.tickets, 0));
+          } else {
+            setPrevTotal(0);
+            setPrevTickets(0);
+          }
+        } catch {
+          setPrevTotal(0);
+          setPrevTickets(0);
+        }
+      })();
+    }, [
+      nav.period,
+      nav.selectedDay,
+      nav.selectedWeekStart,
+      nav.selectedMonth,
+      nav.selectedYear,
+      ticketRepo,
+      wId,
+    ]),
+  );
+
   // ── Chart data ────────────────────────────────────────────────────────────
   const chartData = useMemo(() => {
     if (nav.period === "day") {
@@ -409,6 +467,17 @@ export function SalesSection() {
     nav.period === "day" ? daySummary.ticketCount : monthlySummary.ticketCount;
   const summaryAvg = summaryTickets > 0 ? summaryTotal / summaryTickets : 0;
 
+  // Delta computation
+  const pctDelta = (cur: number, prev: number) =>
+    prev > 0 ? ((cur - prev) / prev) * 100 : undefined;
+  const showDelta = nav.period !== "range";
+  const totalDelta = showDelta ? pctDelta(summaryTotal, prevTotal) : undefined;
+  const ticketsDelta = showDelta
+    ? pctDelta(summaryTickets, prevTickets)
+    : undefined;
+  const prevAvg = prevTickets > 0 ? prevTotal / prevTickets : 0;
+  const avgDelta = showDelta ? pctDelta(summaryAvg, prevAvg) : undefined;
+
   // ── Render ────────────────────────────────────────────────────────────────
   const ListHeader = (
     <YStack gap="$4" px="$4" pb="$2">
@@ -420,12 +489,14 @@ export function SalesSection() {
           detail={`$${fmtMoneyFull(summaryTotal)}`}
           color="$green10"
           icon={<DollarSign size={16} color="$green10" />}
+          delta={totalDelta}
         />
         <StatCard
           label="Tickets"
           value={String(summaryTickets)}
           color="$blue10"
           icon={<ShoppingCart size={16} color="$blue10" />}
+          delta={ticketsDelta}
         />
         <StatCard
           label="Promedio"
@@ -433,6 +504,7 @@ export function SalesSection() {
           detail={`$${fmtMoneyFull(summaryAvg)}`}
           color="$purple10"
           icon={<TrendingUp size={16} color="$purple10" />}
+          delta={avgDelta}
         />
       </XStack>
 
