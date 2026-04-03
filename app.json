@@ -10,7 +10,17 @@
     // "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.eduar297.more-hub"
+      "bundleIdentifier": "com.eduar297.more-hub",
+      "infoPlist": {
+        "NSBonjourServices": [
+          "_morehub._tcp.",
+          "_http._tcp.",
+          "_printer._tcp.",
+          "_pdl-datastream._tcp.",
+          "_ipp._tcp."
+        ],
+        "NSLocalNetworkUsageDescription": "Esta app usa la red local para descubrir impresoras y otros dispositivos."
+      }
     },
     "android": {
       "adaptiveIcon": {

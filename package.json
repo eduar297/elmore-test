@@ -10,6 +10,11 @@
     "android:device": "expo run:android --device",
     "ios": "expo run:ios",
     "ios:device": "expo run:ios --device",
+    "ios:clean": "expo run:ios --clear",
+    "ios:pods": "cd ios && pod install",
+    "prebuild:ios": "npx expo prebuild --platform ios",
+    "prebuild:ios:clean": "npx expo prebuild --platform ios --clean",
+    "prebuild:clean": "npx expo prebuild --clean",
     "web": "expo start --web",
     "lint": "expo lint"
   },
