@@ -425,8 +425,6 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase) {
 
   if (currentVersion === 15) {
     await db.execAsync(`
-      ALTER TABLE tickets ADD COLUMN workerOriginId INTEGER;
-
       CREATE TABLE IF NOT EXISTS sync_metadata (
         id INTEGER PRIMARY KEY CHECK (id = 1),
         last_sync_at TEXT,
@@ -439,7 +437,7 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase) {
   }
 
   if (currentVersion === 16) {
-    // Migrate tickets from INTEGER id to TEXT (UUID) and remove workerOriginId
+    // Migrate tickets from INTEGER id to TEXT (UUID)
     await db.execAsync(`
       CREATE TABLE tickets_new (
         id TEXT PRIMARY KEY,
