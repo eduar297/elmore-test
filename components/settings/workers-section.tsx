@@ -1,4 +1,5 @@
 import { PhotoPicker } from "@/components/ui/photo-picker";
+import { useLan } from "@/contexts/lan-context";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useColors } from "@/hooks/use-colors";
 import { useUserRepository } from "@/hooks/use-user-repository";
@@ -6,7 +7,6 @@ import type { User } from "@/models/user";
 import { hashPin } from "@/utils/auth";
 import { AlertCircle, Edit3, Plus, Trash2, Users } from "@tamagui/lucide-icons";
 import { useFocusEffect } from "expo-router";
-import { useLan } from "@/contexts/lan-context";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -127,7 +127,6 @@ export function WorkersSection() {
     } finally {
       setSaving(false);
     }
-     
   }, [name, pin, pinConfirm, photoUri, editing, userRepo, load]);
 
   const handleDelete = useCallback(
