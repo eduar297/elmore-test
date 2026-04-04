@@ -26,6 +26,7 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
+import { NotificationCards } from "./notifications-section";
 import { settingStyles as styles } from "./shared";
 
 export function PreferencesSection() {
@@ -192,6 +193,9 @@ export function PreferencesSection() {
             />
           </View>
         </View>
+
+        {/* ── Notifications ──────────────────────────────────────────── */}
+        <NotificationCards />
 
         {/* ── Danger zone ────────────────────────────────────────────── */}
         <View

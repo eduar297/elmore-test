@@ -15,6 +15,8 @@ async function ensureTables(db: SQLiteDatabase) {
       phone TEXT,
       logoUri TEXT,
       color TEXT NOT NULL DEFAULT '#3b82f6',
+      openingTime TEXT,
+      closingTime TEXT,
       createdAt TEXT NOT NULL DEFAULT (datetime('now','localtime'))
     );
 
@@ -157,7 +159,7 @@ async function ensureTables(db: SQLiteDatabase) {
 }
 
 export async function migrateDbIfNeeded(db: SQLiteDatabase) {
-  const DATABASE_VERSION = 17;
+  const DATABASE_VERSION = 18;
 
   const result = await db.getFirstAsync<{ user_version: number }>(
     "PRAGMA user_version",
@@ -480,6 +482,14 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase) {
       ALTER TABLE ticket_items_new RENAME TO ticket_items;
     `);
     currentVersion = 17;
+  }
+
+  if (currentVersion === 17) {
+    await db.execAsync(`
+      ALTER TABLE stores ADD COLUMN openingTime TEXT;
+      ALTER TABLE stores ADD COLUMN closingTime TEXT;
+    `);
+    currentVersion = 18;
   }
 
   await seedUnits(db);

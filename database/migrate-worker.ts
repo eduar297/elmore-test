@@ -16,6 +16,8 @@ export async function migrateWorkerDb(db: SQLiteDatabase) {
       phone TEXT,
       logoUri TEXT,
       color TEXT NOT NULL DEFAULT '#3b82f6',
+      openingTime TEXT,
+      closingTime TEXT,
       createdAt TEXT NOT NULL DEFAULT (datetime('now','localtime'))
     );
 
@@ -101,7 +103,7 @@ export async function migrateWorkerDb(db: SQLiteDatabase) {
   `);
 
   // ── Versioned migrations ────────────────────────────────────────────────
-  const WORKER_DB_VERSION = 2;
+  const WORKER_DB_VERSION = 3;
   const result = await db.getFirstAsync<{ user_version: number }>(
     "PRAGMA user_version",
   );
@@ -167,6 +169,15 @@ export async function migrateWorkerDb(db: SQLiteDatabase) {
       ALTER TABLE sync_metadata ADD COLUMN last_profile_hash TEXT;
     `);
     currentVersion = 2;
+  }
+
+  if (currentVersion < 3) {
+    // Add store hours columns
+    await db.execAsync(`
+      ALTER TABLE stores ADD COLUMN openingTime TEXT;
+      ALTER TABLE stores ADD COLUMN closingTime TEXT;
+    `);
+    currentVersion = 3;
   }
 
   await db.execAsync(`PRAGMA user_version = ${WORKER_DB_VERSION}`);

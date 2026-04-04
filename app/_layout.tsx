@@ -1,3 +1,4 @@
+import { NotificationProvider } from "@/components/ui/notification-provider";
 import { StoreBubble } from "@/components/ui/store-bubble";
 import { AuthProvider } from "@/contexts/auth-context";
 import { DeviceProvider, useDevice } from "@/contexts/device-context";
@@ -67,8 +68,10 @@ function AdminProviders({ children }: { children: React.ReactNode }) {
         <PreferencesProvider>
           <AuthProvider>
             <LanProvider>
-              {children}
-              <StoreBubble />
+              <NotificationProvider>
+                {children}
+                <StoreBubble />
+              </NotificationProvider>
             </LanProvider>
           </AuthProvider>
         </PreferencesProvider>
@@ -84,7 +87,9 @@ function WorkerProviders({ children }: { children: React.ReactNode }) {
     <SQLiteProvider databaseName="elmore-worker.db" onInit={migrateWorkerDb}>
       <StoreProvider>
         <AuthProvider>
-          <LanProvider>{children}</LanProvider>
+          <LanProvider>
+            <NotificationProvider>{children}</NotificationProvider>
+          </LanProvider>
         </AuthProvider>
       </StoreProvider>
     </SQLiteProvider>

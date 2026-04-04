@@ -1,5 +1,6 @@
 import { LoginSheet } from "@/components/auth/login-sheet";
 import { HapticTab } from "@/components/haptic-tab";
+import { useNotifications } from "@/components/ui/notification-provider";
 import { useAuth } from "@/contexts/auth-context";
 import { useDevice } from "@/contexts/device-context";
 import { useLan } from "@/contexts/lan-context";
@@ -206,89 +207,88 @@ export default function WorkerLayout() {
     sendTickets,
     bumpCatalogVersion,
   } = useLan();
+  const { notify } = useNotifications();
   const [hasSynced, setHasSynced] = useState<boolean | null>(null); // null = loading
   /** Store latest catalog hash so we can save it after successful apply */
   const pendingCatalogHashRef = useRef<string | null>(null);
 
-  const showSyncNotification = useCallback((summary: CatalogChangeSummary) => {
-    const lines: string[] = [];
+  const showSyncNotification = useCallback(
+    (summary: CatalogChangeSummary) => {
+      const lines: string[] = [];
 
-    if (summary.newProducts > 0) {
-      lines.push(
-        `• ${summary.newProducts} producto${
-          summary.newProducts > 1 ? "s" : ""
-        } nuevo${summary.newProducts > 1 ? "s" : ""}`,
-      );
-    }
-    if (summary.updatedProducts > 0) {
-      lines.push(
-        `• ${summary.updatedProducts} producto${
-          summary.updatedProducts > 1 ? "s" : ""
-        } actualizado${summary.updatedProducts > 1 ? "s" : ""}`,
-      );
-    }
-    if (summary.deletedProducts > 0) {
-      lines.push(
-        `• ${summary.deletedProducts} producto${
-          summary.deletedProducts > 1 ? "s" : ""
-        } eliminado${summary.deletedProducts > 1 ? "s" : ""}`,
-      );
-    }
-    if (summary.priceChanges.length > 0) {
-      lines.push(
-        `• ${summary.priceChanges.length} cambio${
-          summary.priceChanges.length > 1 ? "s" : ""
-        } de precio:`,
-      );
-      for (const pc of summary.priceChanges.slice(0, 5)) {
+      if (summary.newProducts > 0) {
         lines.push(
-          `   ${pc.name}: $${pc.oldPrice.toFixed(2)} → $${pc.newPrice.toFixed(
-            2,
-          )}`,
+          `• ${summary.newProducts} producto${
+            summary.newProducts > 1 ? "s" : ""
+          } nuevo${summary.newProducts > 1 ? "s" : ""}`,
         );
       }
-      if (summary.priceChanges.length > 5) {
-        lines.push(`   ...y ${summary.priceChanges.length - 5} más`);
+      if (summary.updatedProducts > 0) {
+        lines.push(
+          `• ${summary.updatedProducts} producto${
+            summary.updatedProducts > 1 ? "s" : ""
+          } actualizado${summary.updatedProducts > 1 ? "s" : ""}`,
+        );
       }
-    }
-    if (summary.newStores > 0) {
-      lines.push(
-        `• ${summary.newStores} tienda${
-          summary.newStores > 1 ? "s" : ""
-        } nueva${summary.newStores > 1 ? "s" : ""}`,
-      );
-    }
-    if (summary.deletedStores > 0) {
-      lines.push(
-        `• ${summary.deletedStores} tienda${
-          summary.deletedStores > 1 ? "s" : ""
-        } eliminada${summary.deletedStores > 1 ? "s" : ""}`,
-      );
-    }
-    if (summary.newWorkers > 0) {
-      lines.push(
-        `• ${summary.newWorkers} vendedor${
-          summary.newWorkers > 1 ? "es" : ""
-        } nuevo${summary.newWorkers > 1 ? "s" : ""}`,
-      );
-    }
-    if (summary.deletedWorkers > 0) {
-      lines.push(
-        `• ${summary.deletedWorkers} vendedor${
-          summary.deletedWorkers > 1 ? "es" : ""
-        } eliminado${summary.deletedWorkers > 1 ? "s" : ""}`,
-      );
-    }
-    const title = "Actualización recibida";
-    const body =
-      lines.length > 0
-        ? lines.join("\n")
-        : `Catálogo sincronizado: ${summary.totalProducts} productos, ${
-            summary.totalStores
-          } tienda${summary.totalStores > 1 ? "s" : ""}`;
+      if (summary.deletedProducts > 0) {
+        lines.push(
+          `• ${summary.deletedProducts} producto${
+            summary.deletedProducts > 1 ? "s" : ""
+          } eliminado${summary.deletedProducts > 1 ? "s" : ""}`,
+        );
+      }
+      if (summary.priceChanges.length > 0) {
+        lines.push(
+          `• ${summary.priceChanges.length} cambio${
+            summary.priceChanges.length > 1 ? "s" : ""
+          } de precio`,
+        );
+      }
+      if (summary.newStores > 0) {
+        lines.push(
+          `• ${summary.newStores} tienda${
+            summary.newStores > 1 ? "s" : ""
+          } nueva${summary.newStores > 1 ? "s" : ""}`,
+        );
+      }
+      if (summary.deletedStores > 0) {
+        lines.push(
+          `• ${summary.deletedStores} tienda${
+            summary.deletedStores > 1 ? "s" : ""
+          } eliminada${summary.deletedStores > 1 ? "s" : ""}`,
+        );
+      }
+      if (summary.newWorkers > 0) {
+        lines.push(
+          `• ${summary.newWorkers} vendedor${
+            summary.newWorkers > 1 ? "es" : ""
+          } nuevo${summary.newWorkers > 1 ? "s" : ""}`,
+        );
+      }
+      if (summary.deletedWorkers > 0) {
+        lines.push(
+          `• ${summary.deletedWorkers} vendedor${
+            summary.deletedWorkers > 1 ? "es" : ""
+          } eliminado${summary.deletedWorkers > 1 ? "s" : ""}`,
+        );
+      }
 
-    Alert.alert(title, body, [{ text: "OK" }]);
-  }, []);
+      const body =
+        lines.length > 0
+          ? lines.join("\n")
+          : `Catálogo sincronizado: ${summary.totalProducts} productos, ${
+              summary.totalStores
+            } tienda${summary.totalStores > 1 ? "s" : ""}`;
+
+      notify({
+        category: "sync_result",
+        severity: "success",
+        title: "Actualización recibida",
+        body,
+      });
+    },
+    [notify],
+  );
 
   const handleReset = useCallback(() => {
     Alert.alert(
