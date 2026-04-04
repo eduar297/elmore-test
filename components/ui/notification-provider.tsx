@@ -1,44 +1,34 @@
+import type { NotificationHistoryEntry } from "@/models/notification";
 import {
-    cancelReminder,
-    configureForegroundBehaviour,
-    scheduleReminder,
-    sendLocalNotification,
-    setupNotifications,
+  cancelReminder,
+  configureForegroundBehaviour,
+  scheduleReminder,
+  sendLocalNotification,
+  setupNotifications,
 } from "@/services/notifications/notification-service";
 import type {
-    NotificationCategory,
-    NotificationPrefKey,
-    NotificationPrefs,
-    NotificationSeverity,
-    ScheduledReminder,
+  NotificationCategory,
+  NotificationPrefKey,
+  NotificationPrefs,
+  NotificationSeverity,
+  ScheduledReminder,
 } from "@/services/notifications/types";
 import {
-    DEFAULT_NOTIFICATION_PREFS,
-    DEFAULT_SYNC_REMINDERS,
+  DEFAULT_NOTIFICATION_PREFS,
+  DEFAULT_SYNC_REMINDERS,
 } from "@/services/notifications/types";
 import { useSQLiteContext } from "expo-sqlite";
 import React, {
-    createContext,
-    useCallback,
-    useContext,
-    useEffect,
-    useMemo,
-    useRef,
-    useState,
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
 } from "react";
 
-// ── History entry ───────────────────────────────────────────────────────────
-
-export interface NotificationHistoryEntry {
-  id: number;
-  category: NotificationCategory;
-  severity: NotificationSeverity;
-  title: string;
-  body: string;
-  dedupeKey: string | null;
-  seen: number;
-  createdAt: string;
-}
+export type { NotificationHistoryEntry } from "@/models/notification";
 
 // ── Context ─────────────────────────────────────────────────────────────────
 

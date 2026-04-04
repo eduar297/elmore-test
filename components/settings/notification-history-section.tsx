@@ -1,6 +1,6 @@
-import type { NotificationHistoryEntry } from "@/components/ui/notification-provider";
 import { useNotifications } from "@/components/ui/notification-provider";
 import { useColors } from "@/hooks/use-colors";
+import type { NotificationHistoryEntry } from "@/models/notification";
 import type { NotificationCategory } from "@/services/notifications/types";
 import {
     AlertCircle,
