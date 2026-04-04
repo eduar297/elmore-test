@@ -193,7 +193,7 @@ export default function WorkerLayout() {
   const tint = theme.green10?.val ?? "#22c55e";
   const db = useSQLiteContext();
   const { resetDevice } = useDevice();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { refreshStores } = useStore();
   const {
     startServer,
@@ -227,6 +227,13 @@ export default function WorkerLayout() {
         } actualizado${summary.updatedProducts > 1 ? "s" : ""}`,
       );
     }
+    if (summary.deletedProducts > 0) {
+      lines.push(
+        `• ${summary.deletedProducts} producto${
+          summary.deletedProducts > 1 ? "s" : ""
+        } eliminado${summary.deletedProducts > 1 ? "s" : ""}`,
+      );
+    }
     if (summary.priceChanges.length > 0) {
       lines.push(
         `• ${summary.priceChanges.length} cambio${
@@ -251,11 +258,25 @@ export default function WorkerLayout() {
         } nueva${summary.newStores > 1 ? "s" : ""}`,
       );
     }
+    if (summary.deletedStores > 0) {
+      lines.push(
+        `• ${summary.deletedStores} tienda${
+          summary.deletedStores > 1 ? "s" : ""
+        } eliminada${summary.deletedStores > 1 ? "s" : ""}`,
+      );
+    }
     if (summary.newWorkers > 0) {
       lines.push(
         `• ${summary.newWorkers} vendedor${
           summary.newWorkers > 1 ? "es" : ""
         } nuevo${summary.newWorkers > 1 ? "s" : ""}`,
+      );
+    }
+    if (summary.deletedWorkers > 0) {
+      lines.push(
+        `• ${summary.deletedWorkers} vendedor${
+          summary.deletedWorkers > 1 ? "es" : ""
+        } eliminado${summary.deletedWorkers > 1 ? "s" : ""}`,
       );
     }
     const title = "Actualización recibida";
@@ -347,6 +368,20 @@ export default function WorkerLayout() {
         // Bump catalog version so worker screens reload products, etc.
         bumpCatalogVersion();
 
+        // If the currently logged-in worker was deleted by admin, log them out
+        if (user) {
+          const stillExists = await db.getFirstAsync<{ id: number }>(
+            "SELECT id FROM users WHERE id = ?",
+            [user.id],
+          );
+          if (!stillExists) {
+            console.log(
+              `[Worker] Current user ${user.id} was deleted by admin, logging out`,
+            );
+            logout();
+          }
+        }
+
         setHasSynced(true);
 
         // Show notification with changes
@@ -365,6 +400,8 @@ export default function WorkerLayout() {
     onSyncCatalogReceived,
     refreshStores,
     bumpCatalogVersion,
+    user,
+    logout,
   ]);
 
   // Handle ticket request from Admin

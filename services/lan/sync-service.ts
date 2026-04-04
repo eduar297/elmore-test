@@ -353,10 +353,13 @@ export async function applyReceivedTickets(
 export interface CatalogChangeSummary {
   newProducts: number;
   updatedProducts: number;
+  deletedProducts: number;
   priceChanges: { name: string; oldPrice: number; newPrice: number }[];
   newStores: number;
+  deletedStores: number;
   newWorkers: number;
   updatedWorkers: number;
+  deletedWorkers: number;
   totalProducts: number;
   totalStores: number;
   totalWorkers: number;
@@ -369,10 +372,13 @@ export async function applyReceivedCatalog(
   const summary: CatalogChangeSummary = {
     newProducts: 0,
     updatedProducts: 0,
+    deletedProducts: 0,
     priceChanges: [],
     newStores: 0,
+    deletedStores: 0,
     newWorkers: 0,
     updatedWorkers: 0,
+    deletedWorkers: 0,
     totalProducts: (data.products as any[]).length,
     totalStores: (data.stores as any[]).length,
     totalWorkers: (data.workers as any[]).length,
@@ -514,6 +520,76 @@ export async function applyReceivedCatalog(
           product.storeId,
         ],
       );
+    }
+
+    // 6. Delete items that admin removed — admin is source of truth
+
+    // Delete products not in admin's catalog
+    const adminProductIds = (data.products as any[]).map((p: any) => p.id);
+    if (adminProductIds.length > 0) {
+      const phProducts = adminProductIds.map(() => "?").join(",");
+      const delProducts = await tx.runAsync(
+        `DELETE FROM products WHERE id NOT IN (${phProducts})`,
+        adminProductIds,
+      );
+      summary.deletedProducts = delProducts.changes;
+    } else {
+      const delProducts = await tx.runAsync("DELETE FROM products");
+      summary.deletedProducts = delProducts.changes;
+    }
+
+    // Delete workers not in admin's catalog
+    const adminWorkerIds = (data.workers as any[]).map((w: any) => w.id);
+    if (adminWorkerIds.length > 0) {
+      const phWorkers = adminWorkerIds.map(() => "?").join(",");
+      const delWorkers = await tx.runAsync(
+        `DELETE FROM users WHERE role = 'WORKER' AND id NOT IN (${phWorkers})`,
+        adminWorkerIds,
+      );
+      summary.deletedWorkers = delWorkers.changes;
+    } else {
+      const delWorkers = await tx.runAsync(
+        "DELETE FROM users WHERE role = 'WORKER'",
+      );
+      summary.deletedWorkers = delWorkers.changes;
+    }
+
+    // Delete stores not in admin's catalog
+    const adminStoreIds = (data.stores as any[]).map((s: any) => s.id);
+    if (adminStoreIds.length > 0) {
+      const phStores = adminStoreIds.map(() => "?").join(",");
+      const delStores = await tx.runAsync(
+        `DELETE FROM stores WHERE id NOT IN (${phStores})`,
+        adminStoreIds,
+      );
+      summary.deletedStores = delStores.changes;
+    } else {
+      const delStores = await tx.runAsync("DELETE FROM stores");
+      summary.deletedStores = delStores.changes;
+    }
+
+    // Delete unit categories not in admin's catalog
+    const adminCatIds = (data.unitCategories as any[]).map((c: any) => c.id);
+    if (adminCatIds.length > 0) {
+      const phCats = adminCatIds.map(() => "?").join(",");
+      await tx.runAsync(
+        `DELETE FROM unit_categories WHERE id NOT IN (${phCats})`,
+        adminCatIds,
+      );
+    } else {
+      await tx.runAsync("DELETE FROM unit_categories");
+    }
+
+    // Delete units not in admin's catalog
+    const adminUnitIds = (data.units as any[]).map((u: any) => u.id);
+    if (adminUnitIds.length > 0) {
+      const phUnits = adminUnitIds.map(() => "?").join(",");
+      await tx.runAsync(
+        `DELETE FROM units WHERE id NOT IN (${phUnits})`,
+        adminUnitIds,
+      );
+    } else {
+      await tx.runAsync("DELETE FROM units");
     }
   });
 
