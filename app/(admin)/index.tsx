@@ -9,7 +9,15 @@ import type { TabDef } from "@/components/ui/screen-tabs";
 import { ScreenTabs } from "@/components/ui/screen-tabs";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useColors } from "@/hooks/use-colors";
-import { Bell, LayoutDashboard, Package, ShoppingCart, TrendingUp, Users, X } from "@tamagui/lucide-icons";
+import {
+    Bell,
+    LayoutDashboard,
+    Package,
+    ShoppingCart,
+    TrendingUp,
+    Users,
+    X,
+} from "@tamagui/lucide-icons";
 import { useNavigation } from "expo-router";
 import { useCallback, useLayoutEffect, useState } from "react";
 import { Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
@@ -31,7 +39,8 @@ export default function DashboardScreen() {
   const [historyOpen, setHistoryOpen] = useState(false);
   const c = useColors();
   const isDark = useColorScheme() === "dark";
-  const { history, clearHistory, unseenCount, markAllSeen } = useNotifications();
+  const { history, clearHistory, unseenCount, markAllSeen } =
+    useNotifications();
   const navigation = useNavigation();
 
   const openHistory = useCallback(() => {

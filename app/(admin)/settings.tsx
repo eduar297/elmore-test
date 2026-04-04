@@ -18,12 +18,7 @@ import {
 import React, { useState } from "react";
 import { StyleSheet, View } from "react-native";
 
-type SettingTab =
-  | "workers"
-  | "profile"
-  | "stores"
-  | "prefs"
-  | "sync";
+type SettingTab = "workers" | "profile" | "stores" | "prefs" | "sync";
 
 const TABS: TabDef<SettingTab>[] = [
   { key: "profile", label: "Mi Perfil", Icon: UserCog },

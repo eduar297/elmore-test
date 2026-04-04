@@ -400,7 +400,12 @@ export function NotificationCards() {
             >
               <YStack gap="$3" p="$4">
                 <XStack items="center" justify="space-between">
-                  <TText fontSize="$6" fontWeight="bold" color="$color" flex={1}>
+                  <TText
+                    fontSize="$6"
+                    fontWeight="bold"
+                    color="$color"
+                    flex={1}
+                  >
                     {editingReminder
                       ? "Editar recordatorio"
                       : "Nuevo recordatorio"}

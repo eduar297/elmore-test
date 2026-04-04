@@ -1,5 +1,5 @@
-import { useNotifications } from "@/components/ui/notification-provider";
 import type { NotificationHistoryEntry } from "@/components/ui/notification-provider";
+import { useNotifications } from "@/components/ui/notification-provider";
 import { useColors } from "@/hooks/use-colors";
 import type { NotificationCategory } from "@/services/notifications/types";
 import {

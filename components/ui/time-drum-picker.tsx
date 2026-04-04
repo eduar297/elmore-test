@@ -3,7 +3,7 @@ import React, { useCallback, useEffect, useRef } from "react";
 import {
     FlatList,
     type NativeScrollEvent,
-    type NativeSyntheticEvent
+    type NativeSyntheticEvent,
 } from "react-native";
 import { Text, View, XStack, useTheme } from "tamagui";
 
