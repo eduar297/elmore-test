@@ -1,34 +1,41 @@
 import { useNotifications } from "@/components/ui/notification-provider";
-import { OVERLAY } from "@/constants/colors";
+import { ICON_BTN_BG, OVERLAY_HEAVY } from "@/constants/colors";
 import { useColors } from "@/hooks/use-colors";
 import type {
-    NotificationPrefKey,
-    ScheduledReminder,
+  NotificationPrefKey,
+  ScheduledReminder,
 } from "@/services/notifications/types";
 import { Picker } from "@react-native-picker/picker";
 import {
-    Bell,
-    BellOff,
-    Clock,
-    Package,
-    Plus,
-    RefreshCw,
-    Trash2,
-    X,
+  Bell,
+  BellOff,
+  Clock,
+  Package,
+  Plus,
+  RefreshCw,
+  Trash2,
+  X,
 } from "@tamagui/lucide-icons";
 import * as Crypto from "expo-crypto";
 import React, { useCallback, useState } from "react";
 import {
-    Alert,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    Switch,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Switch,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { Button, Input, Text as TText, XStack, YStack } from "tamagui";
+import {
+  Button,
+  Input,
+  Text as TText,
+  TextArea,
+  XStack,
+  YStack,
+} from "tamagui";
 import { settingStyles as styles } from "./shared";
 
 // ── Pref display config ─────────────────────────────────────────────────────
@@ -385,30 +392,34 @@ export function NotificationCards() {
           <View
             style={{
               flex: 1,
-              backgroundColor: OVERLAY,
+              backgroundColor: OVERLAY_HEAVY,
               justifyContent: "center",
               paddingHorizontal: 20,
             }}
           >
             <View
               style={{
-                backgroundColor: c.modalBg,
+                backgroundColor: c.card,
                 borderRadius: 20,
-                overflow: "hidden",
+                borderWidth: 1,
+                borderColor: c.border,
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 8 },
+                shadowOpacity: 0.35,
+                shadowRadius: 24,
+                elevation: 16,
               }}
             >
               <YStack gap="$3" p="$4">
                 <XStack items="center" justify="space-between">
-                  <TText
-                    fontSize="$6"
-                    fontWeight="bold"
-                    color="$color"
-                    flex={1}
-                  >
-                    {editingReminder
-                      ? "Editar recordatorio"
-                      : "Nuevo recordatorio"}
-                  </TText>
+                  <XStack items="center" gap="$2" flex={1}>
+                    <Clock size={18} color={c.blue as any} />
+                    <TText fontSize="$6" fontWeight="bold" color="$color">
+                      {editingReminder
+                        ? "Editar recordatorio"
+                        : "Nuevo recordatorio"}
+                    </TText>
+                  </XStack>
                   <TouchableOpacity
                     onPress={() => setSheetOpen(false)}
                     hitSlop={8}
@@ -416,7 +427,7 @@ export function NotificationCards() {
                       width: 32,
                       height: 32,
                       borderRadius: 16,
-                      backgroundColor: c.muted + "20",
+                      backgroundColor: ICON_BTN_BG,
                       alignItems: "center",
                       justifyContent: "center",
                     }}
@@ -456,12 +467,14 @@ export function NotificationCards() {
                   >
                     Mensaje
                   </TText>
-                  <Input
+                  <TextArea
                     placeholder="Texto que aparecerá en la notificación"
                     value={formBody}
                     onChangeText={(v: string) => setFormBody(v)}
                     autoCapitalize="sentences"
                     size="$4"
+                    numberOfLines={3}
+                    verticalAlign="top"
                   />
                 </YStack>
 
