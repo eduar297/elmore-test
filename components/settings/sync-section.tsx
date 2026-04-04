@@ -7,11 +7,22 @@ import {
   applyReceivedTickets,
   attachPhotos,
   prepareCatalogMeta,
+  type TicketImportSummary,
 } from "@/services/lan/sync-service";
 import {
   AlertCircle,
+  ArrowDownToLine,
+  ArrowUpFromLine,
+  Camera,
   CheckCircle,
+  Image,
+  Key,
+  Package,
+  Receipt,
   RefreshCw,
+  SkipForward,
+  Store,
+  Users,
   Wifi,
   WifiOff,
   Zap,
@@ -44,13 +55,19 @@ interface CatalogSentSummary {
   stores: number;
   workers: number;
   units: number;
+  /** Whether catalog was skipped (worker already had it) */
+  catalogSkipped: boolean;
+  /** Number of photos actually sent (only those the worker needed) */
+  photosSent: number;
+  /** Total photos in manifest */
+  photosTotal: number;
 }
 
 interface WorkerSyncInfo {
   server: DiscoveredServer;
   state: WorkerSyncState;
   lastSyncAt: string | null;
-  ticketsImported: number;
+  ticketSummary: TicketImportSummary | null;
   catalogSent: CatalogSentSummary | null;
   catalogBytes: number;
   error: string | null;
@@ -76,6 +93,7 @@ export function SyncSection() {
     sendTicketsAck,
     onSyncTicketsReceived,
     syncPrepareAckRef,
+    bumpCatalogVersion,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     onSyncCatalogReceived: _onSyncCatalogReceived,
   } = useLan();
@@ -89,6 +107,7 @@ export function SyncSection() {
   const catalogBytesRef = useRef<number>(0);
   const catalogHashRef = useRef<string>("");
   const photoManifestRef = useRef<Record<string, string>>({});
+  const catalogSentRef = useRef<CatalogSentSummary | null>(null);
   const shouldSendPrepareRef = useRef(false);
 
   // ── Discovery ────────────────────────────────────────────────────────────
@@ -132,7 +151,7 @@ export function SyncSection() {
           server: manualServer,
           state: "idle",
           lastSyncAt: null,
-          ticketsImported: 0,
+          ticketSummary: null,
           catalogSent: null,
           catalogBytes: 0,
           error: null,
@@ -153,7 +172,7 @@ export function SyncSection() {
             server: s,
             state: "idle",
             lastSyncAt: null,
-            ticketsImported: 0,
+            ticketSummary: null,
             catalogSent: null,
             catalogBytes: 0,
             error: null,
@@ -182,12 +201,13 @@ export function SyncSection() {
       if (!worker) return;
 
       try {
-        const imported = await applyReceivedTickets(db, data);
+        const ticketSummary = await applyReceivedTickets(db, data);
         console.log(
-          `[SyncSection] Tickets applied: ${imported} imported, ${
-            (data.tickets as any[]).length
-          } total received`,
+          `[SyncSection] Tickets applied: ${ticketSummary.imported} imported, ${ticketSummary.totalReceived} total received`,
         );
+
+        // Signal other admin screens to reload (e.g. WorkersSection photos)
+        bumpCatalogVersion();
 
         // Prepare catalog meta (hash + photo manifest) — no photos yet
         const { payload, catalogHash, photoManifest } =
@@ -210,11 +230,15 @@ export function SyncSection() {
           stores: (payload.stores as any[]).length,
           workers: (payload.workers as any[]).length,
           units: (payload.units as any[]).length,
+          catalogSkipped: false,
+          photosSent: 0,
+          photosTotal: Object.keys(photoManifest).length,
         };
+        catalogSentRef.current = catalogSummary;
 
         updateWorker(worker.server.host, {
           state: "preparing",
-          ticketsImported: imported,
+          ticketSummary,
           catalogSent: catalogSummary,
           catalogBytes: totalBytes,
         });
@@ -246,6 +270,7 @@ export function SyncSection() {
     disconnectFromServer,
     sendSyncPrepare,
     onSyncTicketsReceived,
+    bumpCatalogVersion,
   ]);
 
   // React to syncStatus changes from lan-context
@@ -276,6 +301,19 @@ export function SyncSection() {
           state: "done",
           lastSyncAt: now,
           error: null,
+          catalogSent: {
+            ...(catalogSentRef.current ?? {
+              products: 0,
+              stores: 0,
+              workers: 0,
+              units: 0,
+              catalogSkipped: false,
+              photosSent: 0,
+              photosTotal: 0,
+            }),
+            catalogSkipped: true,
+            photosSent: 0,
+          },
         });
         setTimeout(() => {
           disconnectFromServer();
@@ -283,7 +321,21 @@ export function SyncSection() {
         activeWorkerRef.current = null;
       } else {
         // Attach only needed photos, then send
-        updateWorker(worker.server.host, { state: "sending" });
+        updateWorker(worker.server.host, {
+          state: "sending",
+          catalogSent: {
+            ...(catalogSentRef.current ?? {
+              products: 0,
+              stores: 0,
+              workers: 0,
+              units: 0,
+              catalogSkipped: false,
+              photosSent: 0,
+              photosTotal: 0,
+            }),
+            photosSent: neededPhotos.length,
+          },
+        });
         attachPhotos(catalogPayloadRef.current, neededPhotos).then(
           (withPhotos) => {
             sendCatalog(withPhotos);
@@ -376,7 +428,7 @@ export function SyncSection() {
       updateWorker(info.server.host, {
         state: "connecting",
         error: null,
-        ticketsImported: 0,
+        ticketSummary: null,
         catalogSent: null,
         catalogBytes: 0,
       });
@@ -530,7 +582,7 @@ function WorkerCard({
     state,
     server,
     lastSyncAt,
-    ticketsImported,
+    ticketSummary,
     catalogSent,
     catalogBytes,
     error,
@@ -546,6 +598,12 @@ function WorkerCard({
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
+
+  const formatMoney = (amount: number) =>
+    `$${amount.toLocaleString("es-MX", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
 
   const statusLabel = {
     idle: "Listo para sincronizar",
@@ -629,21 +687,12 @@ function WorkerCard({
               { backgroundColor: `${statusColor}20` },
             ]}
           >
-            {state === "preparing" ? (
-              <View
-                style={[
-                  styles.progressBarIndeterminate,
-                  { backgroundColor: statusColor },
-                ]}
-              />
-            ) : (
-              <View
-                style={[
-                  styles.progressBarIndeterminate,
-                  { backgroundColor: statusColor },
-                ]}
-              />
-            )}
+            <View
+              style={[
+                styles.progressBarIndeterminate,
+                { backgroundColor: statusColor },
+              ]}
+            />
           </View>
           <Text style={[styles.progressText, { color: mutedText }]}>
             {state === "preparing"
@@ -655,53 +704,135 @@ function WorkerCard({
         </View>
       )}
 
-      {/* Sync summary — shown when done or during sync */}
-      {(state === "done" || catalogSent) && (
+      {/* ── Sync summary ────────────────────────────────────────────────── */}
+      {(state === "done" || ticketSummary || catalogSent) && (
         <View style={[styles.summaryBox, { borderTopColor: borderColor }]}>
-          {/* Sent */}
-          {catalogSent && (
+          {/* ── RECEIVED from Worker ── */}
+          {ticketSummary && (
             <View style={styles.summarySection}>
-              <Text style={[styles.summaryLabel, { color: "#3b82f6" }]}>
-                ↑ Enviado al Worker
-              </Text>
-              <View style={styles.summaryRow}>
-                <SummaryPill
-                  label="Productos"
-                  value={catalogSent.products}
-                  color="#3b82f6"
-                />
-                <SummaryPill
-                  label="Tiendas"
-                  value={catalogSent.stores}
-                  color="#8b5cf6"
-                />
-                <SummaryPill
-                  label="Vendedores"
-                  value={catalogSent.workers}
-                  color="#f59e0b"
-                />
-                <SummaryPill
-                  label="Unidades"
-                  value={catalogSent.units}
-                  color="#6b7280"
-                />
+              <View style={styles.summaryHeader}>
+                <ArrowDownToLine size={13} color="#22c55e" />
+                <Text style={[styles.summaryLabel, { color: "#22c55e" }]}>
+                  Recibido del Worker
+                </Text>
               </View>
+
+              {ticketSummary.imported > 0 ? (
+                <>
+                  <View style={styles.summaryRow}>
+                    <SummaryPill
+                      icon={<Receipt size={11} color="#22c55e" />}
+                      label="Tickets"
+                      value={`${ticketSummary.imported}`}
+                      color="#22c55e"
+                    />
+                    <SummaryPill
+                      label="Monto total"
+                      value={formatMoney(ticketSummary.totalAmount)}
+                      color="#22c55e"
+                    />
+                    <SummaryPill
+                      label="Artículos"
+                      value={`${ticketSummary.totalItems}`}
+                      color="#22c55e"
+                    />
+                  </View>
+                  {ticketSummary.duplicates > 0 && (
+                    <Text style={[styles.detailLine, { color: mutedText }]}>
+                      {ticketSummary.duplicates} ticket
+                      {ticketSummary.duplicates > 1 ? "s" : ""} duplicado
+                      {ticketSummary.duplicates > 1 ? "s" : ""} (omitido
+                      {ticketSummary.duplicates > 1 ? "s" : ""})
+                    </Text>
+                  )}
+                </>
+              ) : (
+                <Text style={[styles.detailLine, { color: mutedText }]}>
+                  Sin tickets nuevos
+                </Text>
+              )}
+
+              {/* Worker profile changes */}
+              {(ticketSummary.pinUpdates.length > 0 ||
+                ticketSummary.photoUpdates.length > 0) && (
+                <View style={styles.profileChanges}>
+                  {ticketSummary.pinUpdates.length > 0 && (
+                    <View style={styles.profileRow}>
+                      <Key size={11} color="#f59e0b" />
+                      <Text style={[styles.profileText, { color: textColor }]}>
+                        PIN actualizado: {ticketSummary.pinUpdates.join(", ")}
+                      </Text>
+                    </View>
+                  )}
+                  {ticketSummary.photoUpdates.length > 0 && (
+                    <View style={styles.profileRow}>
+                      <Camera size={11} color="#8b5cf6" />
+                      <Text style={[styles.profileText, { color: textColor }]}>
+                        Foto actualizada:{" "}
+                        {ticketSummary.photoUpdates.join(", ")}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              )}
             </View>
           )}
 
-          {/* Received */}
-          {state === "done" && (
+          {/* ── SENT to Worker ── */}
+          {catalogSent && (
             <View style={styles.summarySection}>
-              <Text style={[styles.summaryLabel, { color: "#22c55e" }]}>
-                ↓ Recibido del Worker
-              </Text>
-              <View style={styles.summaryRow}>
-                <SummaryPill
-                  label="Tickets"
-                  value={ticketsImported}
-                  color="#22c55e"
-                />
+              <View style={styles.summaryHeader}>
+                <ArrowUpFromLine size={13} color="#3b82f6" />
+                <Text style={[styles.summaryLabel, { color: "#3b82f6" }]}>
+                  Enviado al Worker
+                </Text>
               </View>
+
+              {catalogSent.catalogSkipped ? (
+                <View style={styles.skippedRow}>
+                  <SkipForward size={12} color="#f59e0b" />
+                  <Text style={[styles.skippedText, { color: "#f59e0b" }]}>
+                    Catálogo sin cambios — no se envió
+                  </Text>
+                </View>
+              ) : (
+                <View style={styles.summaryRow}>
+                  <SummaryPill
+                    icon={<Package size={11} color="#3b82f6" />}
+                    label="Productos"
+                    value={`${catalogSent.products}`}
+                    color="#3b82f6"
+                  />
+                  <SummaryPill
+                    icon={<Store size={11} color="#8b5cf6" />}
+                    label="Tiendas"
+                    value={`${catalogSent.stores}`}
+                    color="#8b5cf6"
+                  />
+                  <SummaryPill
+                    icon={<Users size={11} color="#f59e0b" />}
+                    label="Vendedores"
+                    value={`${catalogSent.workers}`}
+                    color="#f59e0b"
+                  />
+                </View>
+              )}
+
+              {/* Photo summary */}
+              {catalogSent.photosTotal > 0 && (
+                <View style={styles.profileRow}>
+                  <Image size={11} color={mutedText as any} />
+                  <Text style={[styles.profileText, { color: mutedText }]}>
+                    Fotos: {catalogSent.photosSent} enviada
+                    {catalogSent.photosSent !== 1 ? "s" : ""} de{" "}
+                    {catalogSent.photosTotal} total
+                    {catalogSent.photosTotal !== 1 ? "es" : ""}
+                    {catalogSent.photosSent === 0 &&
+                      catalogSent.photosTotal > 0 &&
+                      " (Worker ya las tenía)"}
+                  </Text>
+                </View>
+              )}
             </View>
           )}
         </View>
@@ -711,16 +842,19 @@ function WorkerCard({
 }
 
 function SummaryPill({
+  icon,
   label,
   value,
   color,
 }: {
+  icon?: React.ReactNode;
   label: string;
-  value: number;
+  value: string;
   color: string;
 }) {
   return (
     <View style={[styles.pill, { backgroundColor: `${color}15` }]}>
+      {icon}
       <Text style={[styles.pillValue, { color }]}>{value}</Text>
       <Text style={[styles.pillLabel, { color }]}>{label}</Text>
     </View>
@@ -860,10 +994,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderTopWidth: StyleSheet.hairlineWidth,
-    gap: 10,
+    gap: 12,
   },
   summarySection: {
     gap: 6,
+  },
+  summaryHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
   },
   summaryLabel: {
     fontSize: 11,
@@ -875,6 +1014,34 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 6,
+  },
+  detailLine: {
+    fontSize: 12,
+    marginLeft: 4,
+  },
+  profileChanges: {
+    gap: 4,
+    marginTop: 2,
+  },
+  profileRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    marginLeft: 4,
+  },
+  profileText: {
+    fontSize: 12,
+  },
+  skippedRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    marginLeft: 4,
+    paddingVertical: 2,
+  },
+  skippedText: {
+    fontSize: 12,
+    fontWeight: "500",
   },
   pill: {
     flexDirection: "row",

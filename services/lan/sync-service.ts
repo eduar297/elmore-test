@@ -204,12 +204,38 @@ export async function attachPhotos(
   return { ...payload, photos };
 }
 
+/** Detailed summary of what was received from a Worker */
+export interface TicketImportSummary {
+  /** Number of new tickets imported */
+  imported: number;
+  /** Number of tickets that were duplicates (already existed) */
+  duplicates: number;
+  /** Total tickets received in the payload */
+  totalReceived: number;
+  /** Sum of totals of imported tickets */
+  totalAmount: number;
+  /** Number of items across all imported tickets */
+  totalItems: number;
+  /** Workers whose PIN was updated */
+  pinUpdates: string[];
+  /** Workers whose photo was updated */
+  photoUpdates: string[];
+}
+
 /** Admin applies tickets received from Worker (dedup by UUID) */
 export async function applyReceivedTickets(
   db: SQLiteDatabase,
   data: SyncTicketsData,
-): Promise<number> {
-  let imported = 0;
+): Promise<TicketImportSummary> {
+  const summary: TicketImportSummary = {
+    imported: 0,
+    duplicates: 0,
+    totalReceived: (data.tickets as any[]).length,
+    totalAmount: 0,
+    totalItems: 0,
+    pinUpdates: [],
+    photoUpdates: [],
+  };
 
   await db.withExclusiveTransactionAsync(async (tx) => {
     for (const ticket of data.tickets as any[]) {
@@ -218,7 +244,10 @@ export async function applyReceivedTickets(
         "SELECT COUNT(*) as cnt FROM tickets WHERE id = ?",
         [ticket.id],
       );
-      if (exists && exists.cnt > 0) continue;
+      if (exists && exists.cnt > 0) {
+        summary.duplicates++;
+        continue;
+      }
 
       await tx.runAsync(
         `INSERT INTO tickets (id, total, itemCount, paymentMethod, createdAt, workerId, workerName, storeId, status, voidedAt, voidedBy, voidReason)
@@ -238,6 +267,9 @@ export async function applyReceivedTickets(
           ticket.voidReason ?? null,
         ],
       );
+
+      summary.totalAmount += ticket.total ?? 0;
+      summary.totalItems += ticket.itemCount ?? 0;
 
       // Insert ticket items for this ticket
       const items = (data.ticketItems as any[]).filter(
@@ -265,17 +297,25 @@ export async function applyReceivedTickets(
           );
         }
       }
-      imported++;
+      summary.imported++;
     }
 
     // Apply worker profile updates (PIN, photo)
     if (data.workerUpdates) {
       for (const upd of data.workerUpdates) {
+        // Resolve worker name for the summary
+        const worker = await tx.getFirstAsync<{ name: string }>(
+          "SELECT name FROM users WHERE id = ?",
+          [upd.id],
+        );
+        const workerName = worker?.name ?? `Worker #${upd.id}`;
+
         if (upd.pinHash) {
           await tx.runAsync(
             "UPDATE users SET pinHash = ? WHERE id = ? AND role = 'WORKER'",
             [upd.pinHash, upd.id],
           );
+          summary.pinUpdates.push(workerName);
           console.log(`[SyncService] Updated pinHash for worker ${upd.id}`);
         }
         if (upd.photoBase64 !== undefined) {
@@ -293,6 +333,7 @@ export async function applyReceivedTickets(
             "UPDATE users SET photoUri = ? WHERE id = ? AND role = 'WORKER'",
             [newUri, upd.id],
           );
+          summary.photoUpdates.push(workerName);
           console.log(
             `[SyncService] Updated photo for worker ${upd.id}: ${
               newUri ? "set" : "cleared"
@@ -303,7 +344,7 @@ export async function applyReceivedTickets(
     }
   });
 
-  return imported;
+  return summary;
 }
 
 // ── Worker side: apply catalog from Admin ───────────────────────────────────

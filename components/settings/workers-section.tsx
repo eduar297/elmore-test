@@ -6,7 +6,8 @@ import type { User } from "@/models/user";
 import { hashPin } from "@/utils/auth";
 import { AlertCircle, Edit3, Plus, Trash2, Users } from "@tamagui/lucide-icons";
 import { useFocusEffect } from "expo-router";
-import React, { useCallback, useState } from "react";
+import { useLan } from "@/contexts/lan-context";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -49,11 +50,18 @@ export function WorkersSection() {
     }
   }, [userRepo]);
 
+  const { catalogVersion } = useLan();
+
   useFocusEffect(
     useCallback(() => {
       load();
     }, [load]),
   );
+
+  // Reload when sync finishes (e.g. worker changed photo/PIN)
+  useEffect(() => {
+    if (catalogVersion > 0) load();
+  }, [catalogVersion, load]);
 
   const openCreate = useCallback(() => {
     setEditing(null);

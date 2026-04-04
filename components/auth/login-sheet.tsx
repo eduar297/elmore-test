@@ -880,14 +880,6 @@ export function LoginSheet({
           })}
         </View>
       )}
-
-      <TouchableOpacity
-        style={[styles.btnCancel, { borderColor: c.border }]}
-        onPress={onClose}
-        activeOpacity={0.7}
-      >
-        <Text style={[styles.btnCancelText, { color: c.muted }]}>Cancelar</Text>
-      </TouchableOpacity>
     </Animated.View>
   );
 
@@ -977,16 +969,6 @@ export function LoginSheet({
             <Text style={[styles.errorText, { color: c.error }]}>{error}</Text>
           </View>
         )}
-
-        <TouchableOpacity
-          style={[styles.btnCancel, { borderColor: c.border }]}
-          onPress={onClose}
-          activeOpacity={0.7}
-        >
-          <Text style={[styles.btnCancelText, { color: c.muted }]}>
-            Cancelar
-          </Text>
-        </TouchableOpacity>
       </Animated.View>
     );
   };
