@@ -40,7 +40,7 @@ export function CloudSyncSection() {
   const c = useColors();
   const db = useSQLiteContext();
   const { businessId, deviceId } = useDevice();
-  const { refreshStores } = useStore();
+  const { refreshStores, setCurrentStore } = useStore();
 
   const [available, setAvailable] = useState<boolean | null>(null);
   const [state, setState] = useState<SyncState>("idle");
@@ -123,6 +123,9 @@ export function CloudSyncSection() {
             setResult("");
             setProgress(null);
 
+            // Clear current store so stale reference doesn't interfere
+            setCurrentStore(null);
+
             const res = await downloadFromCloud(
               db,
               businessId,
@@ -144,7 +147,14 @@ export function CloudSyncSection() {
         },
       ],
     );
-  }, [db, businessId, deviceId, handleProgress, refreshStores]);
+  }, [
+    db,
+    businessId,
+    deviceId,
+    handleProgress,
+    refreshStores,
+    setCurrentStore,
+  ]);
 
   const isBusy =
     state === "uploading" || state === "downloading" || state === "checking";

@@ -279,6 +279,34 @@ export async function uploadToCloud(
   let totalRows = 0;
 
   try {
+    // Phase 1: Delete ALL cloud tables in reverse order (respect FKs)
+    onProgress?.({
+      phase: "uploading",
+      current: 0,
+      total: totalTables,
+      message: "Limpiando datos anteriores en la nube...",
+    });
+
+    const reversedMappings = [...TABLE_MAPPINGS].reverse();
+    for (const mapping of reversedMappings) {
+      const { error: delError } = await client
+        .from(mapping.pgTable)
+        .delete()
+        .eq("business_id", businessId);
+
+      if (delError) {
+        console.warn(
+          `[CloudSync] Delete failed for ${mapping.pgTable}:`,
+          delError.message,
+        );
+        return {
+          success: false,
+          error: `Error limpiando ${mapping.pgTable}: ${delError.message}`,
+        };
+      }
+    }
+
+    // Phase 2: Upload local data in forward order (respect FKs)
     for (let i = 0; i < TABLE_MAPPINGS.length; i++) {
       const mapping = TABLE_MAPPINGS[i];
 
@@ -296,23 +324,6 @@ export async function uploadToCloud(
       );
 
       if (rows.length === 0) continue;
-
-      // Delete existing rows for this business first
-      const { error: delError } = await client
-        .from(mapping.pgTable)
-        .delete()
-        .eq("business_id", businessId);
-
-      if (delError) {
-        console.warn(
-          `[CloudSync] Delete failed for ${mapping.pgTable}:`,
-          delError.message,
-        );
-        return {
-          success: false,
-          error: `Error limpiando ${mapping.pgTable}: ${delError.message}`,
-        };
-      }
 
       // Upload in batches
       for (let b = 0; b < rows.length; b += BATCH_SIZE) {
