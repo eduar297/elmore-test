@@ -1,3 +1,4 @@
+import { clearDataConnection } from "@/services/supabase/client";
 import * as Application from "expo-application";
 import * as Crypto from "expo-crypto";
 import * as SecureStore from "expo-secure-store";
@@ -61,6 +62,7 @@ export async function saveActivation(businessId: string): Promise<void> {
 export async function clearActivation(): Promise<void> {
   await SecureStore.deleteItemAsync(KEYS.activated);
   await SecureStore.deleteItemAsync(KEYS.businessId);
+  await clearDataConnection();
 }
 
 // ── Device Info (for Supabase metadata) ──────────────────────────────────────

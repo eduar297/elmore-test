@@ -1,7 +1,8 @@
 import { EmptyState } from "@/components/ui/empty-state";
 import { OVERLAY } from "@/constants/colors";
 import { ChevronDown, Plus, Receipt, Trash2 } from "@tamagui/lucide-icons";
-import { useCallback, useEffect, useId, useState } from "react";
+import { useFocusEffect } from "expo-router";
+import { useCallback, useId, useState } from "react";
 import { Alert, FlatList, ScrollView } from "react-native";
 import {
     Button,
@@ -307,9 +308,11 @@ export default function ExpensesScreen() {
     nav.dateRange,
   ]);
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+    }, [loadData]),
+  );
 
   const handleCreate = async (data: {
     category: ExpenseCategory;

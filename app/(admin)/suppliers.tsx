@@ -1,6 +1,7 @@
 import { EmptyState } from "@/components/ui/empty-state";
 import { OVERLAY } from "@/constants/colors";
 import { Building2, Edit3, Plus, Trash2 } from "@tamagui/lucide-icons";
+import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useId, useState } from "react";
 import { Alert, FlatList } from "react-native";
 import {
@@ -215,9 +216,11 @@ export default function SuppliersScreen() {
     }
   }, [supplierRepo]);
 
-  useEffect(() => {
-    loadSuppliers();
-  }, [loadSuppliers]);
+  useFocusEffect(
+    useCallback(() => {
+      loadSuppliers();
+    }, [loadSuppliers]),
+  );
 
   const handleCreate = async (data: CreateSupplierInput) => {
     setSaving(true);

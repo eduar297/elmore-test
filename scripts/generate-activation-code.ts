@@ -2,9 +2,14 @@
  * Generate activation codes for MoreHub businesses.
  *
  * Usage:
- *   npx tsx scripts/generate-activation-code.ts --business-name "Mi Negocio" --hours 720
+ *   npx tsx scripts/generate-activation-code.ts \
+ *     --business-name "Mi Negocio" \
+ *     --hours 720 \
+ *     --data-url "https://xxxxx.supabase.co" \
+ *     --data-anon-key "eyJ..."
  *
- * Requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY env vars.
+ * Requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY env vars
+ * (pointing to the CENTRAL Supabase project).
  */
 
 import { createClient } from "@supabase/supabase-js";
@@ -47,27 +52,35 @@ function parseArgs() {
   const args = process.argv.slice(2);
   let businessName = "";
   let hours = 720; // default 30 days
+  let dataUrl = "";
+  let dataAnonKey = "";
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--business-name" && args[i + 1]) {
       businessName = args[++i];
     } else if (args[i] === "--hours" && args[i + 1]) {
       hours = parseInt(args[++i], 10);
+    } else if (args[i] === "--data-url" && args[i + 1]) {
+      dataUrl = args[++i];
+    } else if (args[i] === "--data-anon-key" && args[i + 1]) {
+      dataAnonKey = args[++i];
     }
   }
 
   if (!businessName) {
-    console.error("Usage: --business-name <name> [--hours <number>]");
+    console.error(
+      "Usage: --business-name <name> [--hours <n>] [--data-url <url>] [--data-anon-key <key>]",
+    );
     process.exit(1);
   }
 
-  return { businessName, hours };
+  return { businessName, hours, dataUrl, dataAnonKey };
 }
 
 // ── Main ─────────────────────────────────────────────────────────────────────
 
 async function main() {
-  const { businessName, hours } = parseArgs();
+  const { businessName, hours, dataUrl, dataAnonKey } = parseArgs();
 
   // Upsert business (find existing or create)
   let { data: business } = await supabase
@@ -87,6 +100,24 @@ async function main() {
       process.exit(1);
     }
     business = res.data;
+  }
+
+  // Upsert business_connection if data URL provided
+  if (dataUrl && dataAnonKey) {
+    const { error: connError } = await supabase
+      .from("business_connections")
+      .upsert(
+        {
+          business_id: business!.id,
+          data_url: dataUrl,
+          data_anon_key: dataAnonKey,
+        },
+        { onConflict: "business_id" },
+      );
+    if (connError) {
+      console.error("Failed to upsert connection:", connError.message);
+      process.exit(1);
+    }
   }
 
   // Generate and insert code
@@ -111,7 +142,11 @@ async function main() {
   console.log(`Business : ${businessName}`);
   console.log(`Code     : ${code}`);
   console.log(`Expires  : ${expiresAt}`);
-  console.log(`Hours    : ${hours} (${(hours / 24).toFixed(1)} days)\n`);
+  console.log(`Hours    : ${hours} (${(hours / 24).toFixed(1)} days)`);
+  if (dataUrl) {
+    console.log(`Data URL : ${dataUrl}`);
+  }
+  console.log();
 }
 
 main().catch((err) => {

@@ -3,7 +3,11 @@ import { useAuth } from "@/contexts/auth-context";
 import { useDevice } from "@/contexts/device-context";
 import { usePreferences } from "@/contexts/preferences-context";
 import { useStore } from "@/contexts/store-context";
-import { resetDatabase, seedSimulation } from "@/database/seed-simulation";
+import {
+  resetDatabase,
+  seedBasicSimulation,
+  seedSimulation,
+} from "@/database/seed-simulation";
 import { useColors } from "@/hooks/use-colors";
 import { useUserRepository } from "@/hooks/use-user-repository";
 import { hashPin } from "@/utils/auth";
@@ -45,7 +49,7 @@ export function PreferencesSection() {
   const [success, setSuccess] = useState("");
   const [pinDialogOpen, setPinDialogOpen] = useState(false);
   const [pinDialogMode, setPinDialogMode] = useState<
-    "reset" | "seed" | "changeRole" | null
+    "reset" | "seedBasic" | "seedFull" | "changeRole" | null
   >(null);
 
   const handleChangeRole = useCallback(() => {
@@ -66,8 +70,13 @@ export function PreferencesSection() {
     setPinDialogOpen(true);
   }, []);
 
-  const handleSeed = useCallback(() => {
-    setPinDialogMode("seed");
+  const handleSeedFull = useCallback(() => {
+    setPinDialogMode("seedFull");
+    setPinDialogOpen(true);
+  }, []);
+
+  const handleSeedBasic = useCallback(() => {
+    setPinDialogMode("seedBasic");
     setPinDialogOpen(true);
   }, []);
 
@@ -106,24 +115,61 @@ export function PreferencesSection() {
             },
           ],
         );
-      } else if (pinDialogMode === "seed") {
+      } else if (pinDialogMode === "seedFull") {
         Alert.alert(
           "Sembrar datos de prueba",
           "Se creará un año completo de datos simulados: trabajadores, productos, compras, tickets y gastos.\n\nEs recomendable limpiar la base de datos primero.\n\n¿Continuar?",
           [
             { text: "Cancelar", style: "cancel" },
             {
-              text: "Sí, sembrar datos",
+              text: "Sí, simulación completa",
               onPress: async () => {
+                if (!currentStore) {
+                  setError("No hay tienda seleccionada");
+                  return;
+                }
                 setSeeding(true);
                 setError("");
                 setSuccess("");
                 setSeedProgress("Iniciando...");
                 try {
-                  await seedSimulation(db, currentStore!.id, (msg) =>
-                    setSeedProgress(msg),
-                  );
-                  setSuccess("Simulación completada exitosamente");
+                  await seedSimulation(db, currentStore.id, (msg) => {
+                    setSeedProgress(msg);
+                  });
+                  setSuccess("Simulación completa finalizada");
+                  setSeedProgress("");
+                } catch (e) {
+                  setError((e as Error).message ?? "Error al sembrar datos");
+                  setSeedProgress("");
+                } finally {
+                  setSeeding(false);
+                }
+              },
+            },
+          ],
+        );
+      } else if (pinDialogMode === "seedBasic") {
+        Alert.alert(
+          "Sembrar simulación básica",
+          "Se crearán pocos datos para pruebas rápidas: 1 vendedor, 5 productos, compras, algunas ventas y gastos básicos.\n\nEs recomendable limpiar la base de datos primero.\n\n¿Continuar?",
+          [
+            { text: "Cancelar", style: "cancel" },
+            {
+              text: "Sí, simulación básica",
+              onPress: async () => {
+                if (!currentStore) {
+                  setError("No hay tienda seleccionada");
+                  return;
+                }
+                setSeeding(true);
+                setError("");
+                setSuccess("");
+                setSeedProgress("Iniciando...");
+                try {
+                  await seedBasicSimulation(db, currentStore.id, (msg) => {
+                    setSeedProgress(msg);
+                  });
+                  setSuccess("Simulación básica finalizada");
                   setSeedProgress("");
                 } catch (e) {
                   setError((e as Error).message ?? "Error al sembrar datos");
@@ -157,6 +203,7 @@ export function PreferencesSection() {
       refreshStores,
       setCurrentStore,
       currentStore,
+      resetDevice,
     ],
   );
 
@@ -280,8 +327,8 @@ export function PreferencesSection() {
                 </Text>
               </View>
               <Text style={[styles.dangerDesc, { color: c.muted }]}>
-                Genera un año de datos simulados: 4 trabajadores, 44 productos,
-                5 proveedores, compras, tickets diarios y gastos.
+                Elige entre una simulación completa o una básica para pruebas
+                rápidas.
               </Text>
             </View>
             {!!seedProgress && (
@@ -299,7 +346,7 @@ export function PreferencesSection() {
                 styles.seedBtn,
                 { backgroundColor: c.blue, opacity: seeding ? 0.7 : 1 },
               ]}
-              onPress={handleSeed}
+              onPress={handleSeedFull}
               disabled={seeding || resettingDb}
               activeOpacity={0.8}
             >
@@ -308,7 +355,33 @@ export function PreferencesSection() {
               ) : (
                 <>
                   <Play size={14} color="#fff" />
-                  <Text style={styles.btnSolidText}>Iniciar simulación</Text>
+                  <Text style={styles.btnSolidText}>Simulación completa</Text>
+                </>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.seedBtn,
+                {
+                  backgroundColor: c.card,
+                  borderColor: c.blue,
+                  borderWidth: 1.5,
+                  opacity: seeding ? 0.7 : 1,
+                },
+              ]}
+              onPress={handleSeedBasic}
+              disabled={seeding || resettingDb}
+              activeOpacity={0.8}
+            >
+              {seeding ? (
+                <ActivityIndicator color={c.blue} size="small" />
+              ) : (
+                <>
+                  <Play size={14} color={c.blue as any} />
+                  <Text style={[styles.dangerBtnText, { color: c.blue }]}>
+                    Simulación básica
+                  </Text>
                 </>
               )}
             </TouchableOpacity>
@@ -349,8 +422,10 @@ export function PreferencesSection() {
         description={
           pinDialogMode === "reset"
             ? "Ingresa tu PIN de administrador para limpiar la base de datos"
-            : pinDialogMode === "seed"
-            ? "Ingresa tu PIN de administrador para sembrar datos de prueba"
+            : pinDialogMode === "seedFull"
+            ? "Ingresa tu PIN de administrador para iniciar la simulación completa"
+            : pinDialogMode === "seedBasic"
+            ? "Ingresa tu PIN de administrador para iniciar la simulación básica"
             : "Ingresa tu PIN de administrador para cambiar el rol del dispositivo"
         }
         onConfirm={handlePinConfirm}

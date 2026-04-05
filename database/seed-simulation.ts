@@ -59,6 +59,54 @@ const WORKERS = [
   { name: "Ana López", pin: "4444" },
 ];
 
+const BASIC_WORKER = { name: "Vendedor Demo", pin: "1234" };
+
+const BASIC_SUPPLIER = {
+  name: "Proveedor Demo",
+  contactName: "Marco Demo",
+  phone: "555-0000",
+  email: "demo@proveedor.com",
+  address: "Zona Centro",
+};
+
+const BASIC_PRODUCTS = [
+  {
+    name: "Refresco Cola 600ml",
+    code: "900000000001",
+    price: 18,
+    unit: 7,
+    mode: "UNIT" as const,
+  },
+  {
+    name: "Agua 1L",
+    code: "900000000002",
+    price: 14,
+    unit: 7,
+    mode: "UNIT" as const,
+  },
+  {
+    name: "Papas 45g",
+    code: "900000000003",
+    price: 20,
+    unit: 8,
+    mode: "UNIT" as const,
+  },
+  {
+    name: "Galletas 6pz",
+    code: "900000000004",
+    price: 16,
+    unit: 8,
+    mode: "UNIT" as const,
+  },
+  {
+    name: "Pan de caja chico",
+    code: "900000000005",
+    price: 38,
+    unit: 8,
+    mode: "UNIT" as const,
+  },
+];
+
 const SUPPLIERS_DATA = [
   {
     name: "Distribuidora El Sol",
@@ -816,6 +864,220 @@ export async function resetDatabase(db: SQLiteDatabase) {
       "#3b82f6",
     );
   }
+}
+
+export async function seedBasicSimulation(
+  db: SQLiteDatabase,
+  storeId: number,
+  onProgress?: (msg: string) => void,
+) {
+  const now = new Date();
+  const startDate = new Date(now);
+  startDate.setDate(startDate.getDate() - 10);
+  startDate.setHours(8, 0, 0, 0);
+
+  onProgress?.("Creando vendedor...");
+  const workerPinHash = await Crypto.digestStringAsync(
+    Crypto.CryptoDigestAlgorithm.SHA256,
+    BASIC_WORKER.pin,
+  );
+  const workerResult = await db.runAsync(
+    `INSERT INTO users (name, role, pinHash, storeId, createdAt) VALUES (?, 'WORKER', ?, ?, ?)`,
+    BASIC_WORKER.name,
+    workerPinHash,
+    storeId,
+    fmtDatetime(startDate),
+  );
+  const workerId = workerResult.lastInsertRowId;
+
+  onProgress?.("Creando proveedor...");
+  const supplierResult = await db.runAsync(
+    `INSERT INTO suppliers (name, contactName, phone, email, address, storeId, createdAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    BASIC_SUPPLIER.name,
+    BASIC_SUPPLIER.contactName,
+    BASIC_SUPPLIER.phone,
+    BASIC_SUPPLIER.email,
+    BASIC_SUPPLIER.address,
+    storeId,
+    fmtDatetime(startDate),
+  );
+  const supplierId = supplierResult.lastInsertRowId;
+
+  onProgress?.("Creando 5 productos...");
+  const productIds: number[] = [];
+  const productNames: string[] = [];
+  const salePrices: number[] = [];
+  const stock: number[] = [];
+
+  for (const p of BASIC_PRODUCTS) {
+    const costPrice = Math.round(p.price * 0.72 * 100) / 100;
+    const salePrice = Math.round(p.price * 1.22 * 100) / 100;
+    const result = await db.runAsync(
+      `INSERT INTO products (name, code, pricePerBaseUnit, costPrice, salePrice, visible, baseUnitId, stockBaseQty, saleMode, storeId)
+       VALUES (?, ?, ?, ?, ?, 1, ?, 0, ?, ?)`,
+      p.name,
+      p.code,
+      p.price,
+      costPrice,
+      salePrice,
+      p.unit,
+      p.mode,
+      storeId,
+    );
+    productIds.push(result.lastInsertRowId);
+    productNames.push(p.name);
+    salePrices.push(salePrice);
+    stock.push(0);
+  }
+
+  onProgress?.("Creando compras iniciales...");
+  for (let batch = 0; batch < 2; batch++) {
+    const purchaseDate = new Date(startDate);
+    purchaseDate.setDate(startDate.getDate() + batch * 3);
+    purchaseDate.setHours(8 + batch, 30, 0, 0);
+
+    const items = productIds.map((productId, index) => {
+      const quantity = batch === 0 ? 22 - index * 2 : 12 - index;
+      const unitCost = Math.round(salePrices[index] * 0.73 * 100) / 100;
+      stock[index] += quantity;
+      return {
+        productId,
+        productName: productNames[index],
+        quantity,
+        unitCost,
+      };
+    });
+
+    const total = items.reduce((sum, item) => {
+      return sum + item.quantity * item.unitCost;
+    }, 0);
+
+    const purchaseResult = await db.runAsync(
+      `INSERT INTO purchases (supplierId, supplierName, notes, total, transportCost, itemCount, storeId, createdAt)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      supplierId,
+      BASIC_SUPPLIER.name,
+      batch === 0 ? "Stock inicial básico" : "Reabastecimiento básico",
+      total,
+      0,
+      items.length,
+      storeId,
+      fmtDatetime(purchaseDate),
+    );
+    const purchaseId = purchaseResult.lastInsertRowId;
+
+    for (const item of items) {
+      await db.runAsync(
+        `INSERT INTO purchase_items (purchaseId, productId, productName, quantity, unitCost, subtotal)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        purchaseId,
+        item.productId,
+        item.productName,
+        item.quantity,
+        item.unitCost,
+        item.quantity * item.unitCost,
+      );
+    }
+  }
+
+  onProgress?.("Registrando ventas de ejemplo...");
+  const ticketsToCreate = 8;
+  for (let i = 0; i < ticketsToCreate; i++) {
+    const ticketDate = new Date(startDate);
+    ticketDate.setDate(startDate.getDate() + i);
+    ticketDate.setHours(10 + (i % 6), 10 + (i % 5) * 8, 0, 0);
+
+    const firstProductIdx = i % productIds.length;
+    const secondProductIdx = (i + 2) % productIds.length;
+    const selections = [firstProductIdx, secondProductIdx].filter(
+      (idx) => stock[idx] > 0,
+    );
+
+    if (selections.length === 0) continue;
+
+    let total = 0;
+    const ticketId = Crypto.randomUUID();
+    const ticketItems: Array<{ idx: number; qty: number }> = [];
+
+    for (const idx of selections) {
+      const qty = Math.min(2, stock[idx]);
+      if (qty <= 0) continue;
+      ticketItems.push({ idx, qty });
+      total += qty * salePrices[idx];
+      stock[idx] -= qty;
+    }
+
+    if (ticketItems.length === 0) continue;
+
+    await db.runAsync(
+      `INSERT INTO tickets (id, createdAt, paymentMethod, total, itemCount, workerId, workerName, storeId)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      ticketId,
+      fmtDatetime(ticketDate),
+      i % 3 === 0 ? "CARD" : "CASH",
+      total,
+      ticketItems.length,
+      workerId,
+      BASIC_WORKER.name,
+      storeId,
+    );
+
+    for (const item of ticketItems) {
+      const unitPrice = salePrices[item.idx];
+      await db.runAsync(
+        `INSERT INTO ticket_items (ticketId, productId, productName, quantity, unitPrice, subtotal)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        ticketId,
+        productIds[item.idx],
+        productNames[item.idx],
+        item.qty,
+        unitPrice,
+        item.qty * unitPrice,
+      );
+    }
+  }
+
+  onProgress?.("Actualizando stock...");
+  for (let i = 0; i < productIds.length; i++) {
+    await db.runAsync(
+      `UPDATE products SET stockBaseQty = ? WHERE id = ?`,
+      Math.max(0, stock[i]),
+      productIds[i],
+    );
+  }
+
+  onProgress?.("Agregando gastos básicos...");
+  const baseDate = fmt(startDate).slice(0, 7);
+  await db.runAsync(
+    `INSERT INTO expenses (category, description, amount, date, storeId, createdAt)
+     VALUES ('TRANSPORT', ?, ?, ?, ?, ?)`,
+    "Flete de mercancía",
+    220,
+    `${baseDate}-05`,
+    storeId,
+    `${baseDate}-05 12:00:00`,
+  );
+  await db.runAsync(
+    `INSERT INTO expenses (category, description, amount, date, storeId, createdAt)
+     VALUES ('SUPPLIES', ?, ?, ?, ?, ?)`,
+    "Bolsas y artículos de mostrador",
+    140,
+    `${baseDate}-08`,
+    storeId,
+    `${baseDate}-08 11:00:00`,
+  );
+  await db.runAsync(
+    `INSERT INTO expenses (category, description, amount, date, storeId, createdAt)
+     VALUES ('OTHER', ?, ?, ?, ?, ?)`,
+    "Limpieza general",
+    90,
+    `${baseDate}-10`,
+    storeId,
+    `${baseDate}-10 16:00:00`,
+  );
+
+  onProgress?.("¡Simulación básica completada!");
 }
 
 // ── Seed simulation ──────────────────────────────────────────────────────────

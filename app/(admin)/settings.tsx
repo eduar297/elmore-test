@@ -1,4 +1,5 @@
 import {
+    CloudSyncSection,
     PreferencesSection,
     ProfileSection,
     StoresSection,
@@ -9,6 +10,7 @@ import type { TabDef } from "@/components/ui/screen-tabs";
 import { ScreenTabs } from "@/components/ui/screen-tabs";
 import { useColors } from "@/hooks/use-colors";
 import {
+    Cloud,
     RefreshCw,
     Settings,
     Store,
@@ -18,13 +20,14 @@ import {
 import React, { useState } from "react";
 import { StyleSheet, View } from "react-native";
 
-type SettingTab = "workers" | "profile" | "stores" | "prefs" | "sync";
+type SettingTab = "workers" | "profile" | "stores" | "prefs" | "sync" | "cloud";
 
 const TABS: TabDef<SettingTab>[] = [
   { key: "profile", label: "Mi Perfil", Icon: UserCog },
   { key: "workers", label: "Vendedores", Icon: Users },
   { key: "stores", label: "Tiendas", Icon: Store },
   { key: "sync", label: "Sincronizar", Icon: RefreshCw },
+  { key: "cloud", label: "Nube", Icon: Cloud },
   { key: "prefs", label: "Preferencias", Icon: Settings },
 ];
 
@@ -47,6 +50,9 @@ export default function SettingsScreen() {
       </View>
       <View style={activeTab === "sync" ? styles.visible : styles.hidden}>
         <SyncSection />
+      </View>
+      <View style={activeTab === "cloud" ? styles.visible : styles.hidden}>
+        <CloudSyncSection />
       </View>
       <View style={activeTab === "prefs" ? styles.visible : styles.hidden}>
         <PreferencesSection />
