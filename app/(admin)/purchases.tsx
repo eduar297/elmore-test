@@ -1,38 +1,38 @@
 import { EmptyState } from "@/components/ui/empty-state";
 import { ICON_BTN_BG, OVERLAY } from "@/constants/colors";
 import {
-    Building2,
-    ChevronRight,
-    Package,
-    Plus,
-    ScanLine,
-    Search,
-    ShoppingBag,
-    ShoppingCart,
-    Trash2,
-    X,
+  Building2,
+  ChevronRight,
+  Package,
+  Plus,
+  ScanLine,
+  Search,
+  ShoppingBag,
+  ShoppingCart,
+  Trash2,
+  X,
 } from "@tamagui/lucide-icons";
 import { useCallback, useEffect, useId, useMemo, useState } from "react";
 import {
-    Alert,
-    FlatList,
-    Image,
-    Modal,
-    Pressable,
-    StyleSheet,
+  Alert,
+  FlatList,
+  Image,
+  Modal,
+  Pressable,
+  StyleSheet,
 } from "react-native";
 import {
-    Button,
-    Card,
-    Input,
-    Label,
-    Separator,
-    Sheet,
-    Spinner,
-    Text,
-    TextArea,
-    XStack,
-    YStack,
+  Button,
+  Card,
+  Input,
+  Label,
+  Separator,
+  Sheet,
+  Spinner,
+  Text,
+  TextArea,
+  XStack,
+  YStack,
 } from "tamagui";
 
 import { PeriodSelector } from "@/components/admin/period-selector";
@@ -1066,20 +1066,18 @@ export default function PurchasesScreen() {
             )}
           </XStack>
 
-          {cart.length > 0 && (
-            <XStack
-              bg="$blue3"
-              style={{ alignItems: "center", borderRadius: 8 }}
-              px="$3"
-              py="$2"
-              gap="$2"
-            >
-              <ShoppingCart size={14} color="$blue10" />
-              <Text fontSize="$2" color="$blue10" fontWeight="600">
-                {cart.length} producto{cart.length !== 1 ? "s" : ""} en carrito
-              </Text>
-            </XStack>
-          )}
+          <XStack
+            bg="$blue3"
+            style={{ alignItems: "center", borderRadius: 8 }}
+            px="$3"
+            py="$2"
+            gap="$2"
+          >
+            <ShoppingCart size={14} color="$blue10" />
+            <Text fontSize="$2" color="$blue10" fontWeight="600">
+              {cart.length} producto{cart.length !== 1 ? "s" : ""} en carrito
+            </Text>
+          </XStack>
 
           <FlatList
             data={searchResults}
