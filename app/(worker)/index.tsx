@@ -685,7 +685,7 @@ export default function WorkerScreen() {
           </XStack>
 
           {/* Cart badge */}
-          {cart.length > 0 && (
+          {cart.length >= 0 && (
             <XStack
               bg="$blue3"
               style={{
