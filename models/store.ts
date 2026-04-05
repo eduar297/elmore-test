@@ -6,7 +6,8 @@ export interface Store {
   logoUri: string | null;
   color: string;
   createdAt: string;
+  updatedAt: string;
 }
 
-export type CreateStoreInput = Omit<Store, "id" | "createdAt">;
+export type CreateStoreInput = Omit<Store, "id" | "createdAt" | "updatedAt">;
 export type UpdateStoreInput = Partial<CreateStoreInput>;

@@ -91,6 +91,7 @@ interface LanContextValue {
     clientId: string,
     needsCatalog: boolean,
     neededPhotos: string[],
+    lastSyncAt: string | null,
   ) => void;
   /** Admin: acknowledge tickets received (so Worker can delete them) */
   sendTicketsAck: () => void;
@@ -124,6 +125,7 @@ interface LanContextValue {
   syncPrepareAckRef: React.MutableRefObject<{
     needsCatalog: boolean;
     neededPhotos: string[];
+    lastSyncAt: string | null;
   } | null>;
 
   /** Monotonic counter bumped after each catalog apply — screens watch this to reload */
@@ -347,11 +349,17 @@ export function LanProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const sendSyncPrepareAck = useCallback(
-    (clientId: string, needsCatalog: boolean, neededPhotos: string[]) => {
+    (
+      clientId: string,
+      needsCatalog: boolean,
+      neededPhotos: string[],
+      lastSyncAt: string | null,
+    ) => {
       serverRef.current?.sendToClient(clientId, {
         type: "sync_prepare_ack",
         needsCatalog,
         neededPhotos,
+        lastSyncAt,
       });
     },
     [],
@@ -390,6 +398,7 @@ export function LanProvider({ children }: { children: React.ReactNode }) {
   const syncPrepareAckRef = useRef<{
     needsCatalog: boolean;
     neededPhotos: string[];
+    lastSyncAt: string | null;
   } | null>(null);
 
   const handleServerMessage = useCallback((msg: LanMessage) => {
@@ -425,6 +434,7 @@ export function LanProvider({ children }: { children: React.ReactNode }) {
         syncPrepareAckRef.current = {
           needsCatalog: msg.needsCatalog,
           neededPhotos: msg.neededPhotos,
+          lastSyncAt: msg.lastSyncAt,
         };
         setSyncStatus("sending_catalog");
         break;

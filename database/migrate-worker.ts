@@ -16,7 +16,8 @@ export async function migrateWorkerDb(db: SQLiteDatabase) {
       phone TEXT,
       logoUri TEXT,
       color TEXT NOT NULL DEFAULT '#3b82f6',
-      createdAt TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+      createdAt TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+      updatedAt TEXT NOT NULL DEFAULT (datetime('now','localtime'))
     );
 
     CREATE TABLE IF NOT EXISTS unit_categories (
@@ -46,6 +47,8 @@ export async function migrateWorkerDb(db: SQLiteDatabase) {
       saleMode TEXT CHECK (saleMode IN ('UNIT','VARIABLE')) NOT NULL,
       photoUri TEXT,
       storeId INTEGER NOT NULL DEFAULT 1 REFERENCES stores(id),
+      createdAt TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+      updatedAt TEXT NOT NULL DEFAULT (datetime('now','localtime')),
       FOREIGN KEY (baseUnitId) REFERENCES units(id)
     );
 
@@ -56,7 +59,8 @@ export async function migrateWorkerDb(db: SQLiteDatabase) {
       pinHash TEXT NOT NULL,
       photoUri TEXT,
       storeId INTEGER REFERENCES stores(id),
-      createdAt TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+      createdAt TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+      updatedAt TEXT NOT NULL DEFAULT (datetime('now','localtime'))
     );
 
     CREATE TABLE IF NOT EXISTS tickets (
@@ -71,7 +75,8 @@ export async function migrateWorkerDb(db: SQLiteDatabase) {
       status TEXT NOT NULL DEFAULT 'ACTIVE' CHECK (status IN ('ACTIVE','VOIDED')),
       voidedAt TEXT,
       voidedBy TEXT,
-      voidReason TEXT
+      voidReason TEXT,
+      updatedAt TEXT NOT NULL DEFAULT (datetime('now','localtime'))
     );
 
     CREATE TABLE IF NOT EXISTS ticket_items (
@@ -82,6 +87,8 @@ export async function migrateWorkerDb(db: SQLiteDatabase) {
       quantity REAL NOT NULL,
       unitPrice REAL NOT NULL,
       subtotal REAL NOT NULL,
+      createdAt TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+      updatedAt TEXT NOT NULL DEFAULT (datetime('now','localtime')),
       FOREIGN KEY (ticketId) REFERENCES tickets(id),
       FOREIGN KEY (productId) REFERENCES products(id)
     );
@@ -101,7 +108,7 @@ export async function migrateWorkerDb(db: SQLiteDatabase) {
   `);
 
   // ── Versioned migrations ────────────────────────────────────────────────
-  const WORKER_DB_VERSION = 4;
+  const WORKER_DB_VERSION = 5;
   const result = await db.getFirstAsync<{ user_version: number }>(
     "PRAGMA user_version",
   );
@@ -185,6 +192,55 @@ export async function migrateWorkerDb(db: SQLiteDatabase) {
       `);
     }
     currentVersion = 4;
+  }
+
+  if (currentVersion < 5) {
+    // Add createdAt to tables missing it
+    // NOTE: ALTER TABLE ADD COLUMN requires a constant default in SQLite
+    await db.execAsync(`
+      ALTER TABLE products ADD COLUMN createdAt TEXT NOT NULL DEFAULT '1970-01-01 00:00:00';
+      ALTER TABLE ticket_items ADD COLUMN createdAt TEXT NOT NULL DEFAULT '1970-01-01 00:00:00';
+    `);
+
+    // Add updatedAt to all syncable worker tables
+    await db.execAsync(`
+      ALTER TABLE stores ADD COLUMN updatedAt TEXT NOT NULL DEFAULT '1970-01-01 00:00:00';
+      ALTER TABLE products ADD COLUMN updatedAt TEXT NOT NULL DEFAULT '1970-01-01 00:00:00';
+      ALTER TABLE users ADD COLUMN updatedAt TEXT NOT NULL DEFAULT '1970-01-01 00:00:00';
+      ALTER TABLE tickets ADD COLUMN updatedAt TEXT NOT NULL DEFAULT '1970-01-01 00:00:00';
+      ALTER TABLE ticket_items ADD COLUMN updatedAt TEXT NOT NULL DEFAULT '1970-01-01 00:00:00';
+    `);
+
+    // Backfill existing rows with real timestamps
+    await db.execAsync(`
+      UPDATE products SET createdAt = datetime('now','localtime'), updatedAt = datetime('now','localtime') WHERE createdAt = '1970-01-01 00:00:00';
+      UPDATE ticket_items SET createdAt = datetime('now','localtime'), updatedAt = datetime('now','localtime') WHERE createdAt = '1970-01-01 00:00:00';
+      UPDATE stores SET updatedAt = datetime('now','localtime') WHERE updatedAt = '1970-01-01 00:00:00';
+      UPDATE users SET updatedAt = datetime('now','localtime') WHERE updatedAt = '1970-01-01 00:00:00';
+      UPDATE tickets SET updatedAt = datetime('now','localtime') WHERE updatedAt = '1970-01-01 00:00:00';
+    `);
+
+    currentVersion = 5;
+  }
+
+  // Ensure updatedAt triggers exist (idempotent)
+  const triggerTables = [
+    "stores",
+    "products",
+    "users",
+    "tickets",
+    "ticket_items",
+  ];
+  for (const t of triggerTables) {
+    await db.execAsync(`
+      CREATE TRIGGER IF NOT EXISTS trg_${t}_updated_at
+      AFTER UPDATE ON ${t}
+      FOR EACH ROW
+      WHEN NEW.updatedAt = OLD.updatedAt
+      BEGIN
+        UPDATE ${t} SET updatedAt = datetime('now','localtime') WHERE id = NEW.id;
+      END;
+    `);
   }
 
   await db.execAsync(`PRAGMA user_version = ${WORKER_DB_VERSION}`);

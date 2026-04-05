@@ -49,9 +49,17 @@ export abstract class BaseRepository<
 
   abstract create(input: CreateInput): Promise<T>;
 
+  /** Fields managed by DB defaults / triggers — never overwrite via update(). */
+  private static readonly PROTECTED_FIELDS = new Set([
+    "createdAt",
+    "updatedAt",
+  ]);
+
   async update(id: number | string, input: UpdateInput): Promise<T> {
     const fields = (Object.keys(input) as (keyof UpdateInput)[]).filter(
-      (f) => input[f] !== undefined,
+      (f) =>
+        input[f] !== undefined &&
+        !BaseRepository.PROTECTED_FIELDS.has(String(f)),
     );
     // Validate column names to prevent SQL injection
     for (const f of fields) {

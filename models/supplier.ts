@@ -8,10 +8,11 @@ export interface Supplier {
   notes: string | null;
   storeId: number;
   createdAt: string;
+  updatedAt: string;
 }
 
 export type CreateSupplierInput = Omit<
   Supplier,
-  "id" | "createdAt" | "storeId"
+  "id" | "createdAt" | "updatedAt" | "storeId"
 >;
 export type UpdateSupplierInput = Partial<CreateSupplierInput>;

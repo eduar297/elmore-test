@@ -4,40 +4,41 @@ import { useColors } from "@/hooks/use-colors";
 import type { DiscoveredServer } from "@/services/lan/lan-client";
 import { LAN_PORT, serialize } from "@/services/lan/protocol";
 import {
-  applyReceivedTickets,
-  attachPhotos,
-  prepareCatalogMeta,
-  type TicketImportSummary,
+    applyReceivedTickets,
+    attachPhotos,
+    filterCatalogDelta,
+    prepareCatalogMeta,
+    type TicketImportSummary,
 } from "@/services/lan/sync-service";
 import {
-  AlertCircle,
-  ArrowDownToLine,
-  ArrowUpFromLine,
-  Camera,
-  CheckCircle,
-  Image,
-  Key,
-  Package,
-  Receipt,
-  RefreshCw,
-  SkipForward,
-  Store,
-  Users,
-  Wifi,
-  WifiOff,
-  Zap,
+    AlertCircle,
+    ArrowDownToLine,
+    ArrowUpFromLine,
+    Camera,
+    CheckCircle,
+    Image,
+    Key,
+    Package,
+    Receipt,
+    RefreshCw,
+    SkipForward,
+    Store,
+    Users,
+    Wifi,
+    WifiOff,
+    Zap,
 } from "@tamagui/lucide-icons";
 import * as Haptics from "expo-haptics";
 import { useSQLiteContext } from "expo-sqlite";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -62,6 +63,12 @@ interface CatalogSentSummary {
   photosSent: number;
   /** Total photos in manifest */
   photosTotal: number;
+  /** Whether a delta filter was applied (only changed rows sent) */
+  isDelta?: boolean;
+  /** Total counts in admin catalog (shown alongside delta counts) */
+  totalProducts?: number;
+  totalStores?: number;
+  totalWorkers?: number;
 }
 
 interface WorkerSyncInfo {
@@ -292,6 +299,7 @@ export function SyncSection() {
       const ack = syncPrepareAckRef.current;
       const needsCatalog = ack?.needsCatalog ?? true;
       const neededPhotos = ack?.neededPhotos ?? [];
+      const lastSyncAt = ack?.lastSyncAt ?? null;
       syncPrepareAckRef.current = null; // consumed
 
       if (!needsCatalog && neededPhotos.length === 0) {
@@ -324,27 +332,53 @@ export function SyncSection() {
         }, 300);
         activeWorkerRef.current = null;
       } else {
+        // Apply delta filtering if worker has a previous sync timestamp
+        let payloadToSend = catalogPayloadRef.current;
+        if (lastSyncAt) {
+          payloadToSend = filterCatalogDelta(payloadToSend, lastSyncAt);
+          console.log(
+            `[SyncSection] Delta sync: sending ${
+              (payloadToSend.products as any[]).length
+            } products (of ${payloadToSend.allProductIds?.length ?? "?"})`,
+          );
+        }
+
+        // Update summary with actual counts being sent (delta or full)
+        const updatedSummary: CatalogSentSummary = {
+          ...(catalogSentRef.current ?? {
+            products: 0,
+            stores: 0,
+            workers: 0,
+            units: 0,
+            catalogSkipped: false,
+            photosSent: 0,
+            photosTotal: 0,
+          }),
+          products: (payloadToSend.products as any[]).length,
+          stores: (payloadToSend.stores as any[]).length,
+          workers: (payloadToSend.workers as any[]).length,
+          photosSent: neededPhotos.length,
+          isDelta: !!lastSyncAt,
+          totalProducts:
+            payloadToSend.allProductIds?.length ??
+            (payloadToSend.products as any[]).length,
+          totalStores:
+            payloadToSend.allStoreIds?.length ??
+            (payloadToSend.stores as any[]).length,
+          totalWorkers:
+            payloadToSend.allWorkerIds?.length ??
+            (payloadToSend.workers as any[]).length,
+        };
+        catalogSentRef.current = updatedSummary;
+
         // Attach only needed photos, then send
         updateWorker(worker.server.host, {
           state: "sending",
-          catalogSent: {
-            ...(catalogSentRef.current ?? {
-              products: 0,
-              stores: 0,
-              workers: 0,
-              units: 0,
-              catalogSkipped: false,
-              photosSent: 0,
-              photosTotal: 0,
-            }),
-            photosSent: neededPhotos.length,
-          },
+          catalogSent: updatedSummary,
         });
-        attachPhotos(catalogPayloadRef.current, neededPhotos).then(
-          (withPhotos) => {
-            sendCatalog(withPhotos);
-          },
-        );
+        attachPhotos(payloadToSend, neededPhotos).then((withPhotos) => {
+          sendCatalog(withPhotos);
+        });
       }
     }
 
@@ -814,19 +848,37 @@ function WorkerCard({
                   <SummaryPill
                     icon={<Package size={11} color="#3b82f6" />}
                     label="Productos"
-                    value={`${catalogSent.products}`}
+                    value={
+                      catalogSent.isDelta
+                        ? `${catalogSent.products}/${
+                            catalogSent.totalProducts ?? catalogSent.products
+                          }`
+                        : `${catalogSent.products}`
+                    }
                     color="#3b82f6"
                   />
                   <SummaryPill
                     icon={<Store size={11} color="#8b5cf6" />}
                     label="Tiendas"
-                    value={`${catalogSent.stores}`}
+                    value={
+                      catalogSent.isDelta
+                        ? `${catalogSent.stores}/${
+                            catalogSent.totalStores ?? catalogSent.stores
+                          }`
+                        : `${catalogSent.stores}`
+                    }
                     color="#8b5cf6"
                   />
                   <SummaryPill
                     icon={<Users size={11} color="#f59e0b" />}
                     label="Vendedores"
-                    value={`${catalogSent.workers}`}
+                    value={
+                      catalogSent.isDelta
+                        ? `${catalogSent.workers}/${
+                            catalogSent.totalWorkers ?? catalogSent.workers
+                          }`
+                        : `${catalogSent.workers}`
+                    }
                     color="#f59e0b"
                   />
                 </View>

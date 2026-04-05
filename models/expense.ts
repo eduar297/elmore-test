@@ -18,6 +18,10 @@ export interface Expense {
   date: string;
   storeId: number;
   createdAt: string;
+  updatedAt: string;
 }
 
-export type CreateExpenseInput = Omit<Expense, "id" | "createdAt" | "storeId">;
+export type CreateExpenseInput = Omit<
+  Expense,
+  "id" | "createdAt" | "updatedAt" | "storeId"
+>;

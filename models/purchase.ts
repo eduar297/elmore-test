@@ -12,6 +12,7 @@ export interface Purchase {
   itemCount: number;
   storeId: number;
   createdAt: string;
+  updatedAt: string;
 }
 
 export interface PurchaseItem {
@@ -24,6 +25,8 @@ export interface PurchaseItem {
   /** Cost price paid per unit */
   unitCost: number;
   subtotal: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface CreatePurchaseInput {

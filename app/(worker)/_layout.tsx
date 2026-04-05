@@ -297,19 +297,16 @@ export default function WorkerLayout() {
       photoManifest,
     ) => {
       try {
-        const { needsCatalog, neededPhotos } = await checkCatalogNeeds(
-          db,
-          catalogHash,
-          photoManifest,
-        );
+        const { needsCatalog, neededPhotos, lastSyncAt } =
+          await checkCatalogNeeds(db, catalogHash, photoManifest);
         // Store hash so we can save it after catalog is applied
         pendingCatalogHashRef.current = catalogHash;
-        sendSyncPrepareAck(clientId, needsCatalog, neededPhotos);
+        sendSyncPrepareAck(clientId, needsCatalog, neededPhotos, lastSyncAt);
       } catch (err) {
         console.error("[Worker] checkCatalogNeeds FAILED:", err);
         // Fallback: request everything
         pendingCatalogHashRef.current = catalogHash;
-        sendSyncPrepareAck(clientId, true, Object.keys(photoManifest));
+        sendSyncPrepareAck(clientId, true, Object.keys(photoManifest), null);
       }
     };
     return () => {

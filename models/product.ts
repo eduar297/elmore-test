@@ -17,7 +17,14 @@ export interface Product {
   saleMode: SaleMode;
   photoUri: string | null;
   storeId: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
-export type CreateProductInput = Omit<Product, "id" | "storeId">;
-export type UpdateProductInput = Partial<Omit<Product, "id" | "storeId">>;
+export type CreateProductInput = Omit<
+  Product,
+  "id" | "storeId" | "createdAt" | "updatedAt"
+>;
+export type UpdateProductInput = Partial<
+  Omit<Product, "id" | "storeId" | "createdAt" | "updatedAt">
+>;

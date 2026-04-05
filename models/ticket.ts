@@ -15,6 +15,7 @@ export interface Ticket {
   voidedAt: string | null;
   voidedBy: number | null;
   voidReason: string | null;
+  updatedAt: string;
 }
 
 export interface TicketItem {
@@ -28,6 +29,8 @@ export interface TicketItem {
   code: string | null;
   photoUri: string | null;
   originalPrice: number | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface CreateTicketInput {

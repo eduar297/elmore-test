@@ -204,6 +204,52 @@ export async function attachPhotos(
   return { ...payload, photos };
 }
 
+/**
+ * Phase 2b: Filter a full catalog payload to only include rows changed since lastSyncAt.
+ * Also includes full ID lists so the worker can detect deletions.
+ * Returns a delta payload that is much smaller than the full catalog.
+ */
+export function filterCatalogDelta(
+  fullPayload: SyncCatalogData,
+  lastSyncAt: string,
+): SyncCatalogData {
+  const allProductIds = (fullPayload.products as any[]).map(
+    (p: any) => p.id as number,
+  );
+  const allStoreIds = (fullPayload.stores as any[]).map(
+    (s: any) => s.id as number,
+  );
+  const allWorkerIds = (fullPayload.workers as any[]).map(
+    (w: any) => w.id as number,
+  );
+
+  const deltaProducts = (fullPayload.products as any[]).filter(
+    (p: any) => !p.updatedAt || p.updatedAt > lastSyncAt,
+  );
+  const deltaStores = (fullPayload.stores as any[]).filter(
+    (s: any) => !s.updatedAt || s.updatedAt > lastSyncAt,
+  );
+  const deltaWorkers = (fullPayload.workers as any[]).filter(
+    (w: any) => !w.updatedAt || w.updatedAt > lastSyncAt,
+  );
+
+  console.log(
+    `[SyncService] Delta filter (since ${lastSyncAt}): products ${deltaProducts.length}/${allProductIds.length}, stores ${deltaStores.length}/${allStoreIds.length}, workers ${deltaWorkers.length}/${allWorkerIds.length}`,
+  );
+
+  return {
+    products: deltaProducts,
+    stores: deltaStores,
+    workers: deltaWorkers,
+    units: fullPayload.units, // always send full (small + rarely changes)
+    unitCategories: fullPayload.unitCategories,
+    isDelta: true,
+    allProductIds,
+    allStoreIds,
+    allWorkerIds,
+  };
+}
+
 /** Detailed summary of what was received from a Worker */
 export interface TicketImportSummary {
   /** Number of new tickets imported */
@@ -250,8 +296,8 @@ export async function applyReceivedTickets(
       }
 
       await tx.runAsync(
-        `INSERT INTO tickets (id, total, itemCount, paymentMethod, createdAt, workerId, workerName, storeId, status, voidedAt, voidedBy, voidReason)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO tickets (id, total, itemCount, paymentMethod, createdAt, workerId, workerName, storeId, status, voidedAt, voidedBy, voidReason, updatedAt)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           ticket.id,
           ticket.total,
@@ -265,6 +311,7 @@ export async function applyReceivedTickets(
           ticket.voidedAt ?? null,
           ticket.voidedBy ?? null,
           ticket.voidReason ?? null,
+          ticket.updatedAt ?? ticket.createdAt,
         ],
       );
 
@@ -277,8 +324,8 @@ export async function applyReceivedTickets(
       );
       for (const item of items) {
         await tx.runAsync(
-          `INSERT INTO ticket_items (ticketId, productId, productName, quantity, unitPrice, subtotal)
-           VALUES (?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO ticket_items (ticketId, productId, productName, quantity, unitPrice, subtotal, createdAt, updatedAt)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             ticket.id,
             item.productId,
@@ -286,6 +333,8 @@ export async function applyReceivedTickets(
             item.quantity,
             item.unitPrice,
             item.subtotal,
+            item.createdAt ?? ticket.createdAt,
+            item.updatedAt ?? ticket.createdAt,
           ],
         );
 
@@ -379,9 +428,10 @@ export async function applyReceivedCatalog(
     newWorkers: 0,
     updatedWorkers: 0,
     deletedWorkers: 0,
-    totalProducts: (data.products as any[]).length,
-    totalStores: (data.stores as any[]).length,
-    totalWorkers: (data.workers as any[]).length,
+    totalProducts:
+      data.allProductIds?.length ?? (data.products as any[]).length,
+    totalStores: data.allStoreIds?.length ?? (data.stores as any[]).length,
+    totalWorkers: data.allWorkerIds?.length ?? (data.workers as any[]).length,
   };
 
   // Save received photos to disk and get localUri map
@@ -412,7 +462,7 @@ export async function applyReceivedCatalog(
       );
       if (!existing) summary.newStores++;
       await tx.runAsync(
-        "INSERT OR REPLACE INTO stores (id, name, address, phone, logoUri, color, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        "INSERT OR REPLACE INTO stores (id, name, address, phone, logoUri, color, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
         [
           store.id,
           store.name,
@@ -421,6 +471,7 @@ export async function applyReceivedCatalog(
           store.logoUri,
           store.color,
           store.createdAt,
+          store.updatedAt ?? store.createdAt,
         ],
       );
     }
@@ -441,7 +492,7 @@ export async function applyReceivedCatalog(
       if (!existing) {
         summary.newWorkers++;
         await tx.runAsync(
-          "INSERT INTO users (id, name, role, pinHash, photoUri, storeId, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?)",
+          "INSERT INTO users (id, name, role, pinHash, photoUri, storeId, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
           [
             worker.id,
             worker.name,
@@ -450,6 +501,7 @@ export async function applyReceivedCatalog(
             remappedPhoto,
             worker.storeId,
             worker.createdAt,
+            worker.updatedAt ?? worker.createdAt,
           ],
         );
       } else {
@@ -459,7 +511,7 @@ export async function applyReceivedCatalog(
         const keepPin = existing.pinHash;
         const keepPhoto = existing.photoUri ?? remappedPhoto;
         await tx.runAsync(
-          "UPDATE users SET name = ?, role = ?, pinHash = ?, photoUri = ?, storeId = ?, createdAt = ? WHERE id = ?",
+          "UPDATE users SET name = ?, role = ?, pinHash = ?, photoUri = ?, storeId = ?, createdAt = ?, updatedAt = ? WHERE id = ?",
           [
             worker.name,
             worker.role,
@@ -467,6 +519,7 @@ export async function applyReceivedCatalog(
             keepPhoto,
             worker.storeId,
             worker.createdAt,
+            worker.updatedAt ?? worker.createdAt,
             worker.id,
           ],
         );
@@ -503,8 +556,8 @@ export async function applyReceivedCatalog(
       }
       await tx.runAsync(
         `INSERT OR REPLACE INTO products
-         (id, name, code, pricePerBaseUnit, costPrice, salePrice, visible, baseUnitId, stockBaseQty, saleMode, photoUri, storeId)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         (id, name, code, pricePerBaseUnit, costPrice, salePrice, visible, baseUnitId, stockBaseQty, saleMode, photoUri, storeId, createdAt, updatedAt)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           product.id,
           product.name,
@@ -518,14 +571,18 @@ export async function applyReceivedCatalog(
           product.saleMode,
           localPhotoUri,
           product.storeId,
+          product.createdAt ?? null,
+          product.updatedAt ?? product.createdAt ?? null,
         ],
       );
     }
 
     // 6. Delete items that admin removed — admin is source of truth
+    // In delta mode, use allXxxIds (full ID lists); in full mode, use received data IDs
 
     // Delete products not in admin's catalog
-    const adminProductIds = (data.products as any[]).map((p: any) => p.id);
+    const adminProductIds: number[] =
+      data.allProductIds ?? (data.products as any[]).map((p: any) => p.id);
     if (adminProductIds.length > 0) {
       const phProducts = adminProductIds.map(() => "?").join(",");
       const delProducts = await tx.runAsync(
@@ -539,7 +596,8 @@ export async function applyReceivedCatalog(
     }
 
     // Delete workers not in admin's catalog
-    const adminWorkerIds = (data.workers as any[]).map((w: any) => w.id);
+    const adminWorkerIds: number[] =
+      data.allWorkerIds ?? (data.workers as any[]).map((w: any) => w.id);
     if (adminWorkerIds.length > 0) {
       const phWorkers = adminWorkerIds.map(() => "?").join(",");
       const delWorkers = await tx.runAsync(
@@ -555,7 +613,8 @@ export async function applyReceivedCatalog(
     }
 
     // Delete stores not in admin's catalog
-    const adminStoreIds = (data.stores as any[]).map((s: any) => s.id);
+    const adminStoreIds: number[] =
+      data.allStoreIds ?? (data.stores as any[]).map((s: any) => s.id);
     if (adminStoreIds.length > 0) {
       const phStores = adminStoreIds.map(() => "?").join(",");
       const delStores = await tx.runAsync(
@@ -706,12 +765,18 @@ export async function checkCatalogNeeds(
   db: SQLiteDatabase,
   catalogHash: string,
   photoManifest: Record<string, string>,
-): Promise<{ needsCatalog: boolean; neededPhotos: string[] }> {
+): Promise<{
+  needsCatalog: boolean;
+  neededPhotos: string[];
+  lastSyncAt: string | null;
+}> {
   // Check if catalog data changed
-  const meta = await db.getFirstAsync<{ last_catalog_hash: string | null }>(
-    "SELECT last_catalog_hash FROM sync_metadata WHERE id = 1",
-  );
+  const meta = await db.getFirstAsync<{
+    last_catalog_hash: string | null;
+    last_sync_at: string | null;
+  }>("SELECT last_catalog_hash, last_sync_at FROM sync_metadata WHERE id = 1");
   const needsCatalog = meta?.last_catalog_hash !== catalogHash;
+  const lastSyncAt = meta?.last_sync_at ?? null;
 
   // Check which photos we're missing (by md5 — we might have the file under a different name)
   const neededPhotos: string[] = [];
@@ -738,10 +803,10 @@ export async function checkCatalogNeeds(
       meta?.last_catalog_hash?.slice(0, 8) ?? "none"
     } remote=${catalogHash.slice(0, 8)}), neededPhotos=${neededPhotos.length}/${
       Object.keys(photoManifest).length
-    }`,
+    }, lastSyncAt=${lastSyncAt ?? "none"}`,
   );
 
-  return { needsCatalog, neededPhotos };
+  return { needsCatalog, neededPhotos, lastSyncAt };
 }
 
 /** Worker: save the catalog hash after successful apply */

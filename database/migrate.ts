@@ -15,7 +15,8 @@ async function ensureTables(db: SQLiteDatabase) {
       phone TEXT,
       logoUri TEXT,
       color TEXT NOT NULL DEFAULT '#3b82f6',
-      createdAt TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+      createdAt TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+      updatedAt TEXT NOT NULL DEFAULT (datetime('now','localtime'))
     );
 
     CREATE TABLE IF NOT EXISTS unit_categories (
@@ -45,6 +46,8 @@ async function ensureTables(db: SQLiteDatabase) {
       saleMode TEXT CHECK (saleMode IN ('UNIT','VARIABLE')) NOT NULL,
       photoUri TEXT,
       storeId INTEGER NOT NULL DEFAULT 1 REFERENCES stores(id),
+      createdAt TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+      updatedAt TEXT NOT NULL DEFAULT (datetime('now','localtime')),
       FOREIGN KEY (baseUnitId) REFERENCES units(id)
     );
 
@@ -61,6 +64,7 @@ async function ensureTables(db: SQLiteDatabase) {
       voidedAt TEXT,
       voidedBy INTEGER REFERENCES users(id),
       voidReason TEXT,
+      updatedAt TEXT NOT NULL DEFAULT (datetime('now','localtime')),
       FOREIGN KEY (workerId) REFERENCES users(id)
     );
 
@@ -72,6 +76,8 @@ async function ensureTables(db: SQLiteDatabase) {
       quantity REAL NOT NULL,
       unitPrice REAL NOT NULL,
       subtotal REAL NOT NULL,
+      createdAt TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+      updatedAt TEXT NOT NULL DEFAULT (datetime('now','localtime')),
       FOREIGN KEY (ticketId) REFERENCES tickets(id),
       FOREIGN KEY (productId) REFERENCES products(id)
     );
@@ -85,7 +91,8 @@ async function ensureTables(db: SQLiteDatabase) {
       notes TEXT,
       address TEXT,
       storeId INTEGER NOT NULL DEFAULT 1 REFERENCES stores(id),
-      createdAt TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+      createdAt TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+      updatedAt TEXT NOT NULL DEFAULT (datetime('now','localtime'))
     );
 
     CREATE TABLE IF NOT EXISTS purchases (
@@ -98,6 +105,7 @@ async function ensureTables(db: SQLiteDatabase) {
       itemCount INTEGER NOT NULL,
       storeId INTEGER NOT NULL DEFAULT 1 REFERENCES stores(id),
       createdAt TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+      updatedAt TEXT NOT NULL DEFAULT (datetime('now','localtime')),
       FOREIGN KEY (supplierId) REFERENCES suppliers(id)
     );
 
@@ -109,6 +117,8 @@ async function ensureTables(db: SQLiteDatabase) {
       quantity REAL NOT NULL,
       unitCost REAL NOT NULL,
       subtotal REAL NOT NULL,
+      createdAt TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+      updatedAt TEXT NOT NULL DEFAULT (datetime('now','localtime')),
       FOREIGN KEY (purchaseId) REFERENCES purchases(id),
       FOREIGN KEY (productId) REFERENCES products(id)
     );
@@ -120,7 +130,8 @@ async function ensureTables(db: SQLiteDatabase) {
       amount REAL NOT NULL,
       date TEXT NOT NULL,
       storeId INTEGER NOT NULL DEFAULT 1 REFERENCES stores(id),
-      createdAt TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+      createdAt TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+      updatedAt TEXT NOT NULL DEFAULT (datetime('now','localtime'))
     );
 
     CREATE TABLE IF NOT EXISTS users (
@@ -130,7 +141,8 @@ async function ensureTables(db: SQLiteDatabase) {
       pinHash TEXT NOT NULL,
       photoUri TEXT,
       storeId INTEGER REFERENCES stores(id),
-      createdAt TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+      createdAt TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+      updatedAt TEXT NOT NULL DEFAULT (datetime('now','localtime'))
     );
 
     CREATE TABLE IF NOT EXISTS app_settings (
@@ -165,10 +177,35 @@ async function ensureTables(db: SQLiteDatabase) {
 
     INSERT OR IGNORE INTO sync_metadata (id) VALUES (1);
   `);
+  await ensureTriggers(db);
+}
+
+/** Create updatedAt triggers for all syncable tables (idempotent). */
+async function ensureTriggers(db: SQLiteDatabase) {
+  const tables = [
+    "stores",
+    "products",
+    "tickets",
+    "ticket_items",
+    "expenses",
+    "suppliers",
+    "users",
+  ];
+  for (const t of tables) {
+    await db.execAsync(`
+      CREATE TRIGGER IF NOT EXISTS trg_${t}_updated_at
+      AFTER UPDATE ON ${t}
+      FOR EACH ROW
+      WHEN NEW.updatedAt = OLD.updatedAt
+      BEGIN
+        UPDATE ${t} SET updatedAt = datetime('now','localtime') WHERE id = NEW.id;
+      END;
+    `);
+  }
 }
 
 export async function migrateDbIfNeeded(db: SQLiteDatabase) {
-  const DATABASE_VERSION = 21;
+  const DATABASE_VERSION = 22;
 
   const result = await db.getFirstAsync<{ user_version: number }>(
     "PRAGMA user_version",
@@ -530,6 +567,45 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase) {
     currentVersion = 21;
   }
 
+  if (currentVersion === 21) {
+    // Add createdAt to tables that were missing it
+    // NOTE: ALTER TABLE ADD COLUMN requires a constant default in SQLite
+    await db.execAsync(`
+      ALTER TABLE products ADD COLUMN createdAt TEXT NOT NULL DEFAULT '1970-01-01 00:00:00';
+      ALTER TABLE ticket_items ADD COLUMN createdAt TEXT NOT NULL DEFAULT '1970-01-01 00:00:00';
+      ALTER TABLE purchase_items ADD COLUMN createdAt TEXT NOT NULL DEFAULT '1970-01-01 00:00:00';
+    `);
+
+    // Add updatedAt to all 9 syncable tables
+    await db.execAsync(`
+      ALTER TABLE stores ADD COLUMN updatedAt TEXT NOT NULL DEFAULT '1970-01-01 00:00:00';
+      ALTER TABLE products ADD COLUMN updatedAt TEXT NOT NULL DEFAULT '1970-01-01 00:00:00';
+      ALTER TABLE tickets ADD COLUMN updatedAt TEXT NOT NULL DEFAULT '1970-01-01 00:00:00';
+      ALTER TABLE ticket_items ADD COLUMN updatedAt TEXT NOT NULL DEFAULT '1970-01-01 00:00:00';
+      ALTER TABLE purchases ADD COLUMN updatedAt TEXT NOT NULL DEFAULT '1970-01-01 00:00:00';
+      ALTER TABLE purchase_items ADD COLUMN updatedAt TEXT NOT NULL DEFAULT '1970-01-01 00:00:00';
+      ALTER TABLE expenses ADD COLUMN updatedAt TEXT NOT NULL DEFAULT '1970-01-01 00:00:00';
+      ALTER TABLE suppliers ADD COLUMN updatedAt TEXT NOT NULL DEFAULT '1970-01-01 00:00:00';
+      ALTER TABLE users ADD COLUMN updatedAt TEXT NOT NULL DEFAULT '1970-01-01 00:00:00';
+    `);
+
+    // Backfill existing rows with real timestamps
+    await db.execAsync(`
+      UPDATE products SET createdAt = datetime('now','localtime'), updatedAt = datetime('now','localtime') WHERE createdAt = '1970-01-01 00:00:00';
+      UPDATE ticket_items SET createdAt = datetime('now','localtime'), updatedAt = datetime('now','localtime') WHERE createdAt = '1970-01-01 00:00:00';
+      UPDATE purchase_items SET createdAt = datetime('now','localtime'), updatedAt = datetime('now','localtime') WHERE createdAt = '1970-01-01 00:00:00';
+      UPDATE stores SET updatedAt = datetime('now','localtime') WHERE updatedAt = '1970-01-01 00:00:00';
+      UPDATE tickets SET updatedAt = datetime('now','localtime') WHERE updatedAt = '1970-01-01 00:00:00';
+      UPDATE purchases SET updatedAt = datetime('now','localtime') WHERE updatedAt = '1970-01-01 00:00:00';
+      UPDATE expenses SET updatedAt = datetime('now','localtime') WHERE updatedAt = '1970-01-01 00:00:00';
+      UPDATE suppliers SET updatedAt = datetime('now','localtime') WHERE updatedAt = '1970-01-01 00:00:00';
+      UPDATE users SET updatedAt = datetime('now','localtime') WHERE updatedAt = '1970-01-01 00:00:00';
+    `);
+
+    currentVersion = 22;
+  }
+
+  await ensureTriggers(db);
   await seedUnits(db);
   await seedDefaultStore(db);
   await seedDefaultAdmin(db);

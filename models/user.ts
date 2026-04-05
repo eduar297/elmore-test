@@ -8,6 +8,7 @@ export interface User {
   photoUri: string | null;
   storeId: number | null;
   createdAt: string;
+  updatedAt: string;
 }
 
 export type CreateUserInput = {

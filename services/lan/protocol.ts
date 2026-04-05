@@ -23,6 +23,12 @@ export interface SyncCatalogData {
   unitCategories: unknown[];
   /** Base64-encoded photos keyed by original photoUri — only those requested */
   photos?: Record<string, string>;
+  /** When true, only changed rows are included (not the full catalog) */
+  isDelta?: boolean;
+  /** Full ID lists from admin for deletion detection (admin is source of truth) */
+  allProductIds?: number[];
+  allStoreIds?: number[];
+  allWorkerIds?: number[];
 }
 
 /** Data payload for tickets sync (Worker → Admin) */
@@ -67,6 +73,8 @@ export type LanMessage =
       needsCatalog: boolean;
       /** Photos the worker doesn't have locally */
       neededPhotos: string[];
+      /** Worker's last successful sync timestamp — used for delta sync */
+      lastSyncAt: string | null;
     }
   | { type: "sync_catalog"; data: SyncCatalogData }
   | { type: "sync_catalog_ack" }
