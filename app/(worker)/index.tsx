@@ -7,14 +7,21 @@ import { useLan } from "@/contexts/lan-context";
 import { useBarcodeScanner } from "@/hooks/use-barcode-scanner";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useProductRepository } from "@/hooks/use-product-repository";
+import { useScannerGun } from "@/hooks/use-scanner-gun";
 import { useTicketRepository } from "@/hooks/use-ticket-repository";
 import type { Product } from "@/models/product";
 import type { PaymentMethod } from "@/models/ticket";
 import type { CartItemWire } from "@/services/lan/protocol";
-import { AlertCircle, Receipt, ScanLine, Search } from "@tamagui/lucide-icons";
+import {
+  AlertCircle,
+  Bluetooth,
+  Receipt,
+  ScanLine,
+  Search,
+} from "@tamagui/lucide-icons";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Alert, FlatList, Modal } from "react-native";
+import { Alert, FlatList, Modal, TextInput } from "react-native";
 import { Button, Text, XStack, YStack } from "tamagui";
 
 // ── Main screen ──────────────────────────────────────────────────────────────
@@ -102,6 +109,22 @@ export default function WorkerScreen() {
     onError(msg) {
       setError(msg);
     },
+  });
+
+  // Scanner gun (Bluetooth HID) — looks up product by code and adds to cart
+  const gun = useScannerGun({
+    onScan: useCallback(
+      async (code: string) => {
+        const product = await productRepo.findVisibleByCode(code);
+        if (product) {
+          setError(null);
+          addToCart(product);
+        } else {
+          setError("Producto no encontrado: " + code);
+        }
+      },
+      [productRepo, addToCart],
+    ),
   });
 
   // Search filtered products
@@ -226,6 +249,22 @@ export default function WorkerScreen() {
     <YStack flex={1} bg="$background">
       {/* ── Top section (fixed, doesn't scroll) ── */}
       <YStack px="$4" pt="$3" pb="$2" gap="$3">
+        {/* Scanner gun connection indicator */}
+        {gun.isConnected && (
+          <XStack
+            bg="$blue2"
+            px="$3"
+            py="$2"
+            style={{ borderRadius: 12, alignItems: "center" }}
+            gap="$2"
+          >
+            <Bluetooth size={16} color="$blue10" />
+            <Text fontSize="$3" color="$blue10" fontWeight="600">
+              Pistola escaneadora conectada
+            </Text>
+          </XStack>
+        )}
+
         {/* Error banner */}
         {error && (
           <XStack
@@ -379,7 +418,10 @@ export default function WorkerScreen() {
         <YStack flex={1} bg="$background" theme={themeName as any}>
           <ProductSearchModal
             visible={showSearchSheet}
-            onClose={() => setShowSearchSheet(false)}
+            onClose={() => {
+              setShowSearchSheet(false);
+              gun.refocus();
+            }}
             themeName={themeName}
             products={visibleProducts}
             cartProductIds={cartProductIds}
@@ -392,7 +434,10 @@ export default function WorkerScreen() {
       {/* ── Checkout sheet ────────────────────────────────────────────────── */}
       <CheckoutSheet
         open={showCheckout}
-        onOpenChange={setShowCheckout}
+        onOpenChange={(open) => {
+          setShowCheckout(open);
+          if (!open) gun.refocus();
+        }}
         themeName={themeName}
         cart={cart}
         cartTotal={cartTotal}
@@ -401,6 +446,9 @@ export default function WorkerScreen() {
         confirming={confirming}
         onConfirm={handleConfirmSale}
       />
+
+      {/* Hidden input for scanner gun (Bluetooth HID keyboard) */}
+      <TextInput ref={gun.inputRef} {...gun.inputProps} />
     </YStack>
   );
 }

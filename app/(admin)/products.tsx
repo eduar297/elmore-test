@@ -10,31 +10,34 @@ import { ICON_BTN_BG } from "@/constants/colors";
 import { useBarcodeScanner } from "@/hooks/use-barcode-scanner";
 import { useColors } from "@/hooks/use-colors";
 import { useProductRepository } from "@/hooks/use-product-repository";
+import { useScannerGun } from "@/hooks/use-scanner-gun";
 import { useUnitRepository } from "@/hooks/use-unit-repository";
 import type { CreateProductInput, Product } from "@/models/product";
 import type { Unit, UnitCategory } from "@/models/unit";
 import { generateEAN13 } from "@/utils/barcode";
 import {
-    ChevronDown,
-    Package,
-    Pencil,
-    Plus,
-    ScanLine,
-    ShoppingCart,
-    TrendingDown,
-    TrendingUp,
-    X,
+  Bluetooth,
+  ChevronDown,
+  Package,
+  Pencil,
+  Plus,
+  ScanLine,
+  ShoppingCart,
+  TrendingDown,
+  TrendingUp,
+  X,
 } from "@tamagui/lucide-icons";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import {
-    Alert,
-    Image,
-    Modal,
-    ScrollView,
-    SectionList,
-    StyleSheet,
-    TouchableOpacity,
+  Alert,
+  Image,
+  Modal,
+  ScrollView,
+  SectionList,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button, Spinner, Text, XStack, YStack } from "tamagui";
@@ -248,6 +251,27 @@ export default function ProductsScreen() {
     },
   });
 
+  // Scanner gun (Bluetooth HID) — same logic as camera scanner
+  const gun = useScannerGun({
+    onScan: useCallback(
+      async (code: string) => {
+        const found = await products.findByCode(code);
+        if (found) {
+          setSelectedProduct(found);
+          setDetailEditing(false);
+          setModalMode("view");
+          setModalOpen(true);
+        } else {
+          setCreateCode(code);
+          setScannedCode(true);
+          setModalMode("create");
+          setModalOpen(true);
+        }
+      },
+      [products],
+    ),
+  });
+
   // ── Data loading ───────────────────────────────────────────────────────────
 
   const loadData = useCallback(async () => {
@@ -435,23 +459,33 @@ export default function ProductsScreen() {
         </XStack>
       )}
 
+      {/* Scanner gun connection indicator */}
+      {gun.isConnected && (
+        <XStack
+          px="$4"
+          py="$2"
+          bg="$blue2"
+          style={{ alignItems: "center" }}
+          gap="$2"
+        >
+          <Bluetooth size={16} color="$blue10" />
+          <Text fontSize="$3" color="$blue10" fontWeight="600">
+            Pistola escaneadora conectada
+          </Text>
+        </XStack>
+      )}
+
       {/* ── Catalog tab ─────────────────────────────────────────────── */}
       {section === "catalog" && (
         <>
           {/* Action bar */}
           <XStack gap="$3" px="$4" pt="$2" pb="$3">
-            <Button
-              flex={1}
-              theme="blue"
-              icon={ScanLine}
-              size="$4"
-              onPress={scan}
-            >
+            <Button flex={1} icon={ScanLine} size="$4" onPress={scan}>
               Escanear
             </Button>
             <Button
               flex={1}
-              theme="green"
+              theme="blue"
               icon={Plus}
               size="$4"
               onPress={handleAddManual}
@@ -544,7 +578,10 @@ export default function ProductsScreen() {
         visible={modalOpen}
         animationType="slide"
         presentationStyle="pageSheet"
-        onRequestClose={closeModal}
+        onRequestClose={() => {
+          closeModal();
+          gun.refocus();
+        }}
       >
         <SafeAreaView
           edges={["top"]}
@@ -644,6 +681,9 @@ export default function ProductsScreen() {
           )}
         </SafeAreaView>
       </Modal>
+
+      {/* Hidden input for scanner gun (Bluetooth HID keyboard) */}
+      <TextInput ref={gun.inputRef} {...gun.inputProps} />
     </YStack>
   );
 }

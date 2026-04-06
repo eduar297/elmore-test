@@ -1,39 +1,41 @@
 import { EmptyState } from "@/components/ui/empty-state";
 import { ICON_BTN_BG, OVERLAY } from "@/constants/colors";
 import {
-    Building2,
-    ChevronRight,
-    Package,
-    Plus,
-    ScanLine,
-    Search,
-    ShoppingBag,
-    ShoppingCart,
-    Trash2,
-    X,
+  Bluetooth,
+  Building2,
+  ChevronRight,
+  Package,
+  Plus,
+  ScanLine,
+  Search,
+  ShoppingBag,
+  ShoppingCart,
+  Trash2,
+  X,
 } from "@tamagui/lucide-icons";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useId, useMemo, useState } from "react";
 import {
-    Alert,
-    FlatList,
-    Image,
-    Modal,
-    Pressable,
-    StyleSheet,
+  Alert,
+  FlatList,
+  Image,
+  Modal,
+  Pressable,
+  StyleSheet,
+  TextInput,
 } from "react-native";
 import {
-    Button,
-    Card,
-    Input,
-    Label,
-    Separator,
-    Sheet,
-    Spinner,
-    Text,
-    TextArea,
-    XStack,
-    YStack,
+  Button,
+  Card,
+  Input,
+  Label,
+  Separator,
+  Sheet,
+  Spinner,
+  Text,
+  TextArea,
+  XStack,
+  YStack,
 } from "tamagui";
 
 import { PeriodSelector } from "@/components/admin/period-selector";
@@ -43,6 +45,7 @@ import { useColorScheme } from "@/hooks/use-color-scheme";
 import { usePeriodNavigation } from "@/hooks/use-period-navigation";
 import { useProductRepository } from "@/hooks/use-product-repository";
 import { usePurchaseRepository } from "@/hooks/use-purchase-repository";
+import { useScannerGun } from "@/hooks/use-scanner-gun";
 import { useSupplierRepository } from "@/hooks/use-supplier-repository";
 import type { Product } from "@/models/product";
 import type { Purchase, PurchaseItem } from "@/models/purchase";
@@ -257,6 +260,45 @@ export default function PurchasesScreen() {
       });
     },
     onError: (msg) => Alert.alert("Error", msg),
+  });
+
+  // Scanner gun (Bluetooth HID) — looks up product by code and adds to purchase cart
+  const gun = useScannerGun({
+    onScan: useCallback(
+      async (code: string) => {
+        const p = await productRepo.findByCode(code);
+        if (!p) {
+          Alert.alert(
+            "Producto no encontrado",
+            `Código: ${code}\nRegistra el producto primero en la sección "Productos".`,
+          );
+          return;
+        }
+        setCart((prev) => {
+          const existingIdx = prev.findIndex((i) => i.productId === p.id);
+          if (existingIdx >= 0) {
+            const updated = [...prev];
+            const current = parseFloat(updated[existingIdx].qty) || 1;
+            updated[existingIdx] = {
+              ...updated[existingIdx],
+              qty: String(current + 1),
+            };
+            return updated;
+          }
+          return [
+            ...prev,
+            {
+              productId: p.id,
+              productName: p.name,
+              photoUri: p.photoUri ?? null,
+              qty: "1",
+              unitCost: String(p.costPrice),
+            },
+          ];
+        });
+      },
+      [productRepo],
+    ),
   });
 
   // ── data loading ──────────────────────────────────────────────────────────
@@ -725,6 +767,22 @@ export default function PurchasesScreen() {
                 Nueva Compra
               </Text>
 
+              {/* Scanner gun connection indicator */}
+              {gun.isConnected && (
+                <XStack
+                  bg="$blue2"
+                  px="$3"
+                  py="$2"
+                  style={{ borderRadius: 12, alignItems: "center" }}
+                  gap="$2"
+                >
+                  <Bluetooth size={16} color="$blue10" />
+                  <Text fontSize="$3" color="$blue10" fontWeight="600">
+                    Pistola escaneadora conectada
+                  </Text>
+                </XStack>
+              )}
+
               {/* Supplier selector */}
               <YStack gap="$1">
                 <Text fontSize="$3" color="$color10" fontWeight="600">
@@ -1028,7 +1086,10 @@ export default function PurchasesScreen() {
               circular
               chromeless
               icon={<X size={18} />}
-              onPress={() => setShowSearchSheet(false)}
+              onPress={() => {
+                setShowSearchSheet(false);
+                gun.refocus();
+              }}
             />
           </XStack>
 
@@ -1184,6 +1245,9 @@ export default function PurchasesScreen() {
           />
         </YStack>
       </Modal>
+
+      {/* Hidden input for scanner gun (Bluetooth HID keyboard) */}
+      <TextInput ref={gun.inputRef} {...gun.inputProps} />
     </YStack>
   );
 }
