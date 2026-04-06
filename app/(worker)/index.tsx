@@ -57,13 +57,16 @@ export default function WorkerScreen() {
     setCart((prev) => {
       const idx = prev.findIndex((c) => c.product.id === product.id);
       if (idx >= 0) {
+        const current = prev[idx];
+        if (current.quantity >= product.stockBaseQty) return prev;
         const updated = [...prev];
         updated[idx] = {
-          ...updated[idx],
-          quantity: updated[idx].quantity + 1,
+          ...current,
+          quantity: current.quantity + 1,
         };
         return updated;
       }
+      if (product.stockBaseQty <= 0) return prev;
       return [
         ...prev,
         {

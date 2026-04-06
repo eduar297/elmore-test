@@ -68,11 +68,25 @@ export const CartItemRow = memo(function CartItemRow({
               {item.quantity}
             </Text>
             <Pressable
-              onPress={() => onChangeQty(item.quantity + 1)}
-              style={styles.stepperBtn}
+              onPress={() => {
+                if (item.quantity < item.product.stockBaseQty) {
+                  onChangeQty(item.quantity + 1);
+                }
+              }}
+              style={[
+                styles.stepperBtn,
+                item.quantity >= item.product.stockBaseQty && styles.stepperBtnDisabled,
+              ]}
               hitSlop={8}
             >
-              <Plus size={18} color="$color11" />
+              <Plus
+                size={18}
+                color={
+                  item.quantity >= item.product.stockBaseQty
+                    ? "$color6"
+                    : "$color11"
+                }
+              />
             </Pressable>
           </XStack>
 
@@ -81,6 +95,16 @@ export const CartItemRow = memo(function CartItemRow({
             × ${item.unitPrice.toFixed(2)}
           </Text>
         </XStack>
+
+        {/* Stock indicator */}
+        <Text
+          fontSize="$2"
+          color={
+            item.quantity >= item.product.stockBaseQty ? "$red10" : "$color8"
+          }
+        >
+          Stock: {item.product.stockBaseQty}
+        </Text>
       </YStack>
 
       {/* Subtotal + delete */}
@@ -117,4 +141,5 @@ const styles = StyleSheet.create({
   qtyText: { textAlign: "center" },
   rightCol: { alignItems: "flex-end" },
   deleteBtn: { padding: 6 },
+  stepperBtnDisabled: { opacity: 0.35 },
 });
