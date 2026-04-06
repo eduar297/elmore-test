@@ -1,20 +1,26 @@
 import { PeriodSelector } from "@/components/admin/period-selector";
+import { StatCard } from "@/components/admin/stat-card";
 import { OVERLAY } from "@/constants/colors";
 import { useAuth } from "@/contexts/auth-context";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { usePeriodNavigation } from "@/hooks/use-period-navigation";
 import { useTicketRepository } from "@/hooks/use-ticket-repository";
 import type { Ticket, TicketItem } from "@/models/ticket";
-import { daysInMonth, fmtMoney, weekEndISO } from "@/utils/format";
+import {
+  daysInMonth,
+  fmtMoney,
+  fmtMoneyFull,
+  weekEndISO,
+} from "@/utils/format";
 import {
   Banknote,
   Check,
   ClipboardList,
   Clock,
   CreditCard,
+  DollarSign,
   Package,
-  Receipt,
-  TrendingUp,
+  ShoppingCart
 } from "@tamagui/lucide-icons";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -321,38 +327,19 @@ export default function HistoryScreen() {
 
       {/* Summary cards */}
       <XStack gap="$3" px="$4" pt="$4">
-        <Card
-          flex={1}
-          borderWidth={1}
-          bg="$green2"
-          p="$4"
-          style={{ borderRadius: 14 }}
-          borderColor="$green5"
-        >
-          <TrendingUp size={16} color="$green10" />
-          <Text fontSize="$6" fontWeight="bold" color="$green10" mt="$1">
-            ${fmtMoney(summary.totalSales)}
-          </Text>
-          <Text fontSize="$2" color="$color10">
-            Total
-          </Text>
-        </Card>
-        <Card
-          flex={1}
-          borderWidth={1}
-          bg="$blue2"
-          p="$4"
-          style={{ borderRadius: 14 }}
-          borderColor="$blue5"
-        >
-          <Receipt size={16} color="$blue10" />
-          <Text fontSize="$6" fontWeight="bold" color="$blue10" mt="$1">
-            {summary.ticketCount}
-          </Text>
-          <Text fontSize="$2" color="$color10">
-            Tickets
-          </Text>
-        </Card>
+        <StatCard
+          label="Ventas"
+          value={`$${fmtMoney(summary.totalSales)}`}
+          detail={`$${fmtMoneyFull(summary.totalSales)}`}
+          color="$green10"
+          icon={<DollarSign size={16} color="$green10" />}
+        />
+        <StatCard
+          label="Tickets"
+          value={summary.ticketCount}
+          color="$blue10"
+          icon={<ShoppingCart size={16} color="$blue10" />}
+        />
       </XStack>
 
       {/* Sync filter */}
