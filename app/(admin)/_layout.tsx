@@ -1,6 +1,7 @@
 import { Tabs } from "expo-router";
 import React from "react";
 
+import { HeaderActions } from "@/components/admin/header-actions";
 import { HapticTab } from "@/components/haptic-tab";
 import { useColors } from "@/hooks/use-colors";
 import {
@@ -32,6 +33,7 @@ export default function AdminLayout() {
           backgroundColor: c.tabBarBg,
           borderTopColor: c.tabBarBorder,
         },
+        headerRight: () => <HeaderActions />,
       }}
     >
       <Tabs.Screen
@@ -72,6 +74,7 @@ export default function AdminLayout() {
         name="settings"
         options={{
           title: "Ajustes",
+          headerRight: () => undefined,
           tabBarIcon: ({ color }) => (
             <Settings size={26} color={color as any} />
           ),
