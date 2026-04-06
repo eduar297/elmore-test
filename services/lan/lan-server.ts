@@ -3,15 +3,15 @@ import TcpSocket from "react-native-tcp-socket";
 import Zeroconf from "react-native-zeroconf";
 
 import {
-  type ClientRole,
-  type LanMessage,
-  HEARTBEAT_INTERVAL,
-  HEARTBEAT_TIMEOUT,
-  LAN_PORT,
-  SERVICE_PROTOCOL,
-  SERVICE_TYPE,
-  parse,
-  serialize,
+    type ClientRole,
+    type LanMessage,
+    HEARTBEAT_INTERVAL,
+    HEARTBEAT_TIMEOUT,
+    LAN_PORT,
+    SERVICE_PROTOCOL,
+    SERVICE_TYPE,
+    parse,
+    serialize,
 } from "./protocol";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -164,6 +164,7 @@ export class LanServer {
     const msg: LanMessage = {
       type: "pair_accepted",
       deviceId: client.deviceId,
+      serverName: this._storeName || undefined,
     };
     try {
       client.socket.write(serialize(msg));
@@ -286,7 +287,13 @@ export class LanServer {
         );
         if (knownDevice) {
           client.paired = true;
-          client.socket.write(serialize({ type: "pair_accepted", deviceId }));
+          client.socket.write(
+            serialize({
+              type: "pair_accepted",
+              deviceId,
+              serverName: this._storeName || undefined,
+            }),
+          );
           console.log(`[LanServer] Auto-accepted known device ${deviceId}`);
           this.callbacks.onClientConnected?.(client);
           return;

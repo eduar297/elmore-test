@@ -1,5 +1,7 @@
 import { PhotoPicker } from "@/components/ui/photo-picker";
 import { useAuth } from "@/contexts/auth-context";
+import { useDevice } from "@/contexts/device-context";
+import { useLan } from "@/contexts/lan-context";
 import { useUserRepository } from "@/hooks/use-user-repository";
 import { hashPin } from "@/utils/auth";
 import {
@@ -9,6 +11,7 @@ import {
     Lock,
     LogOut,
     Receipt,
+    Smartphone,
     User as UserIcon,
 } from "@tamagui/lucide-icons";
 import { useNavigation, useRouter } from "expo-router";
@@ -30,6 +33,8 @@ export default function WorkerProfileScreen() {
   const theme = useTheme();
   const userRepo = useUserRepository();
   const { user, setUser, logout } = useAuth();
+  const { deviceId } = useDevice();
+  const { workerName } = useLan();
   const router = useRouter();
   const navigation = useNavigation();
 
@@ -175,6 +180,27 @@ export default function WorkerProfileScreen() {
           <View style={[styles.roleBadge, { backgroundColor: c.accentLight }]}>
             <Text style={[styles.roleText, { color: c.accent }]}>Vendedor</Text>
           </View>
+          {deviceId ? (
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 5,
+                marginTop: 4,
+              }}
+            >
+              <Smartphone size={13} color={c.muted as any} />
+              <Text
+                style={{
+                  fontSize: 12,
+                  color: c.muted,
+                  fontFamily: "monospace",
+                }}
+              >
+                {workerName}
+              </Text>
+            </View>
+          ) : null}
         </View>
 
         {/* Photo picker (shown inline when tapped) */}

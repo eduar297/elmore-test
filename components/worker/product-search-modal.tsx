@@ -259,7 +259,8 @@ export function ProductSearchModal({
             >
               <ShoppingCart size={16} color="$blue10" />
               <Text fontSize="$3" color="$blue10" fontWeight="600">
-                {cartCount} producto{cartCount !== 1 ? "s" : ""} en carrito
+                {cartCount} producto{cartCount !== 1 ? "s" : ""} seleccionado
+                {cartCount !== 1 ? "s" : ""}
               </Text>
             </XStack>
           </YStack>

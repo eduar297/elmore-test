@@ -16,6 +16,7 @@ import {
     ArrowUpFromLine,
     Camera,
     CheckCircle,
+    Clock,
     Image,
     Key,
     Package,
@@ -23,6 +24,7 @@ import {
     RefreshCw,
     SkipForward,
     Store,
+    Trash2,
     Users,
     Wifi,
     WifiOff,
@@ -42,6 +44,15 @@ import {
 } from "react-native";
 
 // ── Types ────────────────────────────────────────────────────────────────────
+
+interface SyncHost {
+  id: number;
+  host: string;
+  port: number;
+  name: string | null;
+  deviceId: string | null;
+  lastUsedAt: string;
+}
 
 type WorkerSyncState =
   | "idle"
@@ -102,6 +113,8 @@ export function SyncSection() {
     onSyncTicketsReceived,
     syncPrepareAckRef,
     bumpCatalogVersion,
+    pairedServerNameRef,
+    pairedDeviceIdRef,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     onSyncCatalogReceived: _onSyncCatalogReceived,
   } = useLan();
@@ -110,6 +123,7 @@ export function SyncSection() {
   const [scanning, setScanning] = useState(false);
   const [workers, setWorkers] = useState<WorkerSyncInfo[]>([]);
   const [manualIp, setManualIp] = useState("");
+  const [recentHosts, setRecentHosts] = useState<SyncHost[]>([]);
   const activeWorkerRef = useRef<WorkerSyncInfo | null>(null);
   const catalogPayloadRef = useRef<any>(null);
   const catalogBytesRef = useRef<number>(0);
@@ -117,6 +131,44 @@ export function SyncSection() {
   const photoManifestRef = useRef<Record<string, string>>({});
   const catalogSentRef = useRef<CatalogSentSummary | null>(null);
   const shouldSendPrepareRef = useRef(false);
+
+  // ── Recent hosts ─────────────────────────────────────────────────────────
+
+  const loadRecentHosts = useCallback(async () => {
+    const rows = await db.getAllAsync<SyncHost>(
+      "SELECT * FROM sync_hosts ORDER BY lastUsedAt DESC LIMIT 10",
+    );
+    setRecentHosts(rows);
+  }, [db]);
+
+  const saveHost = useCallback(
+    async (host: string, port: number, name?: string, devId?: string) => {
+      await db.runAsync(
+        `INSERT INTO sync_hosts (host, port, name, deviceId, lastUsedAt)
+         VALUES (?, ?, ?, ?, datetime('now','localtime'))
+         ON CONFLICT(host, port) DO UPDATE SET
+           name = COALESCE(excluded.name, name),
+           deviceId = COALESCE(excluded.deviceId, deviceId),
+           lastUsedAt = datetime('now','localtime')`,
+        [host, port, name ?? null, devId ?? null],
+      );
+      loadRecentHosts();
+    },
+    [db, loadRecentHosts],
+  );
+
+  const removeHost = useCallback(
+    async (id: number) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      await db.runAsync("DELETE FROM sync_hosts WHERE id = ?", [id]);
+      loadRecentHosts();
+    },
+    [db, loadRecentHosts],
+  );
+
+  useEffect(() => {
+    loadRecentHosts();
+  }, [loadRecentHosts]);
 
   // ── Discovery ────────────────────────────────────────────────────────────
 
@@ -169,8 +221,48 @@ export function SyncSection() {
       ];
     });
 
+    // Save to history
+    saveHost(host, port);
     setManualIp("");
-  }, [manualIp]);
+  }, [manualIp, saveHost]);
+
+  const connectFromHistory = useCallback(
+    (entry: SyncHost) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+      const historyServer: DiscoveredServer = {
+        name: entry.name ?? `Manual-${entry.host}`,
+        host: entry.host,
+        port: entry.port,
+        storeName: entry.name ?? entry.host,
+      };
+
+      setWorkers((prev) => {
+        if (prev.find((w) => w.server.host === entry.host)) return prev;
+        return [
+          ...prev,
+          {
+            server: historyServer,
+            state: "idle",
+            lastSyncAt: null,
+            ticketSummary: null,
+            catalogSent: null,
+            catalogBytes: 0,
+            error: null,
+          },
+        ];
+      });
+
+      // Update lastUsedAt
+      saveHost(
+        entry.host,
+        entry.port,
+        entry.name ?? undefined,
+        entry.deviceId ?? undefined,
+      );
+    },
+    [saveHost],
+  );
 
   // Update workers list when new servers discovered
   useEffect(() => {
@@ -422,6 +514,25 @@ export function SyncSection() {
 
     if (connectionStatus === "paired" && shouldSendPrepareRef.current) {
       shouldSendPrepareRef.current = false;
+
+      // Save worker name from pair_accepted (covers manual IP connections)
+      const pName = pairedServerNameRef.current;
+      const pDeviceId = pairedDeviceIdRef.current;
+      if (pName || pDeviceId) {
+        saveHost(
+          worker.server.host,
+          worker.server.port,
+          pName ?? undefined,
+          pDeviceId ?? undefined,
+        );
+        // Also update the worker entry in the list so the UI shows the real name
+        if (pName) {
+          updateWorker(worker.server.host, {
+            server: { ...worker.server, name: pName, storeName: pName },
+          } as any);
+        }
+      }
+
       console.log(`[SyncSection] Paired! Requesting tickets first`);
       updateWorker(worker.server.host, { state: "receiving" });
       requestTickets(null);
@@ -456,7 +567,13 @@ export function SyncSection() {
       shouldSendPrepareRef.current = false;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [connectionStatus, sendSyncPrepare, updateWorker, disconnectFromServer]);
+  }, [
+    connectionStatus,
+    sendSyncPrepare,
+    updateWorker,
+    disconnectFromServer,
+    saveHost,
+  ]);
 
   const syncWithWorker = useCallback(
     async (info: WorkerSyncInfo) => {
@@ -481,19 +598,22 @@ export function SyncSection() {
         catalogBytes: 0,
       });
 
+      // Save to history
+      saveHost(info.server.host, info.server.port, info.server.storeName);
+
       shouldSendPrepareRef.current = true;
       connectToServer(info.server.host, info.server.port);
       console.log(
         `[SyncSection] syncWithWorker → connecting to ${info.server.host}:${info.server.port}`,
       );
     },
-    [connectToServer, updateWorker],
+    [connectToServer, updateWorker, saveHost],
   );
 
   // ── Render ───────────────────────────────────────────────────────────────
 
   const borderColor = c.border;
-  const cardBg = c.card;
+  const cardBg = c.input;
   const mutedText = c.muted;
 
   return (
@@ -501,46 +621,57 @@ export function SyncSection() {
       style={[styles.root, { backgroundColor: c.bg }]}
       contentContainerStyle={styles.content}
     >
-      {/* Header */}
-      <View style={[styles.header, { borderBottomColor: borderColor }]}>
-        <Text style={[styles.headerTitle, { color: c.text }]}>
-          Sincronizar con Workers
+      {/* ── Scan section ──────────────────────────────────────── */}
+      <View
+        style={[styles.sectionCard, { backgroundColor: cardBg, borderColor }]}
+      >
+        <View style={styles.sectionHeader}>
+          <Wifi size={16} color={tint as any} />
+          <Text style={[styles.sectionTitle, { color: c.text }]}>
+            Buscar en la red
+          </Text>
+        </View>
+        <Text style={[styles.sectionDesc, { color: mutedText }]}>
+          Detecta Workers automáticamente en tu red WiFi
         </Text>
-        <Text style={[styles.headerSub, { color: mutedText }]}>
-          Envía el catálogo y recibe tickets de venta
-        </Text>
+        <TouchableOpacity
+          style={[
+            styles.scanBtn,
+            { backgroundColor: scanning ? "#6b7280" : tint },
+          ]}
+          onPress={startScan}
+          disabled={scanning}
+        >
+          {scanning ? (
+            <ActivityIndicator color="#fff" size="small" />
+          ) : (
+            <Wifi size={16} color="#fff" />
+          )}
+          <Text style={styles.scanBtnText}>
+            {scanning ? "Buscando..." : "Buscar Workers"}
+          </Text>
+        </TouchableOpacity>
       </View>
 
-      {/* Scan button */}
-      <TouchableOpacity
-        style={[
-          styles.scanBtn,
-          { backgroundColor: scanning ? "#6b7280" : tint },
-        ]}
-        onPress={startScan}
-        disabled={scanning}
+      {/* ── Manual IP section ─────────────────────────────────── */}
+      <View
+        style={[styles.sectionCard, { backgroundColor: cardBg, borderColor }]}
       >
-        {scanning ? (
-          <ActivityIndicator color="#fff" size="small" />
-        ) : (
-          <Wifi size={18} color="#fff" />
-        )}
-        <Text style={styles.scanBtnText}>
-          {scanning ? "Buscando Workers..." : "Buscar Workers en la red"}
-        </Text>
-      </TouchableOpacity>
-
-      {/* Manual IP connection */}
-      <View style={[styles.manualBox, { borderColor }]}>
-        <Text style={[styles.manualLabel, { color: mutedText }]}>
-          ¿No aparece? Conectar por IP manualmente:
+        <View style={styles.sectionHeader}>
+          <Zap size={16} color={c.orange as any} />
+          <Text style={[styles.sectionTitle, { color: c.text }]}>
+            Conexión manual
+          </Text>
+        </View>
+        <Text style={[styles.sectionDesc, { color: mutedText }]}>
+          Conecta por IP si no aparece automáticamente
         </Text>
         <View style={styles.manualRow}>
           <TextInput
             style={[
               styles.manualInput,
               {
-                backgroundColor: cardBg,
+                backgroundColor: c.bg,
                 borderColor,
                 color: c.text,
               },
@@ -568,9 +699,69 @@ export function SyncSection() {
             <Text style={styles.manualBtnText}>Conectar</Text>
           </TouchableOpacity>
         </View>
+
+        {/* Recent hosts */}
+        {recentHosts.length > 0 && (
+          <View style={styles.recentSection}>
+            <View style={styles.recentHeader}>
+              <Clock size={13} color={mutedText as any} />
+              <Text style={[styles.recentTitle, { color: mutedText }]}>
+                Recientes
+              </Text>
+            </View>
+            {recentHosts.map((entry) => {
+              const alreadyAdded = workers.some(
+                (w) => w.server.host === entry.host,
+              );
+              return (
+                <View
+                  key={entry.id}
+                  style={[styles.recentRow, { borderColor }]}
+                >
+                  <TouchableOpacity
+                    style={styles.recentInfo}
+                    onPress={() => !alreadyAdded && connectFromHistory(entry)}
+                    disabled={alreadyAdded}
+                    activeOpacity={0.6}
+                  >
+                    <Wifi
+                      size={14}
+                      color={
+                        alreadyAdded ? (c.green as any) : (mutedText as any)
+                      }
+                    />
+                    <View style={styles.recentTexts}>
+                      <Text
+                        style={[
+                          styles.recentHost,
+                          { color: alreadyAdded ? c.green : c.text },
+                        ]}
+                      >
+                        {entry.host}
+                        {entry.port !== LAN_PORT ? `:${entry.port}` : ""}
+                      </Text>
+                      {entry.name && (
+                        <Text style={[styles.recentName, { color: mutedText }]}>
+                          {entry.name}
+                        </Text>
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => removeHost(entry.id)}
+                    hitSlop={6}
+                    style={[styles.recentDeleteBtn, { backgroundColor: c.bg }]}
+                  >
+                    <Trash2 size={13} color={c.danger as any} />
+                  </TouchableOpacity>
+                </View>
+              );
+            })}
+          </View>
+        )}
       </View>
 
-      {/* Workers list */}
+      {/* ── Workers list ──────────────────────────────────────── */}
       {workers.length === 0 && !scanning && (
         <View style={styles.emptyBox}>
           <WifiOff size={40} color={mutedText as any} />
@@ -588,6 +779,15 @@ export function SyncSection() {
               Buscar de nuevo
             </Text>
           </TouchableOpacity>
+        </View>
+      )}
+
+      {workers.length > 0 && (
+        <View style={styles.workersHeader}>
+          <Users size={16} color={tint as any} />
+          <Text style={[styles.workersTitle, { color: c.text }]}>
+            Workers encontrados ({workers.length})
+          </Text>
         </View>
       )}
 
@@ -677,9 +877,11 @@ function WorkerCard({
     <View style={[styles.card, { backgroundColor: cardBg, borderColor }]}>
       <View style={styles.cardHeader}>
         <View style={styles.cardInfo}>
-          <Text style={[styles.cardName, { color: textColor }]}>
-            {server.storeName}
-          </Text>
+          <View style={styles.cardNameRow}>
+            <Text style={[styles.cardName, { color: textColor }]}>
+              {server.storeName}
+            </Text>
+          </View>
           <Text style={[styles.cardIp, { color: mutedText }]}>
             {server.host}:{server.port}
           </Text>
@@ -931,37 +1133,39 @@ function SummaryPill({
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  content: { padding: 16, gap: 12, paddingBottom: 40 },
+  content: { padding: 16, gap: 14, paddingBottom: 40 },
 
-  header: {
-    paddingBottom: 16,
-    marginBottom: 4,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    gap: 4,
+  // Section cards
+  sectionCard: {
+    borderRadius: 14,
+    borderWidth: StyleSheet.hairlineWidth,
+    padding: 16,
+    gap: 10,
   },
-  headerTitle: { fontSize: 17, fontWeight: "600" },
-  headerSub: { fontSize: 13 },
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  sectionTitle: { fontSize: 15, fontWeight: "700" },
+  sectionDesc: { fontSize: 13, lineHeight: 18 },
 
   scanBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    paddingVertical: 14,
-    borderRadius: 12,
-    marginBottom: 8,
+    paddingVertical: 12,
+    borderRadius: 10,
+    marginTop: 4,
   },
-  scanBtnText: { color: "#fff", fontWeight: "600", fontSize: 15 },
+  scanBtnText: { color: "#fff", fontWeight: "600", fontSize: 14 },
 
-  manualBox: {
-    gap: 8,
-    paddingVertical: 8,
-  },
-  manualLabel: { fontSize: 13 },
   manualRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
+    marginTop: 2,
   },
   manualInput: {
     flex: 1,
@@ -979,6 +1183,54 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   manualBtnText: { color: "#fff", fontWeight: "600", fontSize: 14 },
+
+  // Recent hosts
+  recentSection: {
+    marginTop: 6,
+    gap: 6,
+  },
+  recentHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  recentTitle: {
+    fontSize: 12,
+    fontWeight: "600",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  recentRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  recentInfo: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  recentTexts: { flex: 1, gap: 1 },
+  recentHost: { fontSize: 14, fontWeight: "600" },
+  recentName: { fontSize: 11 },
+  recentDeleteBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 7,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  // Workers header
+  workersHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 4,
+  },
+  workersTitle: { fontSize: 15, fontWeight: "700" },
 
   emptyBox: {
     alignItems: "center",
@@ -1011,6 +1263,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   cardInfo: { flex: 1, gap: 2 },
+  cardNameRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   cardName: { fontSize: 15, fontWeight: "600" },
   cardIp: { fontSize: 12 },
   cardLastSync: { fontSize: 11 },

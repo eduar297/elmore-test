@@ -95,9 +95,9 @@ const styles = StyleSheet.create({
   tab: {
     flex: 1,
     alignItems: "center",
-    gap: 8,
-    paddingVertical: 16,
-    paddingHorizontal: 12,
+    gap: 4,
+    paddingVertical: 8,
+    paddingHorizontal: 6,
     borderRadius: 16,
     borderWidth: 1.5,
   },

@@ -131,6 +131,11 @@ interface LanContextValue {
   /** Monotonic counter bumped after each catalog apply — screens watch this to reload */
   catalogVersion: number;
   bumpCatalogVersion: () => void;
+
+  /** Ref holding the paired worker's server name (e.g. "Vendedor-XXXX") after pair_accepted */
+  pairedServerNameRef: React.MutableRefObject<string | null>;
+  /** Ref holding the paired worker's full device ID after pair_accepted */
+  pairedDeviceIdRef: React.MutableRefObject<string | null>;
 }
 
 const LanContext = createContext<LanContextValue>({
@@ -170,6 +175,8 @@ const LanContext = createContext<LanContextValue>({
   syncPrepareAckRef: { current: null },
   catalogVersion: 0,
   bumpCatalogVersion: () => {},
+  pairedServerNameRef: { current: null },
+  pairedDeviceIdRef: { current: null },
 });
 
 // Module-level singleton so the server survives React hot-reloads.
@@ -401,6 +408,11 @@ export function LanProvider({ children }: { children: React.ReactNode }) {
     lastSyncAt: string | null;
   } | null>(null);
 
+  /** Stores the paired worker's server name from pair_accepted */
+  const pairedServerNameRef = useRef<string | null>(null);
+  /** Stores the paired worker's full device ID from pair_accepted */
+  const pairedDeviceIdRef = useRef<string | null>(null);
+
   const handleServerMessage = useCallback((msg: LanMessage) => {
     switch (msg.type) {
       case "cart_update":
@@ -447,7 +459,12 @@ export function LanProvider({ children }: { children: React.ReactNode }) {
         break;
       }
       case "pair_accepted":
+        pairedServerNameRef.current = msg.serverName ?? null;
+        pairedDeviceIdRef.current = msg.deviceId ?? null;
+        break;
       case "pair_rejected":
+        pairedServerNameRef.current = null;
+        pairedDeviceIdRef.current = null;
         break;
       default:
         break;
@@ -638,6 +655,8 @@ export function LanProvider({ children }: { children: React.ReactNode }) {
       syncPrepareAckRef,
       catalogVersion,
       bumpCatalogVersion,
+      pairedServerNameRef,
+      pairedDeviceIdRef,
     }),
     [
       workerName,

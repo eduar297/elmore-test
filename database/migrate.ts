@@ -150,14 +150,6 @@ async function ensureTables(db: SQLiteDatabase) {
       value TEXT NOT NULL
     );
 
-    CREATE TABLE IF NOT EXISTS paired_devices (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      deviceId TEXT NOT NULL UNIQUE,
-      deviceName TEXT,
-      lastConnected TEXT,
-      storeId INTEGER NOT NULL DEFAULT 1 REFERENCES stores(id)
-    );
-
     CREATE TABLE IF NOT EXISTS notification_history (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       category TEXT NOT NULL,
@@ -169,13 +161,15 @@ async function ensureTables(db: SQLiteDatabase) {
       createdAt TEXT NOT NULL DEFAULT (datetime('now','localtime'))
     );
 
-    CREATE TABLE IF NOT EXISTS sync_metadata (
-      id INTEGER PRIMARY KEY CHECK (id = 1),
-      last_sync_at TEXT,
-      admin_device_id TEXT
+    CREATE TABLE IF NOT EXISTS sync_hosts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      host TEXT NOT NULL,
+      port INTEGER NOT NULL DEFAULT 8765,
+      name TEXT,
+      deviceId TEXT,
+      lastUsedAt TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+      UNIQUE(host, port)
     );
-
-    INSERT OR IGNORE INTO sync_metadata (id) VALUES (1);
   `);
   await ensureTriggers(db);
 }
@@ -205,7 +199,7 @@ async function ensureTriggers(db: SQLiteDatabase) {
 }
 
 export async function migrateDbIfNeeded(db: SQLiteDatabase) {
-  const DATABASE_VERSION = 22;
+  const DATABASE_VERSION = 27;
 
   const result = await db.getFirstAsync<{ user_version: number }>(
     "PRAGMA user_version",
@@ -449,15 +443,7 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase) {
   }
 
   if (currentVersion === 13) {
-    await db.execAsync(`
-      CREATE TABLE IF NOT EXISTS paired_devices (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        deviceId TEXT NOT NULL UNIQUE,
-        deviceName TEXT,
-        lastConnected TEXT,
-        storeId INTEGER NOT NULL DEFAULT 1 REFERENCES stores(id)
-      );
-    `);
+    // paired_devices removed in v26 — keep migration as no-op for version chain
     currentVersion = 14;
   }
 
@@ -472,20 +458,12 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase) {
   }
 
   if (currentVersion === 15) {
-    await db.execAsync(`
-      CREATE TABLE IF NOT EXISTS sync_metadata (
-        id INTEGER PRIMARY KEY CHECK (id = 1),
-        last_sync_at TEXT,
-        admin_device_id TEXT
-      );
-
-      INSERT OR IGNORE INTO sync_metadata (id) VALUES (1);
-    `);
+    // sync_metadata removed from admin DB in v27 — keep as no-op
     currentVersion = 16;
   }
 
   if (currentVersion === 16) {
-    // Migrate tickets from INTEGER id to TEXT (UUID)
+    // Migrate tickets from INTEGER TEXT (UUID)
     await db.execAsync(`
       CREATE TABLE tickets_new (
         id TEXT PRIMARY KEY,
@@ -603,6 +581,64 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase) {
     `);
 
     currentVersion = 22;
+  }
+
+  if (currentVersion === 22) {
+    await db.execAsync(`
+      DROP TABLE IF EXISTS sync_hosts;
+      CREATE TABLE sync_hosts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        host TEXT NOT NULL,
+        port INTEGER NOT NULL DEFAULT 8765,
+        name TEXT,
+        deviceShortId TEXT,
+        lastUsedAt TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+        UNIQUE(host, port)
+      );
+    `);
+    currentVersion = 23;
+  }
+
+  if (currentVersion === 23) {
+    await db.execAsync(`
+      DROP TABLE IF EXISTS sync_hosts;
+      CREATE TABLE sync_hosts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        host TEXT NOT NULL,
+        port INTEGER NOT NULL DEFAULT 8765,
+        name TEXT,
+        deviceShortId TEXT,
+        lastUsedAt TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+        UNIQUE(host, port)
+      );
+    `);
+    currentVersion = 24;
+  }
+
+  if (currentVersion === 24) {
+    await db.execAsync(`
+      DROP TABLE IF EXISTS sync_hosts;
+      CREATE TABLE sync_hosts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        host TEXT NOT NULL,
+        port INTEGER NOT NULL DEFAULT 8765,
+        name TEXT,
+        deviceId TEXT,
+        lastUsedAt TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+        UNIQUE(host, port)
+      );
+    `);
+    currentVersion = 25;
+  }
+
+  if (currentVersion === 25) {
+    await db.execAsync(`DROP TABLE IF EXISTS paired_devices;`);
+    currentVersion = 26;
+  }
+
+  if (currentVersion === 26) {
+    await db.execAsync(`DROP TABLE IF EXISTS sync_metadata;`);
+    currentVersion = 27;
   }
 
   await ensureTriggers(db);
