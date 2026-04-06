@@ -22,9 +22,12 @@ import {
   Image,
   Modal,
   Pressable,
+  ScrollView,
   StyleSheet,
   TextInput,
+  TouchableOpacity,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import {
   Button,
   Card,
@@ -720,167 +723,186 @@ export default function PurchasesScreen() {
         </Sheet.Frame>
       </Sheet>
 
-      {/* ── New Purchase Sheet ────────────────────────────────────────────── */}
-      <Sheet
-        open={showCreateSheet}
-        onOpenChange={(open) => {
-          if (!open && creating) return; // prevent dismiss while saving
-          setShowCreateSheet(open);
+      {/* ── New Purchase Modal ─────────────────────────────────────────── */}
+      <Modal
+        visible={showCreateSheet}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => {
+          if (!creating) setShowCreateSheet(false);
         }}
-        modal
-        dismissOnSnapToBottom
-        snapPoints={[95]}
       >
-        <Sheet.Overlay
-          enterStyle={{ opacity: 0 }}
-          exitStyle={{ opacity: 0 }}
-          backgroundColor={OVERLAY}
-        />
-        <Sheet.Frame theme={themeName as any} bg="$background">
-          <Sheet.Handle />
-          <Sheet.ScrollView
-            keyboardShouldPersistTaps="handled"
-            automaticallyAdjustKeyboardInsets
+        <SafeAreaView
+          edges={["top"]}
+          style={[
+            pStyles.modalRoot,
+            { backgroundColor: themeName === "dark" ? "#000" : "#fff" },
+          ]}
+        >
+          {/* Header */}
+          <XStack
+            p="$3"
+            px="$4"
+            style={{ alignItems: "center", justifyContent: "space-between" }}
+            borderBottomWidth={1}
+            borderBottomColor="$borderColor"
           >
-            <YStack gap="$3" p="$4" pb="$10">
-              <Text fontSize="$6" fontWeight="bold" color="$color">
+            <XStack style={{ alignItems: "center" }} gap="$2">
+              <ShoppingBag size={18} color="$blue10" />
+              <Text fontSize={16} fontWeight="700" color="$color">
                 Nueva Compra
               </Text>
+            </XStack>
+            <TouchableOpacity
+              onPress={() => {
+                if (!creating) setShowCreateSheet(false);
+              }}
+              hitSlop={8}
+              style={pStyles.closeBtn}
+            >
+              <X size={18} color="$color" />
+            </TouchableOpacity>
+          </XStack>
 
-              {/* Scanner gun connection indicator */}
-              {gun.isConnected && (
-                <XStack
-                  bg="$blue2"
-                  px="$3"
-                  py="$2"
-                  style={{ borderRadius: 12, alignItems: "center" }}
-                  gap="$2"
-                >
-                  <Bluetooth size={16} color="$blue10" />
-                  <Text fontSize="$3" color="$blue10" fontWeight="600">
-                    Pistola escaneadora conectada
-                  </Text>
-                </XStack>
-              )}
+          {/* Scanner gun connection indicator */}
+          {gun.isConnected && (
+            <XStack
+              bg="$blue2"
+              px="$4"
+              py="$2"
+              style={{ alignItems: "center" }}
+              gap="$2"
+            >
+              <Bluetooth size={16} color="$blue10" />
+              <Text fontSize="$3" color="$blue10" fontWeight="600">
+                Pistola escaneadora conectada
+              </Text>
+            </XStack>
+          )}
 
-              {/* Supplier selector */}
-              <YStack gap="$1">
-                <Text fontSize="$3" color="$color10" fontWeight="600">
-                  Proveedor
-                </Text>
-                <Card
-                  pressStyle={{ opacity: 0.9, scale: 0.98 }}
-                  onPress={() => setShowSupplierPicker(true)}
-                  bg="$color2"
-                  p="$3"
-                  style={{ borderRadius: 12 }}
-                >
-                  <XStack
-                    style={{
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                    }}
-                  >
-                    <XStack style={{ alignItems: "center" }} gap="$2">
-                      <Building2 size={18} color="$color10" />
-                      <Text
-                        fontSize="$4"
-                        color={selectedSupplier ? "$color" : "$color8"}
-                      >
-                        {selectedSupplier?.name ?? "Sin proveedor (opcional)"}
-                      </Text>
-                    </XStack>
-                    <ChevronRight size={16} color="$color8" />
-                  </XStack>
-                </Card>
-              </YStack>
-
-              {/* Notes */}
-              <YStack gap="$1">
-                <Text fontSize="$3" color="$color10" fontWeight="600">
-                  Notas (opcional)
-                </Text>
-                <TextArea
-                  placeholder="Nro. de factura, condiciones, observaciones..."
-                  value={purchaseNotes}
-                  onChangeText={setPurchaseNotes}
-                  numberOfLines={2}
-                  size="$4"
-                />
-              </YStack>
-
-              {/* Transport cost */}
-              <YStack gap="$1">
-                <Text fontSize="$3" color="$color10" fontWeight="600">
-                  Costo de transporte (opcional)
-                </Text>
-                <Input
-                  placeholder="0.00"
-                  value={transportCost}
-                  onChangeText={setTransportCost}
-                  keyboardType="decimal-pad"
-                  returnKeyType="done"
-                  size="$4"
-                />
-              </YStack>
-
-              <Separator />
-
-              {/* Cart header */}
-              <XStack
-                style={{
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                }}
+          {/* Scrollable content */}
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            style={{ flex: 1 }}
+            contentContainerStyle={{ padding: 16, paddingBottom: 40, gap: 12 }}
+          >
+            {/* Supplier selector */}
+            <YStack gap="$1">
+              <Text fontSize="$3" color="$color10" fontWeight="600">
+                Proveedor
+              </Text>
+              <Card
+                pressStyle={{ opacity: 0.9, scale: 0.98 }}
+                onPress={() => setShowSupplierPicker(true)}
+                bg="$color2"
+                p="$3"
+                style={{ borderRadius: 12 }}
               >
-                <Text fontSize="$4" fontWeight="600" color="$color">
-                  Productos ({cart.length})
-                </Text>
-                <XStack gap="$2">
-                  <Button size="$3" icon={<ScanLine />} onPress={scan}>
-                    Escanear
-                  </Button>
-                  <Button
-                    theme="blue"
-                    size="$3"
-                    icon={<Search />}
-                    onPress={() => {
-                      setSearchQuery("");
-                      setShowSearchSheet(true);
-                    }}
-                  >
-                    Buscar
-                  </Button>
+                <XStack
+                  style={{
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  <XStack style={{ alignItems: "center" }} gap="$2">
+                    <Building2 size={18} color="$color10" />
+                    <Text
+                      fontSize="$4"
+                      color={selectedSupplier ? "$color" : "$color8"}
+                    >
+                      {selectedSupplier?.name ?? "Sin proveedor (opcional)"}
+                    </Text>
+                  </XStack>
+                  <ChevronRight size={16} color="$color8" />
                 </XStack>
-              </XStack>
-
-              {/* Cart items */}
-              {cart.length === 0 ? (
-                <YStack style={{ alignItems: "center" }} py="$5" gap="$2">
-                  <Package size={36} color="$color8" />
-                  <Text
-                    fontSize="$4"
-                    color="$color8"
-                    style={{ textAlign: "center" }}
-                  >
-                    Escanea o busca los productos recibidos
-                  </Text>
-                </YStack>
-              ) : (
-                <YStack gap="$3">
-                  {cart.map((item, idx) => (
-                    <CartItemRow
-                      key={`${item.productId}-${idx}`}
-                      item={item}
-                      onQtyChange={(v) => updateCartQty(idx, v)}
-                      onCostChange={(v) => updateCartCost(idx, v)}
-                      onRemove={() => removeFromCart(idx)}
-                    />
-                  ))}
-                </YStack>
-              )}
+              </Card>
             </YStack>
-          </Sheet.ScrollView>
+
+            {/* Notes */}
+            <YStack gap="$1">
+              <Text fontSize="$3" color="$color10" fontWeight="600">
+                Notas (opcional)
+              </Text>
+              <TextArea
+                placeholder="Nro. de factura, condiciones, observaciones..."
+                value={purchaseNotes}
+                onChangeText={setPurchaseNotes}
+                numberOfLines={2}
+                size="$4"
+              />
+            </YStack>
+
+            {/* Transport cost */}
+            <YStack gap="$1">
+              <Text fontSize="$3" color="$color10" fontWeight="600">
+                Costo de transporte (opcional)
+              </Text>
+              <Input
+                placeholder="0.00"
+                value={transportCost}
+                onChangeText={setTransportCost}
+                keyboardType="decimal-pad"
+                returnKeyType="done"
+                size="$4"
+              />
+            </YStack>
+
+            <Separator />
+
+            {/* Cart header */}
+            <XStack
+              style={{
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <Text fontSize="$4" fontWeight="600" color="$color">
+                Productos ({cart.length})
+              </Text>
+              <XStack gap="$2">
+                <Button size="$3" icon={<ScanLine />} onPress={scan}>
+                  Escanear
+                </Button>
+                <Button
+                  theme="blue"
+                  size="$3"
+                  icon={<Search />}
+                  onPress={() => {
+                    setSearchQuery("");
+                    setShowSearchSheet(true);
+                  }}
+                >
+                  Buscar
+                </Button>
+              </XStack>
+            </XStack>
+
+            {/* Cart items */}
+            {cart.length === 0 ? (
+              <YStack style={{ alignItems: "center" }} py="$5" gap="$2">
+                <Package size={36} color="$color8" />
+                <Text
+                  fontSize="$4"
+                  color="$color8"
+                  style={{ textAlign: "center" }}
+                >
+                  Escanea o busca los productos recibidos
+                </Text>
+              </YStack>
+            ) : (
+              <YStack gap="$3">
+                {cart.map((item, idx) => (
+                  <CartItemRow
+                    key={`${item.productId}-${idx}`}
+                    item={item}
+                    onQtyChange={(v) => updateCartQty(idx, v)}
+                    onCostChange={(v) => updateCartCost(idx, v)}
+                    onRemove={() => removeFromCart(idx)}
+                  />
+                ))}
+              </YStack>
+            )}
+          </ScrollView>
 
           {/* ── Sticky bottom bar ── */}
           {cart.length > 0 && (
@@ -946,30 +968,45 @@ export default function PurchasesScreen() {
               </Button>
             </YStack>
           )}
-        </Sheet.Frame>
-      </Sheet>
+        </SafeAreaView>
 
-      {/* ── Supplier Picker Sheet ─────────────────────────────────────────── */}
-      <Sheet
-        open={showSupplierPicker}
-        onOpenChange={setShowSupplierPicker}
-        modal
-        dismissOnSnapToBottom
-        snapPoints={[60]}
-      >
-        <Sheet.Overlay
-          enterStyle={{ opacity: 0 }}
-          exitStyle={{ opacity: 0 }}
-          backgroundColor={OVERLAY}
-        />
-        <Sheet.Frame theme={themeName as any} bg="$background">
-          <Sheet.Handle />
-          <Sheet.ScrollView>
-            <YStack gap="$2" p="$4">
-              <Text fontSize="$5" fontWeight="bold" color="$color" mb="$2">
-                Seleccionar proveedor
-              </Text>
+        {/* ── Supplier Picker (nested modal) ────────────────────────────── */}
+        <Modal
+          visible={showSupplierPicker}
+          animationType="slide"
+          presentationStyle="pageSheet"
+          onRequestClose={() => setShowSupplierPicker(false)}
+        >
+          <SafeAreaView
+            edges={["top"]}
+            style={[
+              pStyles.modalRoot,
+              { backgroundColor: themeName === "dark" ? "#000" : "#fff" },
+            ]}
+          >
+            <XStack
+              p="$3"
+              px="$4"
+              style={{ alignItems: "center", justifyContent: "space-between" }}
+              borderBottomWidth={1}
+              borderBottomColor="$borderColor"
+            >
+              <XStack style={{ alignItems: "center" }} gap="$2">
+                <Building2 size={18} color="$blue10" />
+                <Text fontSize={16} fontWeight="700" color="$color">
+                  Seleccionar proveedor
+                </Text>
+              </XStack>
+              <TouchableOpacity
+                onPress={() => setShowSupplierPicker(false)}
+                hitSlop={8}
+                style={pStyles.closeBtn}
+              >
+                <X size={18} color="$color" />
+              </TouchableOpacity>
+            </XStack>
 
+            <ScrollView contentContainerStyle={{ padding: 16, gap: 8 }}>
               {/* "None" option */}
               <Card
                 pressStyle={{ opacity: 0.9, scale: 0.98 }}
@@ -1032,222 +1069,227 @@ export default function PurchasesScreen() {
                   </Text>
                 </YStack>
               )}
-            </YStack>
-          </Sheet.ScrollView>
-        </Sheet.Frame>
-      </Sheet>
+            </ScrollView>
+          </SafeAreaView>
+        </Modal>
 
-      {/* ── Product search modal ─────────────────────────────────────── */}
-      <Modal
-        visible={showSearchSheet}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setShowSearchSheet(false)}
-      >
-        <YStack
-          flex={1}
-          bg="$background"
-          theme={themeName as any}
-          pt="$6"
-          px="$4"
-          gap="$3"
+        {/* ── Product search modal (nested) ──────────────────────────── */}
+        <Modal
+          visible={showSearchSheet}
+          animationType="slide"
+          presentationStyle="pageSheet"
+          onRequestClose={() => setShowSearchSheet(false)}
         >
-          <XStack
-            style={{
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
-            <Text fontSize="$5" fontWeight="bold" color="$color">
-              Buscar producto
-            </Text>
-            <Button
-              size="$3"
-              circular
-              chromeless
-              icon={<X size={18} />}
-              onPress={() => {
-                setShowSearchSheet(false);
-                gun.refocus();
-              }}
-            />
-          </XStack>
-
-          <XStack
-            bg="$color3"
-            borderWidth={1}
-            borderColor="$borderColor"
-            style={{ borderRadius: 12, alignItems: "center" }}
-            px="$3"
-            gap="$2"
-            height={44}
-          >
-            <Search size={18} color="$color10" />
-            <Input
-              flex={1}
-              size="$3"
-              bg="transparent"
-              borderWidth={0}
-              color="$color"
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              placeholder="Nombre o código de barras…"
-              placeholderTextColor="$color8"
-              returnKeyType="search"
-              autoCorrect={false}
-              autoCapitalize="none"
-              autoFocus
-              px={0}
-            />
-            {searchQuery.length > 0 && (
-              <Button
-                size="$2"
-                chromeless
-                circular
-                icon={<X size={14} color="$color10" />}
-                onPress={() => setSearchQuery("")}
-              />
-            )}
-          </XStack>
-
-          <XStack
-            bg="$blue3"
-            style={{ alignItems: "center", borderRadius: 8 }}
-            px="$3"
-            py="$2"
-            gap="$2"
-          >
-            <ShoppingCart size={14} color="$blue10" />
-            <Text fontSize="$2" color="$blue10" fontWeight="600">
-              {cart.length} producto{cart.length !== 1 ? "s" : ""} seleccionado
-              {cart.length !== 1 ? "s" : ""}
-            </Text>
-          </XStack>
-
-          <YStack flex={1}>
-            <FlatList
-              data={searchResults}
-              keyExtractor={(item) => String(item.id)}
-              keyboardShouldPersistTaps="handled"
-              renderItem={({ item: p }) => {
-                const inCart = cart.some((c) => c.productId === p.id);
-                return (
-                  <Pressable
-                    onPress={() => toggleSearchItem(p)}
-                    style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
-                  >
-                    <XStack
-                      px="$3"
-                      py="$3"
-                      style={{
-                        alignItems: "center",
-                        borderRadius: inCart ? 10 : 0,
-                      }}
-                      gap="$3"
-                      borderBottomWidth={1}
-                      borderColor="$borderColor"
-                      bg={inCart ? "$green3" : "transparent"}
-                    >
-                      {p.photoUri ? (
-                        <Image
-                          source={{ uri: p.photoUri }}
-                          style={{ width: 44, height: 44, borderRadius: 10 }}
-                          resizeMode="cover"
-                        />
-                      ) : (
-                        <YStack
-                          width={44}
-                          height={44}
-                          bg="$color3"
-                          style={{
-                            borderRadius: 10,
-                            alignItems: "center",
-                            justifyContent: "center",
-                          }}
-                        >
-                          <Package size={20} color="$color8" />
-                        </YStack>
-                      )}
-                      <YStack flex={1} gap="$0.5">
-                        <Text
-                          fontSize="$3"
-                          fontWeight="600"
-                          color="$color"
-                          numberOfLines={1}
-                        >
-                          {p.name}
-                        </Text>
-                        <XStack gap="$2" style={{ alignItems: "center" }}>
-                          <Text fontSize="$2" color="$color10">
-                            Stock: {p.stockBaseQty}
-                          </Text>
-                        </XStack>
-                      </YStack>
-                      {inCart ? (
-                        <XStack
-                          px="$2"
-                          py="$1.5"
-                          bg="$green9"
-                          style={{ borderRadius: 8, alignItems: "center" }}
-                          gap="$1"
-                        >
-                          <ShoppingCart size={14} color="white" />
-                          <Text fontSize="$2" fontWeight="bold" color="white">
-                            Añadido
-                          </Text>
-                        </XStack>
-                      ) : (
-                        <XStack
-                          px="$2"
-                          py="$1.5"
-                          bg="$color3"
-                          style={{ borderRadius: 8, alignItems: "center" }}
-                        >
-                          <Text fontSize="$2" fontWeight="500" color="$color10">
-                            Agregar
-                          </Text>
-                        </XStack>
-                      )}
-                    </XStack>
-                  </Pressable>
-                );
-              }}
-              ListEmptyComponent={
-                <YStack p="$6" style={{ alignItems: "center" }} gap="$2">
-                  <Search size={40} color="$color8" />
-                  <Text color="$color10" fontSize="$3">
-                    {searchQuery.trim()
-                      ? "No se encontraron productos"
-                      : "Escribe para buscar productos"}
-                  </Text>
-                </YStack>
-              }
-              style={{ flex: 1 }}
-              contentContainerStyle={{ paddingBottom: 40 }}
-            />
-          </YStack>
-
-          {/* Floating close button */}
           <YStack
-            px="$4"
-            pb="$5"
-            pt="$2"
+            flex={1}
             bg="$background"
             theme={themeName as any}
+            pt="$6"
+            px="$4"
+            gap="$3"
           >
-            <Button
-              size="$5"
-              theme="blue"
-              icon={Check}
-              onPress={() => {
-                setShowSearchSheet(false);
-                gun.refocus();
+            <XStack
+              style={{
+                justifyContent: "space-between",
+                alignItems: "center",
               }}
             >
-              Listo
-            </Button>
+              <Text fontSize="$5" fontWeight="bold" color="$color">
+                Buscar producto
+              </Text>
+              <Button
+                size="$3"
+                circular
+                chromeless
+                icon={<X size={18} />}
+                onPress={() => {
+                  setShowSearchSheet(false);
+                  gun.refocus();
+                }}
+              />
+            </XStack>
+
+            <XStack
+              bg="$color3"
+              borderWidth={1}
+              borderColor="$borderColor"
+              style={{ borderRadius: 12, alignItems: "center" }}
+              px="$3"
+              gap="$2"
+              height={44}
+            >
+              <Search size={18} color="$color10" />
+              <Input
+                flex={1}
+                size="$3"
+                bg="transparent"
+                borderWidth={0}
+                color="$color"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholder="Nombre o código de barras…"
+                placeholderTextColor="$color8"
+                returnKeyType="search"
+                autoCorrect={false}
+                autoCapitalize="none"
+                autoFocus
+                px={0}
+              />
+              {searchQuery.length > 0 && (
+                <Button
+                  size="$2"
+                  chromeless
+                  circular
+                  icon={<X size={14} color="$color10" />}
+                  onPress={() => setSearchQuery("")}
+                />
+              )}
+            </XStack>
+
+            <XStack
+              bg="$blue3"
+              style={{ alignItems: "center", borderRadius: 8 }}
+              px="$3"
+              py="$2"
+              gap="$2"
+            >
+              <ShoppingCart size={14} color="$blue10" />
+              <Text fontSize="$2" color="$blue10" fontWeight="600">
+                {cart.length} producto{cart.length !== 1 ? "s" : ""}{" "}
+                seleccionado
+                {cart.length !== 1 ? "s" : ""}
+              </Text>
+            </XStack>
+
+            <YStack flex={1}>
+              <FlatList
+                data={searchResults}
+                keyExtractor={(item) => String(item.id)}
+                keyboardShouldPersistTaps="handled"
+                renderItem={({ item: p }) => {
+                  const inCart = cart.some((c) => c.productId === p.id);
+                  return (
+                    <Pressable
+                      onPress={() => toggleSearchItem(p)}
+                      style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+                    >
+                      <XStack
+                        px="$3"
+                        py="$3"
+                        style={{
+                          alignItems: "center",
+                          borderRadius: inCart ? 10 : 0,
+                        }}
+                        gap="$3"
+                        borderBottomWidth={1}
+                        borderColor="$borderColor"
+                        bg={inCart ? "$green3" : "transparent"}
+                      >
+                        {p.photoUri ? (
+                          <Image
+                            source={{ uri: p.photoUri }}
+                            style={{ width: 44, height: 44, borderRadius: 10 }}
+                            resizeMode="cover"
+                          />
+                        ) : (
+                          <YStack
+                            width={44}
+                            height={44}
+                            bg="$color3"
+                            style={{
+                              borderRadius: 10,
+                              alignItems: "center",
+                              justifyContent: "center",
+                            }}
+                          >
+                            <Package size={20} color="$color8" />
+                          </YStack>
+                        )}
+                        <YStack flex={1} gap="$0.5">
+                          <Text
+                            fontSize="$3"
+                            fontWeight="600"
+                            color="$color"
+                            numberOfLines={1}
+                          >
+                            {p.name}
+                          </Text>
+                          <XStack gap="$2" style={{ alignItems: "center" }}>
+                            <Text fontSize="$2" color="$color10">
+                              Stock: {p.stockBaseQty}
+                            </Text>
+                          </XStack>
+                        </YStack>
+                        {inCart ? (
+                          <XStack
+                            px="$2"
+                            py="$1.5"
+                            bg="$green9"
+                            style={{ borderRadius: 8, alignItems: "center" }}
+                            gap="$1"
+                          >
+                            <ShoppingCart size={14} color="white" />
+                            <Text fontSize="$2" fontWeight="bold" color="white">
+                              Añadido
+                            </Text>
+                          </XStack>
+                        ) : (
+                          <XStack
+                            px="$2"
+                            py="$1.5"
+                            bg="$color3"
+                            style={{ borderRadius: 8, alignItems: "center" }}
+                          >
+                            <Text
+                              fontSize="$2"
+                              fontWeight="500"
+                              color="$color10"
+                            >
+                              Agregar
+                            </Text>
+                          </XStack>
+                        )}
+                      </XStack>
+                    </Pressable>
+                  );
+                }}
+                ListEmptyComponent={
+                  <YStack p="$6" style={{ alignItems: "center" }} gap="$2">
+                    <Search size={40} color="$color8" />
+                    <Text color="$color10" fontSize="$3">
+                      {searchQuery.trim()
+                        ? "No se encontraron productos"
+                        : "Escribe para buscar productos"}
+                    </Text>
+                  </YStack>
+                }
+                style={{ flex: 1 }}
+                contentContainerStyle={{ paddingBottom: 40 }}
+              />
+            </YStack>
+
+            {/* Floating close button */}
+            <YStack
+              px="$4"
+              pb="$5"
+              pt="$2"
+              bg="$background"
+              theme={themeName as any}
+            >
+              <Button
+                size="$5"
+                theme="blue"
+                icon={Check}
+                onPress={() => {
+                  setShowSearchSheet(false);
+                  gun.refocus();
+                }}
+              >
+                Listo
+              </Button>
+            </YStack>
           </YStack>
-        </YStack>
+        </Modal>
       </Modal>
 
       {/* Hidden input for scanner gun (Bluetooth HID keyboard) */}
@@ -1255,6 +1297,18 @@ export default function PurchasesScreen() {
     </YStack>
   );
 }
+
+const pStyles = StyleSheet.create({
+  modalRoot: { flex: 1 },
+  closeBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: ICON_BTN_BG,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+});
 
 const thumbStyles = StyleSheet.create({
   thumb: { width: 40, height: 40, borderRadius: 8 },
