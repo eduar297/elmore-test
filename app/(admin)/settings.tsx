@@ -1,28 +1,27 @@
 import {
-    CloudSyncSection,
-    PreferencesSection,
-    ProfileSection,
-    StoresSection,
-    SyncSection,
-    WorkersSection,
+  CloudSyncSection,
+  PreferencesSection,
+  ProfileSection,
+  StoresSection,
+  SyncSection,
+  WorkersSection,
 } from "@/components/settings";
+import type { SyncMode } from "@/components/settings/sync-mode-selector";
+import { SyncModeSelector } from "@/components/settings/sync-mode-selector";
 import type { TabDef } from "@/components/ui/screen-tabs";
 import { ScreenTabs } from "@/components/ui/screen-tabs";
 import { useColors } from "@/hooks/use-colors";
 import {
-    Cloud,
-    RefreshCw,
-    Settings,
-    Store,
-    UserCog,
-    Users,
-    Wifi,
+  RefreshCw,
+  Settings,
+  Store,
+  UserCog,
+  Users,
 } from "@tamagui/lucide-icons";
 import React, { useState } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 
 type SettingTab = "workers" | "profile" | "stores" | "prefs" | "sync";
-type SyncMode = "lan" | "cloud";
 
 const TABS: TabDef<SettingTab>[] = [
   { key: "profile", label: "Mi Perfil", Icon: UserCog },
@@ -51,51 +50,7 @@ export default function SettingsScreen() {
         <StoresSection />
       </View>
       <View style={activeTab === "sync" ? styles.visible : styles.hidden}>
-        {/* Sync mode toggle */}
-        <View style={[styles.syncToggleRow, { borderBottomColor: c.border }]}>
-          <TouchableOpacity
-            style={[
-              styles.syncToggleBtn,
-              syncMode === "lan" && { backgroundColor: c.blue },
-            ]}
-            onPress={() => setSyncMode("lan")}
-            activeOpacity={0.7}
-          >
-            <Wifi
-              size={14}
-              color={syncMode === "lan" ? "#fff" : (c.muted as any)}
-            />
-            <Text
-              style={[
-                styles.syncToggleText,
-                { color: syncMode === "lan" ? "#fff" : c.muted },
-              ]}
-            >
-              Vendedores
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.syncToggleBtn,
-              syncMode === "cloud" && { backgroundColor: c.blue },
-            ]}
-            onPress={() => setSyncMode("cloud")}
-            activeOpacity={0.7}
-          >
-            <Cloud
-              size={14}
-              color={syncMode === "cloud" ? "#fff" : (c.muted as any)}
-            />
-            <Text
-              style={[
-                styles.syncToggleText,
-                { color: syncMode === "cloud" ? "#fff" : c.muted },
-              ]}
-            >
-              Nube
-            </Text>
-          </TouchableOpacity>
-        </View>
+        <SyncModeSelector value={syncMode} onChange={setSyncMode} />
         {syncMode === "lan" ? <SyncSection /> : <CloudSyncSection />}
       </View>
       <View style={activeTab === "prefs" ? styles.visible : styles.hidden}>
@@ -109,23 +64,4 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   visible: { flex: 1 },
   hidden: { display: "none" },
-  syncToggleRow: {
-    flexDirection: "row",
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  syncToggleBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-  },
-  syncToggleText: {
-    fontSize: 13,
-    fontWeight: "600",
-  },
 });

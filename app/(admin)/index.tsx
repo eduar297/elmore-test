@@ -8,6 +8,7 @@ import {
   NotificationHistorySection,
   SyncSection,
 } from "@/components/settings";
+import { SyncModeSelector } from "@/components/settings/sync-mode-selector";
 import { useNotifications } from "@/components/ui/notification-provider";
 import type { TabDef } from "@/components/ui/screen-tabs";
 import { ScreenTabs } from "@/components/ui/screen-tabs";
@@ -16,14 +17,12 @@ import { useLan } from "@/contexts/lan-context";
 import { useColors } from "@/hooks/use-colors";
 import {
   Bell,
-  Cloud,
   LayoutDashboard,
   Package,
   RefreshCw,
   ShoppingCart,
   TrendingUp,
   Users,
-  Wifi,
   X,
 } from "@tamagui/lucide-icons";
 import * as Haptics from "expo-haptics";
@@ -69,15 +68,22 @@ export default function DashboardScreen() {
   useLayoutEffect(() => {
     navigation.setOptions({
       headerRight: () => (
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 24 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 18 }}>
           <TouchableOpacity
             onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
               setSyncOpen(true);
             }}
-            hitSlop={8}
+            hitSlop={4}
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              backgroundColor: c.blue as any,
+              padding: 4,
+              borderRadius: 20,
+            }}
           >
-            <RefreshCw size={24} color={c.blue as any} />
+            <RefreshCw size={20} color="#fff" />
           </TouchableOpacity>
           <TouchableOpacity
             onPress={openHistory}
@@ -139,8 +145,9 @@ export default function DashboardScreen() {
       >
         <SafeAreaView
           edges={["top"]}
-          style={[indexStyles.modalRoot, { backgroundColor: c.modalBg }]}
+          style={[indexStyles.modalRoot, { backgroundColor: c.bg }]}
         >
+          {/* Header */}
           <XStack
             p="$3"
             px="$4"
@@ -163,52 +170,11 @@ export default function DashboardScreen() {
               <X size={18} color={c.text as any} />
             </TouchableOpacity>
           </XStack>
-          <View
-            style={[indexStyles.syncToggleRow, { borderBottomColor: c.border }]}
-          >
-            <TouchableOpacity
-              style={[
-                indexStyles.syncToggleBtn,
-                syncMode === "lan" && { backgroundColor: c.blue },
-              ]}
-              onPress={() => setSyncMode("lan")}
-              activeOpacity={0.7}
-            >
-              <Wifi
-                size={14}
-                color={syncMode === "lan" ? "#fff" : (c.muted as any)}
-              />
-              <Text
-                style={[
-                  indexStyles.syncToggleText,
-                  { color: syncMode === "lan" ? "#fff" : c.muted },
-                ]}
-              >
-                Vendedores
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                indexStyles.syncToggleBtn,
-                syncMode === "cloud" && { backgroundColor: c.blue },
-              ]}
-              onPress={() => setSyncMode("cloud")}
-              activeOpacity={0.7}
-            >
-              <Cloud
-                size={14}
-                color={syncMode === "cloud" ? "#fff" : (c.muted as any)}
-              />
-              <Text
-                style={[
-                  indexStyles.syncToggleText,
-                  { color: syncMode === "cloud" ? "#fff" : c.muted },
-                ]}
-              >
-                Nube
-              </Text>
-            </TouchableOpacity>
-          </View>
+
+          {/* Tab selector */}
+          <SyncModeSelector value={syncMode} onChange={setSyncMode} />
+
+          {/* Active sync content */}
           {syncMode === "lan" ? <SyncSection /> : <CloudSyncSection />}
         </SafeAreaView>
       </Modal>
@@ -222,7 +188,7 @@ export default function DashboardScreen() {
       >
         <SafeAreaView
           edges={["top"]}
-          style={[indexStyles.modalRoot, { backgroundColor: c.modalBg }]}
+          style={[indexStyles.modalRoot, { backgroundColor: c.bg }]}
         >
           <XStack
             p="$3"
@@ -265,24 +231,5 @@ const indexStyles = StyleSheet.create({
     backgroundColor: ICON_BTN_BG,
     alignItems: "center",
     justifyContent: "center",
-  },
-  syncToggleRow: {
-    flexDirection: "row",
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  syncToggleBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-  },
-  syncToggleText: {
-    fontSize: 13,
-    fontWeight: "600",
   },
 });
