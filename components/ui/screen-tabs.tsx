@@ -18,8 +18,11 @@ interface ScreenTabsProps<T extends string> {
 
 const TAB_WIDTH = 76;
 const RAIL_H_PADDING = 16;
-const RAIL_INNER_PAD = 3;
-const TAB_GAP = 3;
+const RAIL_INNER_PAD_H = 12;
+const RAIL_INNER_PAD_V = 3;
+const TAB_GAP = 8;
+const DIVIDER_WIDTH = 1;
+const DIVIDER_TOTAL = DIVIDER_WIDTH + TAB_GAP * 2; // 1px line + 8px margin each side = 17px
 
 export function ScreenTabs<T extends string>({
   tabs,
@@ -41,7 +44,7 @@ export function ScreenTabs<T extends string>({
 
   const availableWidth = screenWidth - RAIL_H_PADDING * 2;
   const innerWidth =
-    availableWidth - RAIL_INNER_PAD * 2 - TAB_GAP * (tabs.length - 1);
+    availableWidth - RAIL_INNER_PAD_H * 2 - DIVIDER_TOTAL * (tabs.length - 1);
   const fitsInline = tabs.length * TAB_WIDTH <= innerWidth;
   const tabWidth = fitsInline ? innerWidth / tabs.length : TAB_WIDTH;
 
@@ -51,7 +54,9 @@ export function ScreenTabs<T extends string>({
       onSelect(key);
       if (!fitsInline) {
         const x =
-          index * (tabWidth + TAB_GAP) - availableWidth / 2 + tabWidth / 2;
+          index * (tabWidth + DIVIDER_TOTAL) -
+          availableWidth / 2 +
+          tabWidth / 2;
         scrollRef.current?.scrollTo({ x: Math.max(0, x), animated: true });
       }
     },
@@ -62,7 +67,8 @@ export function ScreenTabs<T extends string>({
     <View
       style={{
         flexDirection: "row",
-        padding: RAIL_INNER_PAD,
+        paddingHorizontal: RAIL_INNER_PAD_H,
+        paddingVertical: RAIL_INNER_PAD_V,
         alignItems: "stretch",
       }}
     >
