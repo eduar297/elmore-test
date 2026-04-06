@@ -1,6 +1,6 @@
 import { PhotoPicker } from "@/components/ui/photo-picker";
 import { PinPromptDialog } from "@/components/ui/pin-prompt-dialog";
-import { OVERLAY } from "@/constants/colors";
+import { ICON_BTN_BG } from "@/constants/colors";
 import { useAuth } from "@/contexts/auth-context";
 import { useStore } from "@/contexts/store-context";
 import { useColors } from "@/hooks/use-colors";
@@ -15,6 +15,7 @@ import {
     Plus,
     Store,
     Trash2,
+    X,
 } from "@tamagui/lucide-icons";
 import { useFocusEffect } from "expo-router";
 import React, { useCallback, useState } from "react";
@@ -22,25 +23,19 @@ import {
     ActivityIndicator,
     Alert,
     Image,
+    Modal,
     ScrollView,
+    StyleSheet,
     Text,
     TouchableOpacity,
     View,
 } from "react-native";
-import {
-    Button,
-    Input,
-    Sheet,
-    Text as TText,
-    useThemeName,
-    XStack,
-    YStack,
-} from "tamagui";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Button, Input, Text as TText, XStack, YStack } from "tamagui";
 import { STORE_COLORS, settingStyles as styles } from "./shared";
 
 export function StoresSection() {
   const c = useColors();
-  const themeName = useThemeName();
 
   const storeRepo = useStoreRepository();
   const { stores, refreshStores, currentStore, setCurrentStore } = useStore();
@@ -328,30 +323,42 @@ export function StoresSection() {
         }}
       />
 
-      {/* ── Store form Sheet ──────────────────────────────────────────── */}
-      <Sheet
-        open={sheetOpen}
-        onOpenChange={setSheetOpen}
-        modal
-        snapPoints={[85]}
-        dismissOnSnapToBottom
+      {/* ── Store form Modal ──────────────────────────────────────────── */}
+      <Modal
+        visible={sheetOpen}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setSheetOpen(false)}
       >
-        <Sheet.Overlay
-          enterStyle={{ opacity: 0 }}
-          exitStyle={{ opacity: 0 }}
-          backgroundColor={OVERLAY}
-        />
-        <Sheet.Frame bg="$background" theme={themeName as any}>
-          <Sheet.Handle />
-          <Sheet.ScrollView
+        <SafeAreaView
+          edges={["top"]}
+          style={[stStyles.modalRoot, { backgroundColor: c.modalBg }]}
+        >
+          <XStack
+            px="$4"
+            py="$3"
+            alignItems="center"
+            justifyContent="space-between"
+          >
+            <XStack alignItems="center" gap="$2">
+              <Store size={20} color="$blue10" />
+              <TText fontSize="$5" fontWeight="bold" color="$color">
+                {editing ? "Editar tienda" : "Nueva tienda"}
+              </TText>
+            </XStack>
+            <TouchableOpacity
+              onPress={() => setSheetOpen(false)}
+              style={stStyles.closeBtn}
+            >
+              <X size={18} color="$color10" />
+            </TouchableOpacity>
+          </XStack>
+
+          <ScrollView
             keyboardShouldPersistTaps="handled"
             automaticallyAdjustKeyboardInsets
           >
             <YStack gap="$3" p="$4">
-              <TText fontSize="$6" fontWeight="bold" color="$color">
-                {editing ? "Editar tienda" : "Nueva tienda"}
-              </TText>
-
               <PhotoPicker uri={logoUri} onChange={setLogoUri} />
 
               {/* Color picker */}
@@ -497,9 +504,21 @@ export function StoresSection() {
                 </Button>
               </XStack>
             </YStack>
-          </Sheet.ScrollView>
-        </Sheet.Frame>
-      </Sheet>
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
     </View>
   );
 }
+
+const stStyles = StyleSheet.create({
+  modalRoot: { flex: 1 },
+  closeBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: ICON_BTN_BG,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+});

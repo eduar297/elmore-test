@@ -1,24 +1,35 @@
-import { BORDER_SUBTLE, OVERLAY, SCRIM, WHITE_FADED } from "@/constants/colors";
+import {
+    BORDER_SUBTLE,
+    ICON_BTN_BG,
+    SCRIM,
+    WHITE_FADED,
+} from "@/constants/colors";
 import { useAuth } from "@/contexts/auth-context";
 import { usePreferences } from "@/contexts/preferences-context";
 import { useStore } from "@/contexts/store-context";
 import { useColorScheme } from "@/hooks/use-color-scheme";
-import { Store, Store as StoreIcon } from "@tamagui/lucide-icons";
+import { useColors } from "@/hooks/use-colors";
+import { Store, Store as StoreIcon, X } from "@tamagui/lucide-icons";
 import * as Haptics from "expo-haptics";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
     Animated,
     Dimensions,
     Image,
+    Modal,
     PanResponder,
     Pressable,
+    ScrollView as RNScrollView,
     StyleSheet,
     Text,
     TouchableOpacity,
     View,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ScrollView, Sheet, Text as TText, YStack, useTheme } from "tamagui";
+import {
+    SafeAreaView,
+    useSafeAreaInsets,
+} from "react-native-safe-area-context";
+import { useTheme } from "tamagui";
 
 const BUBBLE_SIZE = 44;
 const EDGE_MARGIN = 8;
@@ -31,8 +42,8 @@ export function StoreBubble() {
   const { user } = useAuth();
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme();
-  const themeName = colorScheme === "dark" ? "dark" : "light";
   const theme = useTheme();
+  const c = useColors();
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -156,130 +167,162 @@ export function StoreBubble() {
         </Pressable>
       </Animated.View>
 
-      <Sheet
-        open={isMenuOpen}
-        onOpenChange={setIsMenuOpen}
-        modal
-        snapPoints={[40]}
-        dismissOnSnapToBottom
+      <Modal
+        visible={isMenuOpen}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setIsMenuOpen(false)}
       >
-        <Sheet.Overlay
-          enterStyle={{ opacity: 0 }}
-          exitStyle={{ opacity: 0 }}
-          backgroundColor={OVERLAY}
-        />
-        <Sheet.Frame p="$4" bg="$background" theme={themeName as any}>
-          <Sheet.Handle />
-          <ScrollView>
-            <YStack gap="$3" pt="$2">
-              <TText fontSize="$5" fontWeight="bold" color="$color">
+        <SafeAreaView
+          edges={["top"]}
+          style={[styles.modalRoot, { backgroundColor: c.modalBg }]}
+        >
+          {/* Header */}
+          <View style={styles.modalHeader}>
+            <View
+              style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
+            >
+              <Store size={18} color={theme.blue10?.val as string} />
+              <Text
+                style={{
+                  fontSize: 16,
+                  fontWeight: "700",
+                  color: theme.color?.val as string,
+                }}
+              >
                 Cambiar tienda
-              </TText>
+              </Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => setIsMenuOpen(false)}
+              hitSlop={8}
+              style={styles.closeBtn}
+            >
+              <X size={18} color={theme.color?.val as any} />
+            </TouchableOpacity>
+          </View>
 
-              {stores.map((s, idx) => {
-                const isActive = currentStore?.id === s.id;
-                return (
-                  <View key={s.id}>
-                    {idx > 0 && (
-                      <View
-                        style={[
-                          styles.divider,
-                          { backgroundColor: theme.color3?.val },
-                        ]}
-                      />
-                    )}
-                    <TouchableOpacity
-                      style={styles.workerRow}
-                      onPress={() => {
-                        setCurrentStore(s);
-                        setIsMenuOpen(false);
-                      }}
-                      activeOpacity={0.7}
+          <RNScrollView contentContainerStyle={{ padding: 16, gap: 12 }}>
+            {stores.map((s, idx) => {
+              const isActive = currentStore?.id === s.id;
+              return (
+                <View key={s.id}>
+                  {idx > 0 && (
+                    <View
+                      style={[
+                        styles.divider,
+                        { backgroundColor: theme.color3?.val },
+                      ]}
+                    />
+                  )}
+                  <TouchableOpacity
+                    style={styles.workerRow}
+                    onPress={() => {
+                      setCurrentStore(s);
+                      setIsMenuOpen(false);
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <View
+                      style={[
+                        styles.avatar,
+                        {
+                          backgroundColor: s.color
+                            ? `${s.color}22`
+                            : isActive
+                            ? (theme.blue3?.val as string)
+                            : (theme.color3?.val as string),
+                          overflow: "hidden",
+                          borderWidth: isActive ? 2 : 0,
+                          borderColor: s.color ?? (theme.blue10?.val as string),
+                        },
+                      ]}
                     >
+                      {s.logoUri ? (
+                        <Image
+                          source={{ uri: s.logoUri }}
+                          style={{ width: 38, height: 38, borderRadius: 19 }}
+                        />
+                      ) : (
+                        <Store
+                          size={18}
+                          color={
+                            (s.color ??
+                              (isActive
+                                ? theme.blue10?.val
+                                : theme.color8?.val)) as any
+                          }
+                        />
+                      )}
+                    </View>
+                    <View style={styles.workerInfo}>
                       <View
-                        style={[
-                          styles.avatar,
-                          {
-                            backgroundColor: s.color
-                              ? `${s.color}22`
-                              : isActive
-                              ? (theme.blue3?.val as string)
-                              : (theme.color3?.val as string),
-                            overflow: "hidden",
-                            borderWidth: isActive ? 2 : 0,
-                            borderColor:
-                              s.color ?? (theme.blue10?.val as string),
-                          },
-                        ]}
+                        style={{
+                          flexDirection: "row",
+                          alignItems: "center",
+                          gap: 6,
+                        }}
                       >
-                        {s.logoUri ? (
-                          <Image
-                            source={{ uri: s.logoUri }}
-                            style={{ width: 38, height: 38, borderRadius: 19 }}
-                          />
-                        ) : (
-                          <Store
-                            size={18}
-                            color={
-                              (s.color ??
-                                (isActive
-                                  ? theme.blue10?.val
-                                  : theme.color8?.val)) as any
-                            }
-                          />
-                        )}
-                      </View>
-                      <View style={styles.workerInfo}>
                         <View
                           style={{
-                            flexDirection: "row",
-                            alignItems: "center",
-                            gap: 6,
+                            width: 8,
+                            height: 8,
+                            borderRadius: 4,
+                            backgroundColor:
+                              s.color ?? (theme.blue10?.val as string),
                           }}
+                        />
+                        <Text
+                          style={[
+                            styles.workerName,
+                            { color: theme.color?.val as string },
+                          ]}
                         >
-                          <View
-                            style={{
-                              width: 8,
-                              height: 8,
-                              borderRadius: 4,
-                              backgroundColor:
-                                s.color ?? (theme.blue10?.val as string),
-                            }}
-                          />
+                          {s.name}
+                        </Text>
+                        {isActive && (
                           <Text
-                            style={[
-                              styles.workerName,
-                              { color: theme.color?.val as string },
-                            ]}
+                            style={{
+                              fontSize: 10,
+                              color: s.color ?? (theme.blue10?.val as string),
+                              fontWeight: "700",
+                            }}
                           >
-                            {s.name}
+                            ACTIVA
                           </Text>
-                          {isActive && (
-                            <Text
-                              style={{
-                                fontSize: 10,
-                                color: s.color ?? (theme.blue10?.val as string),
-                                fontWeight: "700",
-                              }}
-                            >
-                              ACTIVA
-                            </Text>
-                          )}
-                        </View>
+                        )}
                       </View>
-                    </TouchableOpacity>
-                  </View>
-                );
-              })}
-            </YStack>
-          </ScrollView>
-        </Sheet.Frame>
-      </Sheet>
+                    </View>
+                  </TouchableOpacity>
+                </View>
+              );
+            })}
+          </RNScrollView>
+        </SafeAreaView>
+      </Modal>
     </>
   );
 }
 
 const styles = StyleSheet.create({
+  modalRoot: { flex: 1 },
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "#ccc",
+  },
+  closeBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: ICON_BTN_BG,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   bubble: {
     position: "absolute",
     width: BUBBLE_SIZE,

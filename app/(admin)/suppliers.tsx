@@ -1,15 +1,22 @@
 import { EmptyState } from "@/components/ui/empty-state";
-import { OVERLAY } from "@/constants/colors";
-import { Building2, Edit3, Plus, Trash2 } from "@tamagui/lucide-icons";
+import { ICON_BTN_BG } from "@/constants/colors";
+import { Building2, Edit3, Plus, Trash2, X } from "@tamagui/lucide-icons";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useId, useState } from "react";
-import { Alert, FlatList } from "react-native";
+import {
+    Alert,
+    FlatList,
+    Modal,
+    ScrollView,
+    StyleSheet,
+    TouchableOpacity,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import {
     Button,
     Card,
     Input,
     Label,
-    Sheet,
     Spinner,
     Text,
     TextArea,
@@ -17,7 +24,7 @@ import {
     YStack,
 } from "tamagui";
 
-import { useColorScheme } from "@/hooks/use-color-scheme";
+import { useColors } from "@/hooks/use-colors";
 import { useSupplierRepository } from "@/hooks/use-supplier-repository";
 import type {
     CreateSupplierInput,
@@ -195,8 +202,7 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 
 export default function SuppliersScreen() {
   const supplierRepo = useSupplierRepository();
-  const colorScheme = useColorScheme();
-  const themeName = colorScheme === "dark" ? "dark" : "light";
+  const c = useColors();
 
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(true);
@@ -357,44 +363,88 @@ export default function SuppliersScreen() {
         />
       )}
 
-      {/* ── Create Sheet ─────────────────────────────────────────────────── */}
-      <Sheet
-        open={showCreateSheet}
-        onOpenChange={setShowCreateSheet}
-        modal
-        dismissOnSnapToBottom
-        snapPoints={[92]}
+      {/* ── Create Modal ────────────────────────────────────────────────── */}
+      <Modal
+        visible={showCreateSheet}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowCreateSheet(false)}
       >
-        <Sheet.Overlay
-          enterStyle={{ opacity: 0 }}
-          exitStyle={{ opacity: 0 }}
-          backgroundColor={OVERLAY}
-        />
-        <Sheet.Frame theme={themeName as any} bg="$background">
-          <Sheet.Handle />
-          <Sheet.ScrollView keyboardShouldPersistTaps="handled">
+        <SafeAreaView
+          edges={["top"]}
+          style={[sStyles.modalRoot, { backgroundColor: c.modalBg }]}
+        >
+          <XStack
+            p="$3"
+            px="$4"
+            style={{ alignItems: "center", justifyContent: "space-between" }}
+            borderBottomWidth={1}
+            borderBottomColor="$borderColor"
+          >
+            <XStack style={{ alignItems: "center" }} gap="$2">
+              <Building2 size={18} color="$blue10" />
+              <Text fontSize={16} fontWeight="700" color="$color">
+                Nuevo proveedor
+              </Text>
+            </XStack>
+            <TouchableOpacity
+              onPress={() => setShowCreateSheet(false)}
+              hitSlop={8}
+              style={sStyles.closeBtn}
+            >
+              <X size={18} color="$color" />
+            </TouchableOpacity>
+          </XStack>
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={{ paddingBottom: 40 }}
+          >
             <SupplierForm onSubmit={handleCreate} loading={saving} />
-          </Sheet.ScrollView>
-        </Sheet.Frame>
-      </Sheet>
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
 
-      {/* ── Detail Sheet ─────────────────────────────────────────────────── */}
-      <Sheet
-        open={showDetailSheet}
-        onOpenChange={setShowDetailSheet}
-        modal
-        dismissOnSnapToBottom
-        snapPoints={[55]}
+      {/* ── Detail Modal ─────────────────────────────────────────────────── */}
+      <Modal
+        visible={showDetailSheet}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowDetailSheet(false)}
       >
-        <Sheet.Overlay
-          enterStyle={{ opacity: 0 }}
-          exitStyle={{ opacity: 0 }}
-          backgroundColor={OVERLAY}
-        />
-        <Sheet.Frame theme={themeName as any} bg="$background">
-          <Sheet.Handle />
+        <SafeAreaView
+          edges={["top"]}
+          style={[sStyles.modalRoot, { backgroundColor: c.modalBg }]}
+        >
+          <XStack
+            p="$3"
+            px="$4"
+            style={{ alignItems: "center", justifyContent: "space-between" }}
+            borderBottomWidth={1}
+            borderBottomColor="$borderColor"
+          >
+            <XStack style={{ alignItems: "center" }} gap="$2">
+              <Building2 size={18} color="$blue10" />
+              <Text fontSize={16} fontWeight="700" color="$color">
+                Proveedor
+              </Text>
+            </XStack>
+            <TouchableOpacity
+              onPress={() => setShowDetailSheet(false)}
+              hitSlop={8}
+              style={sStyles.closeBtn}
+            >
+              <X size={18} color="$color" />
+            </TouchableOpacity>
+          </XStack>
+
           {selectedSupplier && (
-            <YStack gap="$4" p="$4">
+            <ScrollView
+              contentContainerStyle={{
+                padding: 16,
+                paddingBottom: 40,
+                gap: 16,
+              }}
+            >
               <XStack style={{ alignItems: "center" }} gap="$3">
                 <YStack
                   width={52}
@@ -464,35 +514,67 @@ export default function SuppliersScreen() {
                   Eliminar
                 </Button>
               </XStack>
-            </YStack>
+            </ScrollView>
           )}
-        </Sheet.Frame>
-      </Sheet>
+        </SafeAreaView>
+      </Modal>
 
-      {/* ── Edit Sheet ───────────────────────────────────────────────────── */}
-      <Sheet
-        open={showEditSheet}
-        onOpenChange={setShowEditSheet}
-        modal
-        dismissOnSnapToBottom
-        snapPoints={[92]}
+      {/* ── Edit Modal ───────────────────────────────────────────────────── */}
+      <Modal
+        visible={showEditSheet}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowEditSheet(false)}
       >
-        <Sheet.Overlay
-          enterStyle={{ opacity: 0 }}
-          exitStyle={{ opacity: 0 }}
-          backgroundColor={OVERLAY}
-        />
-        <Sheet.Frame theme={themeName as any} bg="$background">
-          <Sheet.Handle />
-          <Sheet.ScrollView keyboardShouldPersistTaps="handled">
+        <SafeAreaView
+          edges={["top"]}
+          style={[sStyles.modalRoot, { backgroundColor: c.modalBg }]}
+        >
+          <XStack
+            p="$3"
+            px="$4"
+            style={{ alignItems: "center", justifyContent: "space-between" }}
+            borderBottomWidth={1}
+            borderBottomColor="$borderColor"
+          >
+            <XStack style={{ alignItems: "center" }} gap="$2">
+              <Edit3 size={18} color="$blue10" />
+              <Text fontSize={16} fontWeight="700" color="$color">
+                Editar proveedor
+              </Text>
+            </XStack>
+            <TouchableOpacity
+              onPress={() => setShowEditSheet(false)}
+              hitSlop={8}
+              style={sStyles.closeBtn}
+            >
+              <X size={18} color="$color" />
+            </TouchableOpacity>
+          </XStack>
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={{ paddingBottom: 40 }}
+          >
             <SupplierForm
               initial={selectedSupplier ?? undefined}
               onSubmit={handleEdit}
               loading={saving}
             />
-          </Sheet.ScrollView>
-        </Sheet.Frame>
-      </Sheet>
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
     </YStack>
   );
 }
+
+const sStyles = StyleSheet.create({
+  modalRoot: { flex: 1 },
+  closeBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: ICON_BTN_BG,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+});

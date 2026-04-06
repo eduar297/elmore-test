@@ -1,14 +1,16 @@
 import type { CartItem } from "@/components/worker/types";
-import { OVERLAY } from "@/constants/colors";
+import { ICON_BTN_BG } from "@/constants/colors";
+import { useColors } from "@/hooks/use-colors";
 import type { PaymentMethod } from "@/models/ticket";
-import { Banknote, CreditCard, ShoppingCart } from "@tamagui/lucide-icons";
+import { Banknote, CreditCard, ShoppingCart, X } from "@tamagui/lucide-icons";
 import { memo } from "react";
-import { Button, Card, Sheet, Spinner, Text, XStack, YStack } from "tamagui";
+import { Modal, ScrollView, StyleSheet, TouchableOpacity } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Button, Card, Spinner, Text, XStack, YStack } from "tamagui";
 
 interface CheckoutSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  themeName: string;
   cart: CartItem[];
   cartTotal: number;
   paymentMethod: PaymentMethod;
@@ -20,7 +22,6 @@ interface CheckoutSheetProps {
 export const CheckoutSheet = memo(function CheckoutSheet({
   open,
   onOpenChange,
-  themeName,
   cart,
   cartTotal,
   paymentMethod,
@@ -28,26 +29,44 @@ export const CheckoutSheet = memo(function CheckoutSheet({
   confirming,
   onConfirm,
 }: CheckoutSheetProps) {
+  const c = useColors();
   return (
-    <Sheet
-      open={open}
-      onOpenChange={onOpenChange}
-      modal
-      snapPoints={[65]}
-      dismissOnSnapToBottom
+    <Modal
+      visible={open}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={() => onOpenChange(false)}
     >
-      <Sheet.Overlay
-        enterStyle={{ opacity: 0 }}
-        exitStyle={{ opacity: 0 }}
-        backgroundColor={OVERLAY}
-      />
-      <Sheet.Frame bg="$background" theme={themeName as any}>
-        <Sheet.Handle />
-        <YStack p="$4" gap="$4">
-          <Text fontSize="$7" fontWeight="bold" color="$color">
-            Confirmar venta
-          </Text>
+      <SafeAreaView
+        edges={["top"]}
+        style={[csStyles.modalRoot, { backgroundColor: c.modalBg }]}
+      >
+        {/* Header */}
+        <XStack
+          p="$3"
+          px="$4"
+          style={{ alignItems: "center", justifyContent: "space-between" }}
+          borderBottomWidth={1}
+          borderBottomColor="$borderColor"
+        >
+          <XStack style={{ alignItems: "center" }} gap="$2">
+            <ShoppingCart size={18} color="$green10" />
+            <Text fontSize={16} fontWeight="700" color="$color">
+              Confirmar venta
+            </Text>
+          </XStack>
+          <TouchableOpacity
+            onPress={() => onOpenChange(false)}
+            hitSlop={8}
+            style={csStyles.closeBtn}
+          >
+            <X size={18} color="$color" />
+          </TouchableOpacity>
+        </XStack>
 
+        <ScrollView
+          contentContainerStyle={{ padding: 16, paddingBottom: 40, gap: 16 }}
+        >
           {/* Order summary */}
           <Card
             borderWidth={1}
@@ -114,16 +133,22 @@ export const CheckoutSheet = memo(function CheckoutSheet({
               </Button>
             </XStack>
           </YStack>
+        </ScrollView>
 
-          {/* Total */}
+        {/* Sticky bottom bar */}
+        <YStack
+          px="$4"
+          py="$3"
+          gap="$3"
+          borderTopWidth={1}
+          borderColor="$borderColor"
+          bg="$background"
+        >
           <XStack
             style={{
               justifyContent: "space-between",
               alignItems: "center",
             }}
-            py="$2"
-            borderTopWidth={1}
-            borderColor="$borderColor"
           >
             <Text fontSize="$7" fontWeight="bold" color="$color">
               Total
@@ -133,7 +158,6 @@ export const CheckoutSheet = memo(function CheckoutSheet({
             </Text>
           </XStack>
 
-          {/* Confirm */}
           <Button
             size="$6"
             theme="green"
@@ -144,7 +168,19 @@ export const CheckoutSheet = memo(function CheckoutSheet({
             {confirming ? "Registrando..." : "Confirmar venta"}
           </Button>
         </YStack>
-      </Sheet.Frame>
-    </Sheet>
+      </SafeAreaView>
+    </Modal>
   );
+});
+
+const csStyles = StyleSheet.create({
+  modalRoot: { flex: 1 },
+  closeBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: ICON_BTN_BG,
+    alignItems: "center",
+    justifyContent: "center",
+  },
 });

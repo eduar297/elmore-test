@@ -1,8 +1,8 @@
 import { StatCard } from "@/components/admin/stat-card";
 import { SearchInput } from "@/components/ui/search-input";
-import { OVERLAY } from "@/constants/colors";
+import { ICON_BTN_BG } from "@/constants/colors";
 import { useAuth } from "@/contexts/auth-context";
-import { useColorScheme } from "@/hooks/use-color-scheme";
+import { useColors } from "@/hooks/use-colors";
 import { usePeriodNavigation } from "@/hooks/use-period-navigation";
 import { useTicketRepository } from "@/hooks/use-ticket-repository";
 import { useUserRepository } from "@/hooks/use-user-repository";
@@ -37,13 +37,22 @@ import {
 } from "@tamagui/lucide-icons";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Alert, FlatList, Image, Pressable, ScrollView } from "react-native";
+import {
+    Alert,
+    FlatList,
+    Image,
+    Modal,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    TouchableOpacity,
+} from "react-native";
 import { PieChart } from "react-native-gifted-charts";
+import { SafeAreaView } from "react-native-safe-area-context";
 import {
     Button,
     Card,
     Separator,
-    Sheet,
     Spinner,
     Text,
     XStack,
@@ -146,8 +155,7 @@ export function SalesSection() {
   const ticketRepo = useTicketRepository();
   const userRepo = useUserRepository();
   const { user } = useAuth();
-  const colorScheme = useColorScheme();
-  const themeName = colorScheme === "dark" ? "dark" : "light";
+  const c = useColors();
 
   const nav = usePeriodNavigation();
   const [loading, setLoading] = useState(true);
@@ -929,45 +937,42 @@ export function SalesSection() {
         />
       )}
 
-      {/* Ticket detail Sheet */}
-      <Sheet
-        open={!!sheetTicket}
-        onOpenChange={(open: boolean) => {
-          if (!open) setSheetTicket(null);
-        }}
-        snapPoints={[75]}
-        dismissOnSnapToBottom
-        modal
+      {/* Ticket detail Modal */}
+      <Modal
+        visible={!!sheetTicket}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setSheetTicket(null)}
       >
-        <Sheet.Overlay
-          enterStyle={{ opacity: 0 }}
-          exitStyle={{ opacity: 0 }}
-          backgroundColor={OVERLAY}
-        />
-        <Sheet.Frame theme={themeName as any} bg="$background">
-          <Sheet.Handle />
+        <SafeAreaView
+          edges={["top"]}
+          style={[salStyles.modalRoot, { backgroundColor: c.modalBg }]}
+        >
+          <XStack
+            px="$4"
+            py="$3"
+            alignItems="center"
+            justifyContent="space-between"
+          >
+            <XStack alignItems="center" gap="$2">
+              <Receipt size={20} color="$blue10" />
+              <Text fontSize="$5" fontWeight="bold" color="$color">
+                {sheetTicket
+                  ? `Ticket #${String(sheetTicket.id).slice(0, 8)}`
+                  : "Detalle"}
+              </Text>
+            </XStack>
+            <TouchableOpacity
+              onPress={() => setSheetTicket(null)}
+              style={salStyles.closeBtn}
+            >
+              <X size={18} color="$color10" />
+            </TouchableOpacity>
+          </XStack>
+
           <ScrollView contentContainerStyle={{ padding: 16 }}>
             {sheetTicket && (
               <YStack gap="$4">
-                {/* Title */}
-                <XStack
-                  style={{
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                  }}
-                >
-                  <Text fontSize="$6" fontWeight="bold" color="$color">
-                    Ticket #{String(sheetTicket.id).slice(0, 8)}
-                  </Text>
-                  <Button
-                    size="$3"
-                    circular
-                    chromeless
-                    icon={<X size={18} />}
-                    onPress={() => setSheetTicket(null)}
-                  />
-                </XStack>
-
                 {/* Info */}
                 <XStack
                   style={{
@@ -1168,8 +1173,20 @@ export function SalesSection() {
               </YStack>
             )}
           </ScrollView>
-        </Sheet.Frame>
-      </Sheet>
+        </SafeAreaView>
+      </Modal>
     </>
   );
 }
+
+const salStyles = StyleSheet.create({
+  modalRoot: { flex: 1 },
+  closeBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: ICON_BTN_BG,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+});

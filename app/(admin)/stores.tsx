@@ -1,14 +1,27 @@
 import { EmptyState } from "@/components/ui/empty-state";
-import { OVERLAY } from "@/constants/colors";
-import { Edit3, Plus, Store as StoreIcon, Trash2 } from "@tamagui/lucide-icons";
+import { ICON_BTN_BG } from "@/constants/colors";
+import {
+    Edit3,
+    Plus,
+    Store as StoreIcon,
+    Trash2,
+    X,
+} from "@tamagui/lucide-icons";
 import { useCallback, useEffect, useId, useState } from "react";
-import { Alert, FlatList } from "react-native";
+import {
+    Alert,
+    FlatList,
+    Modal,
+    ScrollView,
+    StyleSheet,
+    TouchableOpacity,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import {
     Button,
     Card,
     Input,
     Label,
-    Sheet,
     Spinner,
     Text,
     XStack,
@@ -16,7 +29,7 @@ import {
 } from "tamagui";
 
 import { useStore } from "@/contexts/store-context";
-import { useColorScheme } from "@/hooks/use-color-scheme";
+import { useColors } from "@/hooks/use-colors";
 import { useStoreRepository } from "@/hooks/use-store-repository";
 import type { CreateStoreInput, Store, UpdateStoreInput } from "@/models/store";
 
@@ -138,8 +151,7 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 export default function StoresScreen() {
   const storeRepo = useStoreRepository();
   const { stores, refreshStores, currentStore } = useStore();
-  const colorScheme = useColorScheme();
-  const themeName = colorScheme === "dark" ? "dark" : "light";
+  const c = useColors();
 
   const [loading, setLoading] = useState(true);
   const [selectedStore, setSelectedStore] = useState<Store | null>(null);
@@ -306,42 +318,72 @@ export default function StoresScreen() {
         />
       )}
 
-      {/* ── Create Sheet ─────────────────────────────────────────────────── */}
-      <Sheet
-        open={showCreateSheet}
-        onOpenChange={setShowCreateSheet}
-        modal
-        dismissOnSnapToBottom
-        snapPoints={[75]}
+      {/* ── Create Modal ───────────────────────────────────────────── */}
+      <Modal
+        visible={showCreateSheet}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowCreateSheet(false)}
       >
-        <Sheet.Overlay
-          enterStyle={{ opacity: 0 }}
-          exitStyle={{ opacity: 0 }}
-          backgroundColor={OVERLAY}
-        />
-        <Sheet.Frame theme={themeName as any} bg="$background">
-          <Sheet.Handle />
-          <Sheet.ScrollView keyboardShouldPersistTaps="handled">
+        <SafeAreaView
+          edges={["top"]}
+          style={[storeStyles.modalRoot, { backgroundColor: c.modalBg }]}
+        >
+          <XStack
+            px="$4"
+            py="$3"
+            alignItems="center"
+            justifyContent="space-between"
+          >
+            <XStack alignItems="center" gap="$2">
+              <StoreIcon size={20} color="$blue10" />
+              <Text fontSize="$5" fontWeight="bold" color="$color">
+                Nueva tienda
+              </Text>
+            </XStack>
+            <TouchableOpacity
+              onPress={() => setShowCreateSheet(false)}
+              style={storeStyles.closeBtn}
+            >
+              <X size={18} color="$color10" />
+            </TouchableOpacity>
+          </XStack>
+          <ScrollView keyboardShouldPersistTaps="handled">
             <StoreForm onSubmit={handleCreate} loading={saving} />
-          </Sheet.ScrollView>
-        </Sheet.Frame>
-      </Sheet>
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
 
-      {/* ── Detail Sheet ─────────────────────────────────────────────────── */}
-      <Sheet
-        open={showDetailSheet}
-        onOpenChange={setShowDetailSheet}
-        modal
-        dismissOnSnapToBottom
-        snapPoints={[45]}
+      {/* ── Detail Modal ───────────────────────────────────────────── */}
+      <Modal
+        visible={showDetailSheet}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowDetailSheet(false)}
       >
-        <Sheet.Overlay
-          enterStyle={{ opacity: 0 }}
-          exitStyle={{ opacity: 0 }}
-          backgroundColor={OVERLAY}
-        />
-        <Sheet.Frame theme={themeName as any} bg="$background">
-          <Sheet.Handle />
+        <SafeAreaView
+          edges={["top"]}
+          style={[storeStyles.modalRoot, { backgroundColor: c.modalBg }]}
+        >
+          <XStack
+            px="$4"
+            py="$3"
+            alignItems="center"
+            justifyContent="space-between"
+          >
+            <XStack alignItems="center" gap="$2">
+              <StoreIcon size={20} color="$blue10" />
+              <Text fontSize="$5" fontWeight="bold" color="$color">
+                Tienda
+              </Text>
+            </XStack>
+            <TouchableOpacity
+              onPress={() => setShowDetailSheet(false)}
+              style={storeStyles.closeBtn}
+            >
+              <X size={18} color="$color10" />
+            </TouchableOpacity>
+          </XStack>
           {selectedStore && (
             <YStack gap="$4" p="$4">
               <XStack style={{ alignItems: "center" }} gap="$3">
@@ -403,33 +445,60 @@ export default function StoresScreen() {
               </XStack>
             </YStack>
           )}
-        </Sheet.Frame>
-      </Sheet>
+        </SafeAreaView>
+      </Modal>
 
-      {/* ── Edit Sheet ───────────────────────────────────────────────────── */}
-      <Sheet
-        open={showEditSheet}
-        onOpenChange={setShowEditSheet}
-        modal
-        dismissOnSnapToBottom
-        snapPoints={[75]}
+      {/* ── Edit Modal ───────────────────────────────────────────────────── */}
+      <Modal
+        visible={showEditSheet}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowEditSheet(false)}
       >
-        <Sheet.Overlay
-          enterStyle={{ opacity: 0 }}
-          exitStyle={{ opacity: 0 }}
-          backgroundColor={OVERLAY}
-        />
-        <Sheet.Frame theme={themeName as any} bg="$background">
-          <Sheet.Handle />
-          <Sheet.ScrollView keyboardShouldPersistTaps="handled">
+        <SafeAreaView
+          edges={["top"]}
+          style={[storeStyles.modalRoot, { backgroundColor: c.modalBg }]}
+        >
+          <XStack
+            px="$4"
+            py="$3"
+            alignItems="center"
+            justifyContent="space-between"
+          >
+            <XStack alignItems="center" gap="$2">
+              <Edit3 size={20} color="$blue10" />
+              <Text fontSize="$5" fontWeight="bold" color="$color">
+                Editar tienda
+              </Text>
+            </XStack>
+            <TouchableOpacity
+              onPress={() => setShowEditSheet(false)}
+              style={storeStyles.closeBtn}
+            >
+              <X size={18} color="$color10" />
+            </TouchableOpacity>
+          </XStack>
+          <ScrollView keyboardShouldPersistTaps="handled">
             <StoreForm
               initial={selectedStore ?? undefined}
               onSubmit={handleEdit}
               loading={saving}
             />
-          </Sheet.ScrollView>
-        </Sheet.Frame>
-      </Sheet>
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
     </YStack>
   );
 }
+
+const storeStyles = StyleSheet.create({
+  modalRoot: { flex: 1 },
+  closeBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: ICON_BTN_BG,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+});

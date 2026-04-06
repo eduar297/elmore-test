@@ -1,5 +1,5 @@
 import { EmptyState } from "@/components/ui/empty-state";
-import { ICON_BTN_BG, OVERLAY } from "@/constants/colors";
+import { ICON_BTN_BG } from "@/constants/colors";
 import {
   Bluetooth,
   Building2,
@@ -33,7 +33,6 @@ import {
   Card,
   Input,
   Separator,
-  Sheet,
   Spinner,
   Text,
   TextArea,
@@ -45,6 +44,7 @@ import { PeriodSelector } from "@/components/admin/period-selector";
 import { ScreenTabs, type TabDef } from "@/components/ui/screen-tabs";
 import { useBarcodeScanner } from "@/hooks/use-barcode-scanner";
 import { useColorScheme } from "@/hooks/use-color-scheme";
+import { useColors } from "@/hooks/use-colors";
 import { usePeriodNavigation } from "@/hooks/use-period-navigation";
 import { useProductRepository } from "@/hooks/use-product-repository";
 import { usePurchaseRepository } from "@/hooks/use-purchase-repository";
@@ -169,6 +169,7 @@ export default function PurchasesScreen() {
   const productRepo = useProductRepository();
   const colorScheme = useColorScheme();
   const themeName = colorScheme === "dark" ? "dark" : "light";
+  const c = useColors();
   const [activeTab, setActiveTab] = useState<PTab>("purchases");
 
   // ── history ──────────────────────────────────────────────────────────────
@@ -596,132 +597,155 @@ export default function PurchasesScreen() {
         </>
       )}
 
-      {/* ── Purchase Detail Sheet ─────────────────────────────────────────── */}
-      <Sheet
-        open={showDetailSheet}
-        onOpenChange={setShowDetailSheet}
-        modal
-        dismissOnSnapToBottom
-        snapPoints={[75]}
+      {/* ── Purchase Detail Modal ─────────────────────────────────────── */}
+      <Modal
+        visible={showDetailSheet}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowDetailSheet(false)}
       >
-        <Sheet.Overlay
-          enterStyle={{ opacity: 0 }}
-          exitStyle={{ opacity: 0 }}
-          backgroundColor={OVERLAY}
-        />
-        <Sheet.Frame theme={themeName as any} bg="$background">
-          <Sheet.Handle />
+        <SafeAreaView
+          edges={["top"]}
+          style={[pStyles.modalRoot, { backgroundColor: c.modalBg }]}
+        >
+          {/* Header */}
+          <XStack
+            p="$3"
+            px="$4"
+            style={{ alignItems: "center", justifyContent: "space-between" }}
+            borderBottomWidth={1}
+            borderBottomColor="$borderColor"
+          >
+            <XStack style={{ alignItems: "center" }} gap="$2">
+              <ShoppingBag size={18} color="$green10" />
+              <Text fontSize={16} fontWeight="700" color="$color">
+                Detalle de compra
+              </Text>
+            </XStack>
+            <TouchableOpacity
+              onPress={() => setShowDetailSheet(false)}
+              hitSlop={8}
+              style={pStyles.closeBtn}
+            >
+              <X size={18} color="$color" />
+            </TouchableOpacity>
+          </XStack>
+
           {selectedPurchase && (
-            <Sheet.ScrollView>
-              <YStack gap="$3" p="$4">
-                {/* Header */}
-                <XStack style={{ alignItems: "center" }} gap="$3">
-                  <YStack
-                    width={52}
-                    height={52}
-                    bg="$green4"
-                    style={{
-                      borderRadius: 26,
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <ShoppingBag size={26} color="$green10" />
-                  </YStack>
-                  <YStack flex={1}>
-                    <Text fontSize="$6" fontWeight="bold" color="$color">
-                      {selectedPurchase.supplierName}
-                    </Text>
-                    <Text fontSize="$3" color="$color10">
-                      {fmtDate(selectedPurchase.createdAt)}
-                    </Text>
-                  </YStack>
-                </XStack>
+            <ScrollView
+              contentContainerStyle={{
+                padding: 16,
+                paddingBottom: 40,
+                gap: 12,
+              }}
+            >
+              {/* Supplier + date header */}
+              <XStack style={{ alignItems: "center" }} gap="$3">
+                <YStack
+                  width={52}
+                  height={52}
+                  bg="$green4"
+                  style={{
+                    borderRadius: 26,
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <ShoppingBag size={26} color="$green10" />
+                </YStack>
+                <YStack flex={1}>
+                  <Text fontSize="$6" fontWeight="bold" color="$color">
+                    {selectedPurchase.supplierName}
+                  </Text>
+                  <Text fontSize="$3" color="$color10">
+                    {fmtDate(selectedPurchase.createdAt)}
+                  </Text>
+                </YStack>
+              </XStack>
 
-                {selectedPurchase.notes ? (
-                  <YStack bg="$color2" p="$3" style={{ borderRadius: 8 }}>
-                    <Text fontSize="$3" color="$color10">
-                      {selectedPurchase.notes}
-                    </Text>
-                  </YStack>
-                ) : null}
+              {selectedPurchase.notes ? (
+                <YStack bg="$color2" p="$3" style={{ borderRadius: 8 }}>
+                  <Text fontSize="$3" color="$color10">
+                    {selectedPurchase.notes}
+                  </Text>
+                </YStack>
+              ) : null}
 
-                <Separator />
+              <Separator />
 
-                <Text fontSize="$4" fontWeight="600" color="$color">
-                  Productos recibidos
-                </Text>
+              <Text fontSize="$4" fontWeight="600" color="$color">
+                Productos recibidos
+              </Text>
 
-                {detailItems.map((item) => (
-                  <XStack
-                    key={item.id}
-                    style={{ alignItems: "center" }}
-                    gap="$3"
-                    py="$2"
-                    borderBottomWidth={1}
-                    borderBottomColor="$color3"
-                  >
-                    {detailPhotoMap[item.productId] ? (
-                      <Image
-                        source={{ uri: detailPhotoMap[item.productId] }}
-                        style={thumbStyles.thumb}
-                        resizeMode="cover"
-                      />
-                    ) : (
-                      <YStack style={thumbStyles.placeholder}>
-                        <Package size={18} color="$color8" />
-                      </YStack>
-                    )}
-                    <YStack flex={1}>
-                      <Text fontSize="$4" fontWeight="500" color="$color">
-                        {item.productName}
-                      </Text>
-                      <Text fontSize="$3" color="$color10">
-                        {item.quantity} × ${fmtCurrency(item.unitCost)}
-                      </Text>
+              {detailItems.map((item) => (
+                <XStack
+                  key={item.id}
+                  style={{ alignItems: "center" }}
+                  gap="$3"
+                  py="$2"
+                  borderBottomWidth={1}
+                  borderBottomColor="$color3"
+                >
+                  {detailPhotoMap[item.productId] ? (
+                    <Image
+                      source={{ uri: detailPhotoMap[item.productId] }}
+                      style={thumbStyles.thumb}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <YStack style={thumbStyles.placeholder}>
+                      <Package size={18} color="$color8" />
                     </YStack>
-                    <Text fontSize="$4" fontWeight="bold" color="$color">
-                      ${fmtCurrency(item.subtotal)}
+                  )}
+                  <YStack flex={1}>
+                    <Text fontSize="$4" fontWeight="500" color="$color">
+                      {item.productName}
                     </Text>
-                  </XStack>
-                ))}
-
-                <Separator />
-
-                {selectedPurchase.transportCost > 0 && (
-                  <XStack
-                    style={{
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                    }}
-                  >
                     <Text fontSize="$3" color="$color10">
-                      Transporte
+                      {item.quantity} × ${fmtCurrency(item.unitCost)}
                     </Text>
-                    <Text fontSize="$4" color="$color">
-                      ${fmtCurrency(selectedPurchase.transportCost)}
-                    </Text>
-                  </XStack>
-                )}
+                  </YStack>
+                  <Text fontSize="$4" fontWeight="bold" color="$color">
+                    ${fmtCurrency(item.subtotal)}
+                  </Text>
+                </XStack>
+              ))}
 
+              <Separator />
+
+              {selectedPurchase.transportCost > 0 && (
                 <XStack
                   style={{
                     justifyContent: "space-between",
                     alignItems: "center",
                   }}
                 >
-                  <Text fontSize="$5" fontWeight="bold" color="$color">
-                    Total pagado
+                  <Text fontSize="$3" color="$color10">
+                    Transporte
                   </Text>
-                  <Text fontSize="$6" fontWeight="bold" color="$green10">
-                    ${fmtCurrency(selectedPurchase.total)}
+                  <Text fontSize="$4" color="$color">
+                    ${fmtCurrency(selectedPurchase.transportCost)}
                   </Text>
                 </XStack>
-              </YStack>
-            </Sheet.ScrollView>
+              )}
+
+              <XStack
+                style={{
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <Text fontSize="$5" fontWeight="bold" color="$color">
+                  Total pagado
+                </Text>
+                <Text fontSize="$6" fontWeight="bold" color="$green10">
+                  ${fmtCurrency(selectedPurchase.total)}
+                </Text>
+              </XStack>
+            </ScrollView>
           )}
-        </Sheet.Frame>
-      </Sheet>
+        </SafeAreaView>
+      </Modal>
 
       {/* ── New Purchase Modal ─────────────────────────────────────────── */}
       <Modal
@@ -734,10 +758,7 @@ export default function PurchasesScreen() {
       >
         <SafeAreaView
           edges={["top"]}
-          style={[
-            pStyles.modalRoot,
-            { backgroundColor: themeName === "dark" ? "#000" : "#fff" },
-          ]}
+          style={[pStyles.modalRoot, { backgroundColor: c.modalBg }]}
         >
           {/* Header */}
           <XStack
@@ -979,10 +1000,7 @@ export default function PurchasesScreen() {
         >
           <SafeAreaView
             edges={["top"]}
-            style={[
-              pStyles.modalRoot,
-              { backgroundColor: themeName === "dark" ? "#000" : "#fff" },
-            ]}
+            style={[pStyles.modalRoot, { backgroundColor: c.modalBg }]}
           >
             <XStack
               p="$3"

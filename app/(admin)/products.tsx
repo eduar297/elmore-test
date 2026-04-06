@@ -578,10 +578,7 @@ export default function ProductsScreen() {
         visible={modalOpen}
         animationType="slide"
         presentationStyle="pageSheet"
-        onRequestClose={() => {
-          closeModal();
-          gun.refocus();
-        }}
+        onRequestClose={closeModal}
       >
         <SafeAreaView
           edges={["top"]}

@@ -1,36 +1,37 @@
 import { PhotoPicker } from "@/components/ui/photo-picker";
-import { OVERLAY } from "@/constants/colors";
+import { ICON_BTN_BG } from "@/constants/colors";
 import { useLan } from "@/contexts/lan-context";
 import { useColors } from "@/hooks/use-colors";
 import { useUserRepository } from "@/hooks/use-user-repository";
 import type { User } from "@/models/user";
 import { hashPin } from "@/utils/auth";
-import { AlertCircle, Edit3, Plus, Trash2, Users } from "@tamagui/lucide-icons";
+import {
+  AlertCircle,
+  Edit3,
+  Plus,
+  Trash2,
+  Users,
+  X,
+} from "@tamagui/lucide-icons";
 import { useFocusEffect } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    ScrollView,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Image,
+  Modal,
+  ScrollView as RNScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import {
-    Button,
-    Input,
-    Sheet,
-    Text as TText,
-    useThemeName,
-    XStack,
-    YStack,
-} from "tamagui";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Button, Input, Text as TText, XStack, YStack } from "tamagui";
 import { settingStyles as styles } from "./shared";
 
 export function WorkersSection() {
   const c = useColors();
-  const themeName = useThemeName();
 
   const userRepo = useUserRepository();
   const [workers, setWorkers] = useState<User[]>([]);
@@ -176,7 +177,7 @@ export function WorkersSection() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.listContent}>
+      <RNScrollView contentContainerStyle={styles.listContent}>
         {loading ? (
           <View style={styles.centerBox}>
             <ActivityIndicator color={c.blue} size="large" />
@@ -260,32 +261,43 @@ export function WorkersSection() {
             ))}
           </View>
         )}
-      </ScrollView>
+      </RNScrollView>
 
-      {/* ── Worker form Sheet ──────────────────────────────────────────── */}
-      <Sheet
-        open={sheetOpen}
-        onOpenChange={setSheetOpen}
-        modal
-        snapPoints={[85]}
-        dismissOnSnapToBottom
+      {/* ── Worker form Modal ──────────────────────────────────────────── */}
+      <Modal
+        visible={sheetOpen}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setSheetOpen(false)}
       >
-        <Sheet.Overlay
-          enterStyle={{ opacity: 0 }}
-          exitStyle={{ opacity: 0 }}
-          backgroundColor={OVERLAY}
-        />
-        <Sheet.Frame bg="$background" theme={themeName as any}>
-          <Sheet.Handle />
-          <Sheet.ScrollView
+        <SafeAreaView
+          edges={["top"]}
+          style={[wStyles.modalRoot, { backgroundColor: c.modalBg }]}
+        >
+          <XStack
+            px="$4"
+            py="$3"
+            style={{ alignItems: "center", justifyContent: "space-between" }}
+          >
+            <XStack style={{ alignItems: "center" }} gap="$2">
+              <Users size={20} color="$blue10" />
+              <TText fontSize="$5" fontWeight="bold" color="$color">
+                {editing ? "Editar vendedor" : "Nuevo vendedor"}
+              </TText>
+            </XStack>
+            <TouchableOpacity
+              onPress={() => setSheetOpen(false)}
+              style={wStyles.closeBtn}
+            >
+              <X size={18} color="$color10" />
+            </TouchableOpacity>
+          </XStack>
+
+          <RNScrollView
             keyboardShouldPersistTaps="handled"
             automaticallyAdjustKeyboardInsets
           >
             <YStack gap="$3" p="$4">
-              <TText fontSize="$6" fontWeight="bold" color="$color">
-                {editing ? "Editar vendedor" : "Nuevo vendedor"}
-              </TText>
-
               <PhotoPicker uri={photoUri} onChange={setPhotoUri} />
 
               <YStack gap="$1">
@@ -402,9 +414,21 @@ export function WorkersSection() {
                 </Button>
               </XStack>
             </YStack>
-          </Sheet.ScrollView>
-        </Sheet.Frame>
-      </Sheet>
+          </RNScrollView>
+        </SafeAreaView>
+      </Modal>
     </View>
   );
 }
+
+const wStyles = StyleSheet.create({
+  modalRoot: { flex: 1 },
+  closeBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: ICON_BTN_BG,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+});

@@ -145,7 +145,7 @@ export default function DashboardScreen() {
       >
         <SafeAreaView
           edges={["top"]}
-          style={[indexStyles.modalRoot, { backgroundColor: c.bg }]}
+          style={[indexStyles.modalRoot, { backgroundColor: c.modalBg }]}
         >
           {/* Header */}
           <XStack
@@ -188,7 +188,7 @@ export default function DashboardScreen() {
       >
         <SafeAreaView
           edges={["top"]}
-          style={[indexStyles.modalRoot, { backgroundColor: c.bg }]}
+          style={[indexStyles.modalRoot, { backgroundColor: c.modalBg }]}
         >
           <XStack
             p="$3"

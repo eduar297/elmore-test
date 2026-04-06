@@ -1,8 +1,8 @@
 import { PeriodSelector } from "@/components/admin/period-selector";
 import { StatCard } from "@/components/admin/stat-card";
-import { OVERLAY } from "@/constants/colors";
+import { ICON_BTN_BG } from "@/constants/colors";
 import { useAuth } from "@/contexts/auth-context";
-import { useColorScheme } from "@/hooks/use-color-scheme";
+import { useColors } from "@/hooks/use-colors";
 import { usePeriodNavigation } from "@/hooks/use-period-navigation";
 import { useTicketRepository } from "@/hooks/use-ticket-repository";
 import type { Ticket, TicketItem } from "@/models/ticket";
@@ -20,15 +20,24 @@ import {
   CreditCard,
   DollarSign,
   Package,
-  ShoppingCart
+  ShoppingCart,
+  X,
 } from "@tamagui/lucide-icons";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FlatList, Image, Pressable, ScrollView } from "react-native";
+import {
+  FlatList,
+  Image,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import {
   Card,
   Separator,
-  Sheet,
   Spinner,
   Text,
   XStack,
@@ -218,8 +227,7 @@ function TicketRow({
 
 export default function HistoryScreen() {
   const ticketRepo = useTicketRepository();
-  const colorScheme = useColorScheme();
-  const themeName = colorScheme === "dark" ? "dark" : "light";
+  const c = useColors();
   const { user } = useAuth();
   const nav = usePeriodNavigation("day");
 
@@ -393,27 +401,41 @@ export default function HistoryScreen() {
         />
       </Card>
 
-      {/* Ticket detail sheet */}
-      <Sheet
-        open={showDetail}
-        onOpenChange={setShowDetail}
-        modal
-        snapPoints={[80]}
-        dismissOnSnapToBottom
+      {/* Ticket detail modal */}
+      <Modal
+        visible={showDetail}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowDetail(false)}
       >
-        <Sheet.Overlay
-          enterStyle={{ opacity: 0 }}
-          exitStyle={{ opacity: 0 }}
-          backgroundColor={OVERLAY}
-        />
-        <Sheet.Frame p="$4" bg="$background" theme={themeName as any}>
-          <Sheet.Handle />
-          <ScrollView>
+        <SafeAreaView
+          edges={["top"]}
+          style={[hStyles.modalRoot, { backgroundColor: c.modalBg }]}
+        >
+          <XStack
+            px="$4"
+            py="$3"
+            style={{ alignItems: "center", justifyContent: "space-between" }}
+          >
+            <XStack style={{ alignItems: "center" }} gap="$2">
+              <ShoppingCart size={20} color="$blue10" />
+              <Text fontSize="$5" fontWeight="bold" color="$color">
+                {selectedTicket
+                  ? `Ticket #${String(selectedTicket.id).slice(0, 8)}`
+                  : "Detalle"}
+              </Text>
+            </XStack>
+            <TouchableOpacity
+              onPress={() => setShowDetail(false)}
+              style={hStyles.closeBtn}
+            >
+              <X size={18} color="$color10" />
+            </TouchableOpacity>
+          </XStack>
+
+          <ScrollView contentContainerStyle={{ padding: 16 }}>
             {selectedTicket && (
               <YStack gap="$4">
-                <Text fontSize="$6" fontWeight="bold" color="$color">
-                  Ticket #{String(selectedTicket.id).slice(0, 8)}
-                </Text>
                 <XStack
                   style={{
                     justifyContent: "space-between",
@@ -537,8 +559,20 @@ export default function HistoryScreen() {
               </YStack>
             )}
           </ScrollView>
-        </Sheet.Frame>
-      </Sheet>
+        </SafeAreaView>
+      </Modal>
     </YStack>
   );
 }
+
+const hStyles = StyleSheet.create({
+  modalRoot: { flex: 1 },
+  closeBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: ICON_BTN_BG,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+});

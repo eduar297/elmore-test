@@ -438,7 +438,6 @@ export default function WorkerScreen() {
           setShowCheckout(open);
           if (!open) gun.refocus();
         }}
-        themeName={themeName}
         cart={cart}
         cartTotal={cartTotal}
         paymentMethod={paymentMethod}

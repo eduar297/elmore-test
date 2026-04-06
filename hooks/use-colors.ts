@@ -47,7 +47,7 @@ export function useColors() {
     headerText: theme.color?.val as string,
     tabBarBg: theme.background?.val as string,
     tabBarBorder: theme.borderColor?.val as string,
-    modalBg: theme.color1?.val as string,
+    modalBg: theme.background?.val as string,
 
     // ── Overlays & translucent ────────────────────────────────────────────
     overlay: OVERLAY,

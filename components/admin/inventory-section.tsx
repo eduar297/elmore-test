@@ -3,8 +3,8 @@ import { StatCard } from "@/components/admin/stat-card";
 import { StockRow } from "@/components/admin/stock-row";
 import { ProductDetail } from "@/components/product/product-detail";
 import { SearchInput } from "@/components/ui/search-input";
-import { CHART_PALETTE, OVERLAY } from "@/constants/colors";
-import { useColorScheme } from "@/hooks/use-color-scheme";
+import { CHART_PALETTE, ICON_BTN_BG } from "@/constants/colors";
+import { useColors } from "@/hooks/use-colors";
 import { usePeriodNavigation } from "@/hooks/use-period-navigation";
 import { useProductRepository } from "@/hooks/use-product-repository";
 import { usePurchaseRepository } from "@/hooks/use-purchase-repository";
@@ -31,20 +31,29 @@ import {
     Tag,
     TrendingDown,
     TrendingUp,
+    X,
 } from "@tamagui/lucide-icons";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
-import { FlatList, Image, Pressable, ScrollView } from "react-native";
+import {
+    FlatList,
+    Image,
+    Modal,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    TouchableOpacity,
+} from "react-native";
 import { PieChart } from "react-native-gifted-charts";
-import { Card, Separator, Sheet, Spinner, Text, XStack, YStack } from "tamagui";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Card, Separator, Spinner, Text, XStack, YStack } from "tamagui";
 
 export function InventorySection() {
   const productRepo = useProductRepository();
   const unitRepo = useUnitRepository();
   const purchaseRepo = usePurchaseRepository();
   const ticketRepo = useTicketRepository();
-  const colorScheme = useColorScheme();
-  const themeName = colorScheme === "dark" ? "dark" : "light";
+  const c = useColors();
 
   const nav = usePeriodNavigation();
 
@@ -856,29 +865,63 @@ export function InventorySection() {
         style={{ flex: 1 }}
       />
 
-      {/* Product detail sheet */}
-      <Sheet
-        open={showDetailSheet}
-        onOpenChange={(open) => {
-          setShowDetailSheet(open);
-          if (!open) setSelectedProduct(null);
+      {/* Product detail modal */}
+      <Modal
+        visible={showDetailSheet}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => {
+          setShowDetailSheet(false);
+          setSelectedProduct(null);
         }}
-        modal
-        snapPoints={[95]}
-        dismissOnSnapToBottom
       >
-        <Sheet.Overlay
-          enterStyle={{ opacity: 0 }}
-          exitStyle={{ opacity: 0 }}
-          backgroundColor={OVERLAY}
-        />
-        <Sheet.Frame p="$4" bg="$background" theme={themeName as any}>
-          <Sheet.Handle />
-          <ScrollView>
+        <SafeAreaView
+          edges={["top"]}
+          style={[invStyles.modalRoot, { backgroundColor: c.modalBg }]}
+        >
+          <XStack
+            p="$3"
+            px="$4"
+            style={{ alignItems: "center", justifyContent: "space-between" }}
+            borderBottomWidth={1}
+            borderBottomColor="$borderColor"
+          >
+            <XStack style={{ alignItems: "center" }} gap="$2">
+              <Package size={18} color="$blue10" />
+              <Text fontSize={16} fontWeight="700" color="$color">
+                Detalle de producto
+              </Text>
+            </XStack>
+            <TouchableOpacity
+              onPress={() => {
+                setShowDetailSheet(false);
+                setSelectedProduct(null);
+              }}
+              hitSlop={8}
+              style={invStyles.closeBtn}
+            >
+              <X size={18} color="$color" />
+            </TouchableOpacity>
+          </XStack>
+          <ScrollView
+            contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
+          >
             {selectedProduct && <ProductDetail product={selectedProduct} />}
           </ScrollView>
-        </Sheet.Frame>
-      </Sheet>
+        </SafeAreaView>
+      </Modal>
     </>
   );
 }
+
+const invStyles = StyleSheet.create({
+  modalRoot: { flex: 1 },
+  closeBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: ICON_BTN_BG,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+});
