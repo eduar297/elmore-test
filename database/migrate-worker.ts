@@ -76,7 +76,8 @@ export async function migrateWorkerDb(db: SQLiteDatabase) {
       voidedAt TEXT,
       voidedBy TEXT,
       voidReason TEXT,
-      updatedAt TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+      updatedAt TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+      syncedAt TEXT
     );
 
     CREATE TABLE IF NOT EXISTS ticket_items (
@@ -108,7 +109,7 @@ export async function migrateWorkerDb(db: SQLiteDatabase) {
   `);
 
   // ── Versioned migrations ────────────────────────────────────────────────
-  const WORKER_DB_VERSION = 5;
+  const WORKER_DB_VERSION = 6;
   const result = await db.getFirstAsync<{ user_version: number }>(
     "PRAGMA user_version",
   );
@@ -221,6 +222,14 @@ export async function migrateWorkerDb(db: SQLiteDatabase) {
     `);
 
     currentVersion = 5;
+  }
+
+  if (currentVersion < 6) {
+    // Add syncedAt column so tickets survive after sync
+    await db.execAsync(`
+      ALTER TABLE tickets ADD COLUMN syncedAt TEXT;
+    `);
+    currentVersion = 6;
   }
 
   // Ensure updatedAt triggers exist (idempotent)

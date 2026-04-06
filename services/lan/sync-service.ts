@@ -660,34 +660,25 @@ export async function applyReceivedCatalog(
   return summary;
 }
 
-/** Worker prepares tickets to send to Admin (since last sync) */
+/** Worker prepares tickets to send to Admin (unsynced only) */
 export async function prepareTicketsPayload(
   db: SQLiteDatabase,
-  since: string | null,
+  _since?: string | null,
 ): Promise<SyncTicketsData> {
-  let tickets: unknown[];
+  // Only send tickets that haven't been synced yet
+  const tickets = await db.getAllAsync(
+    "SELECT * FROM tickets WHERE syncedAt IS NULL ORDER BY id",
+  );
   let ticketItems: unknown[];
-
-  if (since) {
-    tickets = await db.getAllAsync(
-      "SELECT * FROM tickets WHERE createdAt > ? ORDER BY id",
-      [since],
-    );
-    const ticketIds = (tickets as any[]).map((t) => t.id);
-    if (ticketIds.length > 0) {
-      const placeholders = ticketIds.map(() => "?").join(",");
-      ticketItems = await db.getAllAsync(
-        `SELECT * FROM ticket_items WHERE ticketId IN (${placeholders}) ORDER BY id`,
-        ticketIds,
-      );
-    } else {
-      ticketItems = [];
-    }
-  } else {
-    tickets = await db.getAllAsync("SELECT * FROM tickets ORDER BY id");
+  const ticketIds = (tickets as any[]).map((t: any) => t.id);
+  if (ticketIds.length > 0) {
+    const placeholders = ticketIds.map(() => "?").join(",");
     ticketItems = await db.getAllAsync(
-      "SELECT * FROM ticket_items ORDER BY id",
+      `SELECT * FROM ticket_items WHERE ticketId IN (${placeholders}) ORDER BY id`,
+      ticketIds,
     );
+  } else {
+    ticketItems = [];
   }
 
   // Only include worker profile updates if they changed since last sync
@@ -820,21 +811,10 @@ export async function saveCatalogHash(
   );
 }
 
-/** Worker: delete all tickets and their items (after admin confirmed receipt) */
-export async function deleteAllWorkerTickets(
-  db: SQLiteDatabase,
-): Promise<number> {
-  const countRow = await db.getFirstAsync<{ cnt: number }>(
-    "SELECT COUNT(*) as cnt FROM tickets",
+/** Worker: mark all unsynced tickets as synced (after admin confirmed receipt) */
+export async function markTicketsSynced(db: SQLiteDatabase): Promise<number> {
+  const result = await db.runAsync(
+    "UPDATE tickets SET syncedAt = datetime('now','localtime') WHERE syncedAt IS NULL",
   );
-  const count = countRow?.cnt ?? 0;
-
-  if (count > 0) {
-    await db.withExclusiveTransactionAsync(async (tx) => {
-      await tx.runAsync("DELETE FROM ticket_items");
-      await tx.runAsync("DELETE FROM tickets");
-    });
-  }
-
-  return count;
+  return result.changes;
 }

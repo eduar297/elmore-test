@@ -1,21 +1,34 @@
+import { PeriodSelector } from "@/components/admin/period-selector";
 import { OVERLAY } from "@/constants/colors";
 import { useAuth } from "@/contexts/auth-context";
 import { useColorScheme } from "@/hooks/use-color-scheme";
+import { usePeriodNavigation } from "@/hooks/use-period-navigation";
 import { useTicketRepository } from "@/hooks/use-ticket-repository";
 import type { Ticket, TicketItem } from "@/models/ticket";
-import { fmtMoney } from "@/utils/format";
+import { daysInMonth, fmtMoney, weekEndISO } from "@/utils/format";
 import {
-    Banknote,
-    ClipboardList,
-    CreditCard,
-    Package,
-    Receipt,
-    TrendingUp,
+  Banknote,
+  Check,
+  ClipboardList,
+  Clock,
+  CreditCard,
+  Package,
+  Receipt,
+  TrendingUp,
 } from "@tamagui/lucide-icons";
 import { useFocusEffect } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
-import { FlatList, Image, ScrollView } from "react-native";
-import { Card, Separator, Sheet, Spinner, Text, XStack, YStack } from "tamagui";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { FlatList, Image, Pressable, ScrollView } from "react-native";
+import {
+  Card,
+  Separator,
+  Sheet,
+  Spinner,
+  Text,
+  XStack,
+  YStack,
+  useTheme,
+} from "tamagui";
 
 function formatTime(iso: string) {
   const d = new Date(iso);
@@ -31,6 +44,75 @@ function formatDate(iso: string) {
   });
 }
 
+type SyncFilter = "all" | "pending" | "synced";
+
+const SYNC_FILTERS: { key: SyncFilter; label: string }[] = [
+  { key: "all", label: "Todos" },
+  { key: "pending", label: "Pendientes" },
+  { key: "synced", label: "Sincronizados" },
+];
+
+function SyncFilterTabs({
+  value,
+  onChange,
+  counts,
+}: {
+  value: SyncFilter;
+  onChange: (f: SyncFilter) => void;
+  counts: { all: number; pending: number; synced: number };
+}) {
+  const theme = useTheme();
+  return (
+    <XStack
+      bg="$color2"
+      style={{ borderRadius: 10 }}
+      p="$1"
+      gap={4}
+      height={34}
+    >
+      {SYNC_FILTERS.map(({ key, label }) => {
+        const active = value === key;
+        return (
+          <Pressable
+            key={key}
+            onPress={() => onChange(key)}
+            style={{
+              flex: 1,
+              borderRadius: 8,
+              backgroundColor: active
+                ? key === "pending"
+                  ? theme.orange10?.val
+                  : key === "synced"
+                  ? theme.green10?.val
+                  : theme.blue10?.val
+                : "transparent",
+              alignItems: "center",
+              justifyContent: "center",
+              flexDirection: "row",
+              gap: 4,
+            }}
+          >
+            <Text
+              fontSize={11}
+              fontWeight="700"
+              color={active ? "white" : "$color10"}
+            >
+              {label}
+            </Text>
+            <Text
+              fontSize={10}
+              fontWeight="600"
+              color={active ? "white" : "$color8"}
+            >
+              {counts[key]}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </XStack>
+  );
+}
+
 function TicketRow({
   ticket,
   onPress,
@@ -40,6 +122,7 @@ function TicketRow({
 }) {
   const PayIcon = ticket.paymentMethod === "CARD" ? CreditCard : Banknote;
   const voided = ticket.status === "VOIDED";
+  const synced = !!ticket.syncedAt;
   return (
     <XStack
       px="$4"
@@ -78,6 +161,30 @@ function TicketRow({
               </Text>
             </YStack>
           )}
+          <YStack
+            bg={synced ? "$green3" : "$orange3"}
+            px="$1.5"
+            py="$0.5"
+            style={{
+              borderRadius: 4,
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 2,
+            }}
+          >
+            {synced ? (
+              <Check size={9} color="$green10" />
+            ) : (
+              <Clock size={9} color="$orange10" />
+            )}
+            <Text
+              fontSize={9}
+              fontWeight="700"
+              color={synced ? "$green10" : "$orange10"}
+            >
+              {synced ? "Sincronizado" : "Pendiente"}
+            </Text>
+          </YStack>
         </XStack>
         <XStack style={{ alignItems: "center" }} gap="$2">
           <Text fontSize="$2" color="$color10">
@@ -108,26 +215,59 @@ export default function HistoryScreen() {
   const colorScheme = useColorScheme();
   const themeName = colorScheme === "dark" ? "dark" : "light";
   const { user } = useAuth();
+  const nav = usePeriodNavigation("day");
 
   // Data
   const [allTickets, setAllTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState({ totalSales: 0, ticketCount: 0 });
+  const [syncFilter, setSyncFilter] = useState<SyncFilter>("all");
 
   // Detail sheet
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [ticketItems, setTicketItems] = useState<TicketItem[]>([]);
   const [showDetail, setShowDetail] = useState(false);
 
-  // ── Load data (worker-scoped, today only) ───────────────────────────────
+  // ── Compute from/to based on selected period ────────────────────────────
+  const { from, to } = useMemo(() => {
+    if (nav.period === "day")
+      return { from: nav.selectedDay, to: nav.selectedDay };
+    if (nav.period === "week")
+      return {
+        from: nav.selectedWeekStart,
+        to: weekEndISO(nav.selectedWeekStart),
+      };
+    if (nav.period === "month") {
+      const last = String(daysInMonth(nav.selectedMonth)).padStart(2, "0");
+      return {
+        from: `${nav.selectedMonth}-01`,
+        to: `${nav.selectedMonth}-${last}`,
+      };
+    }
+    if (nav.period === "year")
+      return {
+        from: `${nav.selectedYear}-01-01`,
+        to: `${nav.selectedYear}-12-31`,
+      };
+    // range
+    return { from: nav.dateRange.from, to: nav.dateRange.to };
+  }, [
+    nav.period,
+    nav.selectedDay,
+    nav.selectedWeekStart,
+    nav.selectedMonth,
+    nav.selectedYear,
+    nav.dateRange,
+  ]);
+
+  // ── Load data (worker-scoped, period-aware) ─────────────────────────────
   const loadTickets = useCallback(async () => {
     if (!user) return;
     setLoading(true);
     try {
-      const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
       const [list, stats] = await Promise.all([
-        ticketRepo.findByWorkerAndDateRange(user.id, today, today),
-        ticketRepo.workerRangeSummary(user.id, today, today),
+        ticketRepo.findByWorkerAndDateRange(user.id, from, to),
+        ticketRepo.workerRangeSummary(user.id, from, to),
       ]);
       setAllTickets(list);
       setSummary(stats);
@@ -136,7 +276,7 @@ export default function HistoryScreen() {
     } finally {
       setLoading(false);
     }
-  }, [ticketRepo, user]);
+  }, [ticketRepo, user, from, to]);
 
   useFocusEffect(
     useCallback(() => {
@@ -147,6 +287,19 @@ export default function HistoryScreen() {
   useEffect(() => {
     loadTickets();
   }, [loadTickets]);
+
+  // ── Filtered tickets + counts ───────────────────────────────────────────
+  const syncCounts = useMemo(() => {
+    const pending = allTickets.filter((t) => !t.syncedAt).length;
+    const synced = allTickets.filter((t) => !!t.syncedAt).length;
+    return { all: allTickets.length, pending, synced };
+  }, [allTickets]);
+
+  const filteredTickets = useMemo(() => {
+    if (syncFilter === "pending") return allTickets.filter((t) => !t.syncedAt);
+    if (syncFilter === "synced") return allTickets.filter((t) => !!t.syncedAt);
+    return allTickets;
+  }, [allTickets, syncFilter]);
 
   // ── Detail ──────────────────────────────────────────────────────────────
   const openDetail = useCallback(
@@ -161,26 +314,10 @@ export default function HistoryScreen() {
 
   return (
     <YStack flex={1} bg="$background">
-      {/* Today header */}
-      <Card
-        mx="$4"
-        mt="$3"
-        mb="$2"
-        p="$3"
-        bg="$color1"
-        borderWidth={1}
-        borderColor="$borderColor"
-        style={{ borderRadius: 16 }}
-      >
-        <Text
-          fontSize="$4"
-          fontWeight="600"
-          color="$color"
-          style={{ textAlign: "center" }}
-        >
-          Ventas de hoy
-        </Text>
-      </Card>
+      {/* Period selector */}
+      <YStack px="$4" pt="$3" gap="$2">
+        <PeriodSelector nav={nav} />
+      </YStack>
 
       {/* Summary cards */}
       <XStack gap="$3" px="$4" pt="$4">
@@ -218,6 +355,15 @@ export default function HistoryScreen() {
         </Card>
       </XStack>
 
+      {/* Sync filter */}
+      <YStack px="$4" pt="$3">
+        <SyncFilterTabs
+          value={syncFilter}
+          onChange={setSyncFilter}
+          counts={syncCounts}
+        />
+      </YStack>
+
       {/* Virtualized ticket list */}
       <Card
         mx="$4"
@@ -231,7 +377,7 @@ export default function HistoryScreen() {
         overflow="hidden"
       >
         <FlatList
-          data={allTickets}
+          data={filteredTickets}
           keyExtractor={(item) => String(item.id)}
           renderItem={({ item: ticket }) => (
             <TicketRow ticket={ticket} onPress={() => openDetail(ticket)} />

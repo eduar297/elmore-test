@@ -8,32 +8,32 @@ import { useStore } from "@/contexts/store-context";
 import { useColors } from "@/hooks/use-colors";
 import type { SyncCatalogData } from "@/services/lan/protocol";
 import {
-    applyReceivedCatalog,
-    checkCatalogNeeds,
-    deleteAllWorkerTickets,
-    getLastSyncAt,
-    prepareTicketsPayload,
-    saveCatalogHash,
-    type CatalogChangeSummary,
+  applyReceivedCatalog,
+  checkCatalogNeeds,
+  getLastSyncAt,
+  markTicketsSynced,
+  prepareTicketsPayload,
+  saveCatalogHash,
+  type CatalogChangeSummary,
 } from "@/services/lan/sync-service";
 import {
-    Download,
-    LayoutList,
-    Monitor,
-    ScanLine,
-    User,
-    Wifi,
+  Download,
+  LayoutList,
+  Monitor,
+  ScanLine,
+  User,
+  Wifi,
 } from "@tamagui/lucide-icons";
 import { Tabs } from "expo-router";
 import { useSQLiteContext } from "expo-sqlite";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { useTheme } from "tamagui";
 
@@ -404,12 +404,12 @@ export default function WorkerLayout() {
   useEffect(() => {
     onSyncTicketsAckReceived.current = async () => {
       try {
-        const deleted = await deleteAllWorkerTickets(db);
+        const marked = await markTicketsSynced(db);
         console.log(
-          `[Worker] Deleted ${deleted} tickets after admin confirmed receipt`,
+          `[Worker] Marked ${marked} tickets as synced after admin confirmed receipt`,
         );
       } catch (err) {
-        console.error(`[Worker] deleteAllWorkerTickets FAILED:`, err);
+        console.error(`[Worker] markTicketsSynced FAILED:`, err);
       }
     };
     return () => {

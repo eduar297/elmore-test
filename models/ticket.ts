@@ -16,6 +16,7 @@ export interface Ticket {
   voidedBy: number | null;
   voidReason: string | null;
   updatedAt: string;
+  syncedAt: string | null;
 }
 
 export interface TicketItem {
