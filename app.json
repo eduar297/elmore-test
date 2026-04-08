@@ -7,7 +7,6 @@
     "icon": "./assets/images/icon.png",
     "scheme": "more-hub",
     "userInterfaceStyle": "automatic",
-    // "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.eduar297.more-hub",
@@ -27,7 +26,6 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      // "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "package": "com.eduar297.el_more_hub"
     },
@@ -58,6 +56,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "da216c1e-7258-42c7-90ca-95ce7439a157"
+      }
     }
   }
 }
