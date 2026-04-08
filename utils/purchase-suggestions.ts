@@ -64,7 +64,10 @@ export interface PurchaseReport {
 // ── Engine ───────────────────────────────────────────────────────────────────
 
 function isoDate(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
+    2,
+    "0",
+  )}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 /**
@@ -94,7 +97,9 @@ export async function runPurchaseSuggestions(
 
   // ── Auto-detect analysis period from earliest ticket ────────────────────
   const earliest = await db.getFirstAsync<{ d: string | null }>(
-    `SELECT MIN(date(createdAt)) AS d FROM tickets${storeId !== undefined ? " WHERE storeId = " + Number(storeId) : ""}`,
+    `SELECT MIN(date(createdAt)) AS d FROM tickets${
+      storeId !== undefined ? " WHERE storeId = " + Number(storeId) : ""
+    }`,
   );
 
   let fromDate: Date;
@@ -148,7 +153,9 @@ export async function runPurchaseSuggestions(
 
   // ── Products ────────────────────────────────────────────────────────────
   const products = await db.getAllAsync<Product>(
-    `SELECT * FROM products${storeId !== undefined ? " WHERE storeId = ?" : ""} ORDER BY name ASC`,
+    `SELECT * FROM products${
+      storeId !== undefined ? " WHERE storeId = ?" : ""
+    } ORDER BY name ASC`,
     storeId !== undefined ? [storeId] : [],
   );
 
@@ -161,7 +168,9 @@ export async function runPurchaseSuggestions(
     `SELECT productId, SUM(quantity) AS totalQty, SUM(subtotal) AS totalRevenue
      FROM ticket_items ti
      JOIN tickets t ON t.id = ti.ticketId
-     WHERE date(t.createdAt) >= ? AND date(t.createdAt) <= ?${storeId !== undefined ? " AND t.storeId = ?" : ""}
+     WHERE date(t.createdAt) >= ? AND date(t.createdAt) <= ?${
+       storeId !== undefined ? " AND t.storeId = ?" : ""
+     }
      GROUP BY productId`,
     storeId !== undefined ? [from, to, storeId] : [from, to],
   );
@@ -176,7 +185,9 @@ export async function runPurchaseSuggestions(
     `SELECT productId, SUM(quantity) AS totalQty
      FROM ticket_items ti
      JOIN tickets t ON t.id = ti.ticketId
-     WHERE date(t.createdAt) >= ? AND date(t.createdAt) < ?${storeId !== undefined ? " AND t.storeId = ?" : ""}
+     WHERE date(t.createdAt) >= ? AND date(t.createdAt) < ?${
+       storeId !== undefined ? " AND t.storeId = ?" : ""
+     }
      GROUP BY productId`,
     storeId !== undefined ? [from, mid, storeId] : [from, mid],
   );
@@ -192,7 +203,9 @@ export async function runPurchaseSuggestions(
     `SELECT productId, SUM(quantity) AS totalQty
      FROM ticket_items ti
      JOIN tickets t ON t.id = ti.ticketId
-     WHERE date(t.createdAt) >= ? AND date(t.createdAt) <= ?${storeId !== undefined ? " AND t.storeId = ?" : ""}
+     WHERE date(t.createdAt) >= ? AND date(t.createdAt) <= ?${
+       storeId !== undefined ? " AND t.storeId = ?" : ""
+     }
      GROUP BY productId`,
     storeId !== undefined ? [mid, to, storeId] : [mid, to],
   );
@@ -208,7 +221,9 @@ export async function runPurchaseSuggestions(
     `SELECT productId, SUM(subtotal) / SUM(quantity) AS avgCost
      FROM purchase_items pi
      JOIN purchases p ON p.id = pi.purchaseId
-     WHERE date(p.createdAt) >= ? AND date(p.createdAt) <= ?${storeId !== undefined ? " AND p.storeId = ?" : ""}
+     WHERE date(p.createdAt) >= ? AND date(p.createdAt) <= ?${
+       storeId !== undefined ? " AND p.storeId = ?" : ""
+     }
      GROUP BY productId`,
     storeId !== undefined ? [from, to, storeId] : [from, to],
   );
@@ -292,10 +307,10 @@ export async function runPurchaseSuggestions(
       urgency === "critical"
         ? 40
         : urgency === "low"
-          ? 25
-          : urgency === "ok"
-            ? 5
-            : 0;
+        ? 25
+        : urgency === "ok"
+        ? 5
+        : 0;
     const trendPts =
       salesTrend === "rising" ? 20 : salesTrend === "stable" ? 10 : 0;
     const roiPts = Math.min(20, Math.max(0, roi * 40)); // 50% ROI = 20pts

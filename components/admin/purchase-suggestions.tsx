@@ -3,32 +3,32 @@ import { BLUE_TINT, TREND_COLORS, URGENCY_COLORS } from "@/constants/colors";
 import { useStore } from "@/contexts/store-context";
 import { fmtMoney } from "@/utils/format";
 import type {
-    PurchaseReport,
-    PurchaseSuggestion,
-    SalesTrend,
-    Urgency,
+  PurchaseReport,
+  PurchaseSuggestion,
+  SalesTrend,
+  Urgency,
 } from "@/utils/purchase-suggestions";
 import { runPurchaseSuggestions } from "@/utils/purchase-suggestions";
 import {
-    ArrowUpDown,
-    ChevronDown,
-    Package,
-    ShoppingCart,
+  ArrowUpDown,
+  ChevronDown,
+  Package,
+  ShoppingCart,
 } from "@tamagui/lucide-icons";
 import { useSQLiteContext } from "expo-sqlite";
 import { useCallback, useMemo, useState } from "react";
 import { Image, ScrollView } from "react-native";
 import {
-    Accordion,
-    Button,
-    Card,
-    Input,
-    Label,
-    Separator,
-    Spinner,
-    Text,
-    XStack,
-    YStack,
+  Accordion,
+  Button,
+  Card,
+  Input,
+  Label,
+  Separator,
+  Spinner,
+  Text,
+  XStack,
+  YStack,
 } from "tamagui";
 
 // ── Urgency helpers ──────────────────────────────────────────────────────────
@@ -481,109 +481,119 @@ export function PurchaseSuggestionsSection() {
 
       {/* Results */}
       {report && (
-        <YStack flex={1}>
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ paddingBottom: 40 }}
+          keyboardShouldPersistTaps="handled"
+        >
           {/* KPIs */}
-          <XStack px="$4" pb="$2" gap="$2" flexWrap="wrap">
-            <Card
-              flex={1}
-              p="$2"
-              bg="$color1"
-              borderWidth={1}
-              borderColor="$borderColor"
-              minWidth={100}
-              style={{ borderRadius: 10 }}
-            >
-              <Text fontSize="$1" color="$color10">
-                Requieren compra
-              </Text>
-              <Text fontSize="$3" fontWeight="bold" color="$orange10">
-                {needPurchase}
-              </Text>
-            </Card>
-            <Card
-              flex={1}
-              p="$2"
-              bg="$color1"
-              borderWidth={1}
-              borderColor="$borderColor"
-              minWidth={100}
-              style={{ borderRadius: 10 }}
-            >
-              <Text fontSize="$1" color="$color10">
-                Críticos
-              </Text>
-              <Text fontSize="$3" fontWeight="bold" color="$red10">
-                {report.criticalCount}
-              </Text>
-            </Card>
-            <Card
-              flex={1}
-              p="$2"
-              bg="$color1"
-              borderWidth={1}
-              borderColor="$borderColor"
-              minWidth={100}
-              style={{ borderRadius: 10 }}
-            >
-              <Text fontSize="$1" color="$color10">
-                En alza
-              </Text>
-              <Text fontSize="$3" fontWeight="bold" color="$green10">
-                {report.risingCount}
-              </Text>
-            </Card>
-            <Card
-              flex={1}
-              p="$2"
-              bg="$color1"
-              borderWidth={1}
-              borderColor="$borderColor"
-              minWidth={100}
-              style={{ borderRadius: 10 }}
-            >
-              <Text fontSize="$1" color="$color10">
-                Costo estimado
-              </Text>
-              <Text fontSize="$3" fontWeight="bold" color="$blue10">
-                {`$${fmtMoney(report.totalEstimatedCost)}`}
-              </Text>
-            </Card>
-            <Card
-              flex={1}
-              p="$2"
-              bg="$color1"
-              borderWidth={1}
-              borderColor="$borderColor"
-              minWidth={100}
-              style={{ borderRadius: 10 }}
-            >
-              <Text fontSize="$1" color="$color10">
-                ROI promedio
-              </Text>
-              <Text fontSize="$3" fontWeight="bold" color="$purple10">
-                {`${(report.avgRoi * 100).toFixed(1)}%`}
-              </Text>
-            </Card>
-            <Card
-              flex={1}
-              p="$2"
-              bg="$color1"
-              borderWidth={1}
-              borderColor="$borderColor"
-              minWidth={100}
-              style={{ borderRadius: 10 }}
-            >
-              <Text fontSize="$1" color="$color10">
-                Días analizados
-              </Text>
-              <Text fontSize="$3" fontWeight="bold" color="$color">
-                {report.analysedDays}
-              </Text>
-            </Card>
-          </XStack>
+          <YStack px="$4" pt="$2" pb="$3" gap="$2.5">
+            <XStack gap="$2.5">
+              <Card
+                flex={1}
+                p="$3"
+                bg="$color1"
+                borderWidth={1}
+                borderColor="$borderColor"
+                style={{ borderRadius: 12 }}
+              >
+                <Text fontSize="$2" color="$color10">
+                  Requieren compra
+                </Text>
+                <Text fontSize="$5" fontWeight="bold" color="$orange10">
+                  {needPurchase}
+                </Text>
+              </Card>
+              <Card
+                flex={1}
+                p="$3"
+                bg="$color1"
+                borderWidth={1}
+                borderColor="$borderColor"
+                style={{ borderRadius: 12 }}
+              >
+                <Text fontSize="$2" color="$color10">
+                  Críticos
+                </Text>
+                <Text fontSize="$5" fontWeight="bold" color="$red10">
+                  {report.criticalCount}
+                </Text>
+              </Card>
+              <Card
+                flex={1}
+                p="$3"
+                bg="$color1"
+                borderWidth={1}
+                borderColor="$borderColor"
+                style={{ borderRadius: 12 }}
+              >
+                <Text fontSize="$2" color="$color10">
+                  En alza
+                </Text>
+                <Text fontSize="$5" fontWeight="bold" color="$green10">
+                  {report.risingCount}
+                </Text>
+              </Card>
+            </XStack>
+            <XStack gap="$2.5">
+              <Card
+                flex={1}
+                p="$3"
+                bg="$color1"
+                borderWidth={1}
+                borderColor="$borderColor"
+                style={{ borderRadius: 12 }}
+              >
+                <Text fontSize="$2" color="$color10">
+                  Costo estimado
+                </Text>
+                <Text fontSize="$4" fontWeight="bold" color="$blue10">
+                  {`$${fmtMoney(report.totalEstimatedCost)}`}
+                </Text>
+              </Card>
+              <Card
+                flex={1}
+                p="$3"
+                bg="$color1"
+                borderWidth={1}
+                borderColor="$borderColor"
+                style={{ borderRadius: 12 }}
+              >
+                <Text fontSize="$2" color="$color10">
+                  ROI promedio
+                </Text>
+                <Text fontSize="$4" fontWeight="bold" color="$purple10">
+                  {`${(report.avgRoi * 100).toFixed(1)}%`}
+                </Text>
+              </Card>
+              <Card
+                flex={1}
+                p="$3"
+                bg="$color1"
+                borderWidth={1}
+                borderColor="$borderColor"
+                style={{ borderRadius: 12 }}
+              >
+                <Text fontSize="$2" color="$color10">
+                  Días analizados
+                </Text>
+                <Text fontSize="$4" fontWeight="bold" color="$color">
+                  {report.analysedDays}
+                </Text>
+              </Card>
+            </XStack>
+          </YStack>
 
           {/* Urgency filter pills */}
-          <XStack px="$4" pb="$2" gap="$2" flexWrap="wrap">
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{
+              paddingHorizontal: 16,
+              gap: 8,
+              paddingBottom: 8,
+            }}
+          >
             {(["critical", "low", "ok", "overstock"] as const).map((u) => {
               const meta = URGENCY_META[u];
               const active = filterUrgency === u;
@@ -599,7 +609,7 @@ export function PurchaseSuggestionsSection() {
                 </Button>
               );
             })}
-          </XStack>
+          </ScrollView>
 
           {/* Search */}
           <YStack px="$4" pb="$2">
@@ -611,7 +621,15 @@ export function PurchaseSuggestionsSection() {
           </YStack>
 
           {/* Sort row */}
-          <XStack px="$4" pb="$2" gap="$1.5" flexWrap="wrap">
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{
+              paddingHorizontal: 16,
+              gap: 6,
+              paddingBottom: 8,
+            }}
+          >
             {SORT_OPTIONS.map((opt) => (
               <Button
                 key={opt.key}
@@ -631,34 +649,39 @@ export function PurchaseSuggestionsSection() {
                 }
               >
                 <Text
-                  fontSize="$1"
+                  fontSize="$2"
                   color={sortKey === opt.key ? "$blue10" : "$color10"}
                 >
                   {opt.label}
                 </Text>
               </Button>
             ))}
-          </XStack>
+          </ScrollView>
 
           {/* Product list */}
-          <ScrollView
-            style={{ flex: 1 }}
-            contentContainerStyle={{ paddingBottom: 40 }}
-          >
-            {sorted.length === 0 ? (
-              <YStack p="$6" style={{ alignItems: "center" }} gap="$2">
-                <ShoppingCart size={40} color="$color8" />
-                <Text color="$color10">No hay productos con ese filtro</Text>
-              </YStack>
-            ) : (
-              <Accordion type="single" collapsible overflow="hidden">
-                {sorted.map((item) => (
-                  <SuggestionRow key={item.product.id} item={item} />
-                ))}
-              </Accordion>
-            )}
-          </ScrollView>
-        </YStack>
+          {sorted.length === 0 ? (
+            <YStack p="$6" style={{ alignItems: "center" }} gap="$2">
+              <ShoppingCart size={40} color="$color8" />
+              <Text color="$color10">No hay productos con ese filtro</Text>
+            </YStack>
+          ) : (
+            <YStack px="$4">
+              <Card
+                bg="$color1"
+                borderWidth={1}
+                borderColor="$borderColor"
+                style={{ borderRadius: 14 }}
+                overflow="hidden"
+              >
+                <Accordion type="single" collapsible overflow="hidden">
+                  {sorted.map((item) => (
+                    <SuggestionRow key={item.product.id} item={item} />
+                  ))}
+                </Accordion>
+              </Card>
+            </YStack>
+          )}
+        </ScrollView>
       )}
 
       {!report && !loading && (

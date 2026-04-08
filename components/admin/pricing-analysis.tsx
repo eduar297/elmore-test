@@ -18,7 +18,7 @@ import {
 } from "@tamagui/lucide-icons";
 import { useSQLiteContext } from "expo-sqlite";
 import { useCallback, useMemo, useState } from "react";
-import { Alert, Image, ScrollView } from "react-native";
+import { Alert, Image, ScrollView as RNScrollView } from "react-native";
 import {
     Accordion,
     Button,
@@ -119,8 +119,8 @@ function AnalysisRow({
     >
       <Accordion.Trigger
         flexDirection="row"
-        px="$3"
-        py="$3"
+        px="$4"
+        py="$3.5"
         gap="$3"
         style={{ alignItems: "center" }}
         borderWidth={0}
@@ -132,21 +132,21 @@ function AnalysisRow({
             {p.photoUri ? (
               <Image
                 source={{ uri: p.photoUri }}
-                style={{ width: 36, height: 36, borderRadius: 8 }}
+                style={{ width: 44, height: 44, borderRadius: 10 }}
                 resizeMode="cover"
               />
             ) : (
               <YStack
-                width={36}
-                height={36}
+                width={44}
+                height={44}
                 style={{
-                  borderRadius: 8,
+                  borderRadius: 10,
                   backgroundColor: "#e5e7eb",
                   alignItems: "center",
                   justifyContent: "center",
                 }}
               >
-                <TrendingUp size={16} color="$color8" />
+                <TrendingUp size={20} color="$color8" />
               </YStack>
             )}
 
@@ -480,133 +480,157 @@ export function PricingAnalysisSection({
 
       {report && (
         <YStack flex={1}>
-          {/* Summary KPIs */}
-          <XStack px="$4" pb="$2" gap="$2" flexWrap="wrap">
-            <Card
-              flex={1}
-              minWidth={100}
-              p="$2"
-              bg="$color1"
-              borderWidth={1}
-              borderColor="$borderColor"
-              style={{ borderRadius: 10 }}
-            >
-              <Text fontSize="$1" color="$color10">
-                Ingresos totales
-              </Text>
-              <Text fontSize="$3" fontWeight="bold" color="$green10">
-                ${fmtMoney(report.totalRevenue)}
-              </Text>
-            </Card>
-            <Card
-              flex={1}
-              minWidth={100}
-              p="$2"
-              bg="$color1"
-              borderWidth={1}
-              borderColor="$borderColor"
-              style={{ borderRadius: 10 }}
-            >
-              <Text fontSize="$1" color="$color10">
-                Gastos/mes prom.
-              </Text>
-              <Text fontSize="$3" fontWeight="bold" color="$red10">
-                ${fmtMoney(report.avgMonthlyExpenses)}
-              </Text>
-            </Card>
-            <Card
-              flex={1}
-              minWidth={100}
-              p="$2"
-              bg="$color1"
-              borderWidth={1}
-              borderColor="$borderColor"
-              style={{ borderRadius: 10 }}
-            >
-              <Text fontSize="$1" color="$color10">
-                Período
-              </Text>
-              <Text fontSize="$3" fontWeight="bold" color="$blue10">
-                {report.monthsAnalysed} meses
-              </Text>
-            </Card>
-          </XStack>
-
-          {/* Classification filter pills */}
-          <XStack px="$4" pb="$2" gap="$2">
-            <Button
-              size="$2"
-              theme={filterClass === null ? "blue" : undefined}
-              chromeless={filterClass !== null}
-              onPress={() => setFilterClass(null)}
-            >
-              <Text fontSize="$2">{`Todos (${report.products.length})`}</Text>
-            </Button>
-            {(["star", "cow", "question", "dog"] as ProductClass[]).map(
-              (cls) => (
-                <Button
-                  key={cls}
-                  size="$2"
-                  theme={filterClass === cls ? "blue" : undefined}
-                  chromeless={filterClass !== cls}
-                  onPress={() =>
-                    setFilterClass(filterClass === cls ? null : cls)
-                  }
-                >
-                  <Text fontSize="$2">{`${CLASS_META[cls].emoji} ${classCounts[cls]}`}</Text>
-                </Button>
-              ),
-            )}
-          </XStack>
-
-          {/* Search */}
-          <YStack px="$4" pb="$2">
-            <SearchInput
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              placeholder="Buscar producto…"
-            />
-          </YStack>
-
-          {/* Sort row */}
-          <XStack px="$4" pb="$2" gap="$1.5" flexWrap="wrap">
-            {SORT_OPTIONS.map((opt) => (
-              <Button
-                key={opt.key}
-                size="$2"
-                chromeless
-                onPress={() => handleSort(opt.key)}
-                icon={
-                  sortKey === opt.key ? (
-                    <ArrowUpDown size={12} color="$blue10" />
-                  ) : undefined
-                }
-              >
-                <Text
-                  fontSize="$1"
-                  color={sortKey === opt.key ? "$blue10" : "$color10"}
-                >
-                  {opt.label}
-                </Text>
-              </Button>
-            ))}
-          </XStack>
-
-          {/* Product list */}
-          <ScrollView
+          <RNScrollView
             style={{ flex: 1 }}
             contentContainerStyle={{ paddingBottom: 100 }}
+            keyboardShouldPersistTaps="handled"
           >
-            <Accordion type="single" collapsible overflow="hidden">
-              {sortedProducts.map((item) => (
-                <AnalysisRow
-                  key={item.product.id}
-                  item={item}
-                  onApply={() => applyOne(item)}
-                />
+            {/* Summary KPIs */}
+            <XStack px="$4" pt="$2" pb="$3" gap="$2.5">
+              <Card
+                flex={1}
+                p="$3"
+                bg="$color1"
+                borderWidth={1}
+                borderColor="$borderColor"
+                style={{ borderRadius: 12 }}
+              >
+                <Text fontSize="$2" color="$color10">
+                  Ingresos totales
+                </Text>
+                <Text fontSize="$4" fontWeight="bold" color="$green10">
+                  ${fmtMoney(report.totalRevenue)}
+                </Text>
+              </Card>
+              <Card
+                flex={1}
+                p="$3"
+                bg="$color1"
+                borderWidth={1}
+                borderColor="$borderColor"
+                style={{ borderRadius: 12 }}
+              >
+                <Text fontSize="$2" color="$color10">
+                  Gastos/mes prom.
+                </Text>
+                <Text fontSize="$4" fontWeight="bold" color="$red10">
+                  ${fmtMoney(report.avgMonthlyExpenses)}
+                </Text>
+              </Card>
+              <Card
+                flex={1}
+                p="$3"
+                bg="$color1"
+                borderWidth={1}
+                borderColor="$borderColor"
+                style={{ borderRadius: 12 }}
+              >
+                <Text fontSize="$2" color="$color10">
+                  Período
+                </Text>
+                <Text fontSize="$4" fontWeight="bold" color="$blue10">
+                  {report.monthsAnalysed} meses
+                </Text>
+              </Card>
+            </XStack>
+
+            {/* Classification filter pills */}
+            <RNScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{
+                paddingHorizontal: 16,
+                gap: 8,
+                paddingBottom: 8,
+              }}
+            >
+              <Button
+                size="$2"
+                theme={filterClass === null ? "blue" : undefined}
+                chromeless={filterClass !== null}
+                onPress={() => setFilterClass(null)}
+              >
+                <Text fontSize="$2">{`Todos (${report.products.length})`}</Text>
+              </Button>
+              {(["star", "cow", "question", "dog"] as ProductClass[]).map(
+                (cls) => (
+                  <Button
+                    key={cls}
+                    size="$2"
+                    theme={filterClass === cls ? "blue" : undefined}
+                    chromeless={filterClass !== cls}
+                    onPress={() =>
+                      setFilterClass(filterClass === cls ? null : cls)
+                    }
+                  >
+                    <Text fontSize="$2">{`${CLASS_META[cls].emoji} ${classCounts[cls]}`}</Text>
+                  </Button>
+                ),
+              )}
+            </RNScrollView>
+
+            {/* Search */}
+            <YStack px="$4" pb="$2">
+              <SearchInput
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholder="Buscar producto…"
+              />
+            </YStack>
+
+            {/* Sort row */}
+            <RNScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{
+                paddingHorizontal: 16,
+                gap: 6,
+                paddingBottom: 8,
+              }}
+            >
+              {SORT_OPTIONS.map((opt) => (
+                <Button
+                  key={opt.key}
+                  size="$2"
+                  chromeless
+                  onPress={() => handleSort(opt.key)}
+                  icon={
+                    sortKey === opt.key ? (
+                      <ArrowUpDown size={12} color="$blue10" />
+                    ) : undefined
+                  }
+                >
+                  <Text
+                    fontSize="$2"
+                    color={sortKey === opt.key ? "$blue10" : "$color10"}
+                  >
+                    {opt.label}
+                  </Text>
+                </Button>
               ))}
-            </Accordion>
-          </ScrollView>
+            </RNScrollView>
+
+            {/* Product list */}
+            <YStack px="$4">
+              <Card
+                bg="$color1"
+                borderWidth={1}
+                borderColor="$borderColor"
+                style={{ borderRadius: 14 }}
+                overflow="hidden"
+              >
+                <Accordion type="single" collapsible overflow="hidden">
+                  {sortedProducts.map((item) => (
+                    <AnalysisRow
+                      key={item.product.id}
+                      item={item}
+                      onApply={() => applyOne(item)}
+                    />
+                  ))}
+                </Accordion>
+              </Card>
+            </YStack>
+          </RNScrollView>
 
           {/* Apply all button */}
           <YStack

@@ -1,41 +1,41 @@
 import { SearchInput } from "@/components/ui/search-input";
 import {
-  AFFINITY_COLORS,
-  DISCOUNT_COLORS,
-  STAGNANT_COLORS,
+    AFFINITY_COLORS,
+    DISCOUNT_COLORS,
+    STAGNANT_COLORS,
 } from "@/constants/colors";
 import { useStore } from "@/contexts/store-context";
 import { useProductRepository } from "@/hooks/use-product-repository";
 import { fmtMoney } from "@/utils/format";
 import type {
-  ComboAffinity,
-  ComboSuggestion,
-  DiscountOpportunity,
-  SalesReport,
-  StagnantProduct,
-  StagnantStatus,
+    ComboAffinity,
+    ComboSuggestion,
+    DiscountOpportunity,
+    SalesReport,
+    StagnantProduct,
+    StagnantStatus,
 } from "@/utils/sales-analysis";
 import { comboAffinity, runSalesAnalysis } from "@/utils/sales-analysis";
 import {
-  ArrowUpDown,
-  Check,
-  CheckCircle,
-  ChevronDown,
-  Package,
-  TrendingDown,
+    ArrowUpDown,
+    Check,
+    CheckCircle,
+    ChevronDown,
+    Package,
+    TrendingDown,
 } from "@tamagui/lucide-icons";
 import { useSQLiteContext } from "expo-sqlite";
 import { useCallback, useMemo, useState } from "react";
 import { Alert, Image, ScrollView } from "react-native";
 import {
-  Accordion,
-  Button,
-  Card,
-  Separator,
-  Spinner,
-  Text,
-  XStack,
-  YStack,
+    Accordion,
+    Button,
+    Card,
+    Separator,
+    Spinner,
+    Text,
+    XStack,
+    YStack,
 } from "tamagui";
 
 // ── Badge helpers ────────────────────────────────────────────────────────────
@@ -664,9 +664,21 @@ function StagnantSection({
   }
 
   return (
-    <YStack flex={1}>
+    <ScrollView
+      style={{ flex: 1 }}
+      contentContainerStyle={{ paddingBottom: 40 }}
+      keyboardShouldPersistTaps="handled"
+    >
       {/* Filter pills */}
-      <XStack px="$4" pb="$2" gap="$2" flexWrap="wrap">
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{
+          paddingHorizontal: 16,
+          gap: 8,
+          paddingBottom: 8,
+        }}
+      >
         {(["all", "no_sales", "heavy_drop", "slowing"] as const).map((f) => {
           const active = filter === f;
           return (
@@ -681,15 +693,15 @@ function StagnantSection({
                 {f === "all"
                   ? `Todos (${items.length})`
                   : f === "no_sales"
-                    ? `🔴 Sin ventas`
-                    : f === "heavy_drop"
-                      ? `🟠 Caída fuerte`
-                      : `🟡 Desacelerando`}
+                  ? `🔴 Sin ventas`
+                  : f === "heavy_drop"
+                  ? `🟠 Caída fuerte`
+                  : `🟡 Desacelerando`}
               </Text>
             </Button>
           );
         })}
-      </XStack>
+      </ScrollView>
 
       {/* Search */}
       <YStack px="$4" pb="$2">
@@ -701,7 +713,15 @@ function StagnantSection({
       </YStack>
 
       {/* Sort pills */}
-      <XStack px="$4" pb="$2" gap="$1.5" flexWrap="wrap">
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{
+          paddingHorizontal: 16,
+          gap: 6,
+          paddingBottom: 8,
+        }}
+      >
         {SORT_OPTS.map((opt) => (
           <Button
             key={opt.key}
@@ -715,35 +735,40 @@ function StagnantSection({
             }
           >
             <Text
-              fontSize="$1"
+              fontSize="$2"
               color={sortKey === opt.key ? "$blue10" : "$color10"}
             >
               {opt.label}
             </Text>
           </Button>
         ))}
-      </XStack>
+      </ScrollView>
 
       {/* Product list */}
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{ paddingBottom: 40 }}
-      >
-        <Accordion type="single" collapsible overflow="hidden">
-          {filtered.map((item) => {
-            const disc = discountMap.get(item.product.id);
-            return (
-              <StagnantRow
-                key={item.product.id}
-                item={item}
-                discount={disc}
-                onApply={disc ? () => onApply(disc) : undefined}
-              />
-            );
-          })}
-        </Accordion>
-      </ScrollView>
-    </YStack>
+      <YStack px="$4">
+        <Card
+          bg="$color1"
+          borderWidth={1}
+          borderColor="$borderColor"
+          style={{ borderRadius: 14 }}
+          overflow="hidden"
+        >
+          <Accordion type="single" collapsible overflow="hidden">
+            {filtered.map((item) => {
+              const disc = discountMap.get(item.product.id);
+              return (
+                <StagnantRow
+                  key={item.product.id}
+                  item={item}
+                  discount={disc}
+                  onApply={disc ? () => onApply(disc) : undefined}
+                />
+              );
+            })}
+          </Accordion>
+        </Card>
+      </YStack>
+    </ScrollView>
   );
 }
 
@@ -814,9 +839,21 @@ function DiscountSection({
   }
 
   return (
-    <YStack flex={1}>
+    <ScrollView
+      style={{ flex: 1 }}
+      contentContainerStyle={{ paddingBottom: 40 }}
+      keyboardShouldPersistTaps="handled"
+    >
       {/* Filter pills */}
-      <XStack px="$4" pb="$2" gap="$2" flexWrap="wrap">
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{
+          paddingHorizontal: 16,
+          gap: 8,
+          paddingBottom: 8,
+        }}
+      >
         {(["all", "possible", "tight", "none"] as const).map((f) => {
           const active = filter === f;
           return (
@@ -831,15 +868,15 @@ function DiscountSection({
                 {f === "all"
                   ? `Todos (${items.length})`
                   : f === "possible"
-                    ? `✅ Posible`
-                    : f === "tight"
-                      ? `⚠️ Justo`
-                      : `🚫 Sin margen`}
+                  ? `✅ Posible`
+                  : f === "tight"
+                  ? `⚠️ Justo`
+                  : `🚫 Sin margen`}
               </Text>
             </Button>
           );
         })}
-      </XStack>
+      </ScrollView>
 
       {/* Search */}
       <YStack px="$4" pb="$2">
@@ -851,7 +888,15 @@ function DiscountSection({
       </YStack>
 
       {/* Sort pills */}
-      <XStack px="$4" pb="$2" gap="$1.5" flexWrap="wrap">
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{
+          paddingHorizontal: 16,
+          gap: 6,
+          paddingBottom: 8,
+        }}
+      >
         {SORT_OPTS.map((opt) => (
           <Button
             key={opt.key}
@@ -865,31 +910,36 @@ function DiscountSection({
             }
           >
             <Text
-              fontSize="$1"
+              fontSize="$2"
               color={sortKey === opt.key ? "$blue10" : "$color10"}
             >
               {opt.label}
             </Text>
           </Button>
         ))}
-      </XStack>
+      </ScrollView>
 
       {/* Product list */}
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{ paddingBottom: 40 }}
-      >
-        <Accordion type="single" collapsible overflow="hidden">
-          {filtered.map((item) => (
-            <DiscountRow
-              key={item.product.id}
-              item={item}
-              onApply={() => onApply(item)}
-            />
-          ))}
-        </Accordion>
-      </ScrollView>
-    </YStack>
+      <YStack px="$4">
+        <Card
+          bg="$color1"
+          borderWidth={1}
+          borderColor="$borderColor"
+          style={{ borderRadius: 14 }}
+          overflow="hidden"
+        >
+          <Accordion type="single" collapsible overflow="hidden">
+            {filtered.map((item) => (
+              <DiscountRow
+                key={item.product.id}
+                item={item}
+                onApply={() => onApply(item)}
+              />
+            ))}
+          </Accordion>
+        </Card>
+      </YStack>
+    </ScrollView>
   );
 }
 
@@ -948,7 +998,11 @@ function ComboSection({ items }: { items: ComboSuggestion[] }) {
   }
 
   return (
-    <YStack flex={1}>
+    <ScrollView
+      style={{ flex: 1 }}
+      contentContainerStyle={{ paddingBottom: 40 }}
+      keyboardShouldPersistTaps="handled"
+    >
       {/* Search */}
       <YStack px="$4" pb="$2">
         <SearchInput
@@ -959,7 +1013,15 @@ function ComboSection({ items }: { items: ComboSuggestion[] }) {
       </YStack>
 
       {/* Sort pills */}
-      <XStack px="$4" pb="$2" gap="$1.5" flexWrap="wrap">
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{
+          paddingHorizontal: 16,
+          gap: 6,
+          paddingBottom: 8,
+        }}
+      >
         {SORT_OPTS.map((opt) => (
           <Button
             key={opt.key}
@@ -973,30 +1035,35 @@ function ComboSection({ items }: { items: ComboSuggestion[] }) {
             }
           >
             <Text
-              fontSize="$1"
+              fontSize="$2"
               color={sortKey === opt.key ? "$blue10" : "$color10"}
             >
               {opt.label}
             </Text>
           </Button>
         ))}
-      </XStack>
+      </ScrollView>
 
       {/* Product list */}
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{ paddingBottom: 40 }}
-      >
-        <Accordion type="single" collapsible overflow="hidden">
-          {filtered.map((item) => (
-            <ComboRow
-              key={`${item.anchorProduct.id}-${item.partnerProduct.id}`}
-              item={item}
-            />
-          ))}
-        </Accordion>
-      </ScrollView>
-    </YStack>
+      <YStack px="$4">
+        <Card
+          bg="$color1"
+          borderWidth={1}
+          borderColor="$borderColor"
+          style={{ borderRadius: 14 }}
+          overflow="hidden"
+        >
+          <Accordion type="single" collapsible overflow="hidden">
+            {filtered.map((item) => (
+              <ComboRow
+                key={`${item.anchorProduct.id}-${item.partnerProduct.id}`}
+                item={item}
+              />
+            ))}
+          </Accordion>
+        </Card>
+      </YStack>
+    </ScrollView>
   );
 }
 
@@ -1066,7 +1133,9 @@ export function SalesAnalysisSection({
       onPricesUpdated();
       Alert.alert(
         "Listo",
-        `Precio de ${item.product.name} actualizado a $${fmtMoney(item.suggestedPrice)}`,
+        `Precio de ${item.product.name} actualizado a $${fmtMoney(
+          item.suggestedPrice,
+        )}`,
       );
     },
     [productRepo, report, onPricesUpdated],
@@ -1089,7 +1158,9 @@ export function SalesAnalysisSection({
 
     Alert.alert(
       "Aplicar descuentos",
-      `Se actualizará el precio de ${updates.length} producto${updates.length > 1 ? "s" : ""}. ¿Continuar?`,
+      `Se actualizará el precio de ${updates.length} producto${
+        updates.length > 1 ? "s" : ""
+      }. ¿Continuar?`,
       [
         { text: "Cancelar", style: "cancel" },
         {
@@ -1103,7 +1174,9 @@ export function SalesAnalysisSection({
               onPricesUpdated();
               Alert.alert(
                 "Listo",
-                `${updates.length} precio${updates.length > 1 ? "s" : ""} actualizado${updates.length > 1 ? "s" : ""}.`,
+                `${updates.length} precio${
+                  updates.length > 1 ? "s" : ""
+                } actualizado${updates.length > 1 ? "s" : ""}.`,
               );
             } catch (e) {
               Alert.alert("Error", (e as Error).message);
