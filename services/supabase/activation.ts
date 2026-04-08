@@ -1,4 +1,4 @@
-import { saveDataConnection, supabase } from "./client";
+import { supabase } from "./client";
 
 interface ValidationResult {
   success: boolean;
@@ -28,12 +28,6 @@ export async function validateActivationCode(
         success: false,
         error: data?.error ?? "invalid_code",
       };
-    }
-
-    // Save data connection if provided
-    if (data.data_url && data.data_anon_key) {
-      await saveDataConnection(data.data_url, data.data_anon_key);
-      console.log("[Activation] Data connection saved for cloud sync");
     }
 
     return {

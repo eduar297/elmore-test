@@ -1,9 +1,4 @@
-import {
-  DATA_ANON_KEY_KEY,
-  DATA_URL_KEY,
-  SUPABASE_ANON_KEY,
-  SUPABASE_URL,
-} from "@/constants/supabase";
+import { SUPABASE_ANON_KEY, SUPABASE_URL } from "@/constants/supabase";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import * as SecureStore from "expo-secure-store";
 
@@ -32,6 +27,8 @@ export const supabase = createClient(
 // ── Dynamic Data Client ──────────────────────────────────────────────────────
 
 let _dataClient: SupabaseClient | null = null;
+let _dataClientUrl: string | null = null;
+let _dataClientAnonKey: string | null = null;
 
 function isNetworkFailure(errorMessage: string): boolean {
   return /network request failed/i.test(errorMessage);
@@ -59,42 +56,50 @@ async function canReachDataProject(
   }
 }
 
-/** Save data connection credentials to SecureStore */
-export async function saveDataConnection(
+/** Check if cloud sync can reach Central for this activated device. */
+export async function hasDataConnection(): Promise<boolean> {
+  try {
+    const businessId = await SecureStore.getItemAsync("morehub_business_id");
+    const activated = await SecureStore.getItemAsync("morehub_activated");
+    const deviceId = await SecureStore.getItemAsync("morehub_device_id");
+
+    if (activated !== "true" || !businessId || !deviceId) return false;
+
+    const { data, error } = await supabase.rpc("get_data_connection", {
+      p_business_id: businessId,
+      p_device_id: deviceId,
+    });
+
+    if (error) return false;
+    return !!(data?.success && data?.data_url && data?.data_anon_key);
+  } catch {
+    return false;
+  }
+}
+
+function getOrCreateDataClient(
   dataUrl: string,
   dataAnonKey: string,
-): Promise<void> {
-  await SecureStore.setItemAsync(DATA_URL_KEY, dataUrl);
-  await SecureStore.setItemAsync(DATA_ANON_KEY_KEY, dataAnonKey);
-  // Invalidate cached client
-  _dataClient = null;
-}
+): SupabaseClient {
+  if (
+    _dataClient &&
+    _dataClientUrl === dataUrl &&
+    _dataClientAnonKey === dataAnonKey
+  ) {
+    return _dataClient;
+  }
 
-/** Check if data connection credentials exist */
-export async function hasDataConnection(): Promise<boolean> {
-  const url = await SecureStore.getItemAsync(DATA_URL_KEY);
-  const key = await SecureStore.getItemAsync(DATA_ANON_KEY_KEY);
-  return !!(url && key);
-}
-
-/** Get or create the Data Supabase client. Returns null if not configured. */
-export async function getDataClient(): Promise<SupabaseClient | null> {
-  if (_dataClient) return _dataClient;
-
-  const url = await SecureStore.getItemAsync(DATA_URL_KEY);
-  const key = await SecureStore.getItemAsync(DATA_ANON_KEY_KEY);
-
-  if (!url || !key) return null;
-
-  _dataClient = createClient(url, key, supabaseOptions);
+  _dataClient = createClient(dataUrl, dataAnonKey, supabaseOptions);
+  _dataClientUrl = dataUrl;
+  _dataClientAnonKey = dataAnonKey;
   return _dataClient;
 }
 
-/** Clear data connection credentials */
+/** Clear in-memory data connection cache */
 export async function clearDataConnection(): Promise<void> {
-  await SecureStore.deleteItemAsync(DATA_URL_KEY);
-  await SecureStore.deleteItemAsync(DATA_ANON_KEY_KEY);
   _dataClient = null;
+  _dataClientUrl = null;
+  _dataClientAnonKey = null;
 }
 
 // ── Fetch credentials from Central ──────────────────────────────────────────
@@ -107,7 +112,12 @@ export async function clearDataConnection(): Promise<void> {
 export async function fetchAndSaveDataConnection(
   businessId: string,
   deviceId: string,
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{
+  success: boolean;
+  error?: string;
+  dataUrl?: string;
+  dataAnonKey?: string;
+}> {
   try {
     const { data, error } = await supabase.rpc("get_data_connection", {
       p_business_id: businessId,
@@ -133,9 +143,12 @@ export async function fetchAndSaveDataConnection(
       return { success: false, error: "unreachable_data_project" };
     }
 
-    await saveDataConnection(data.data_url, data.data_anon_key);
-    console.log("[DataConn] Credentials fetched and saved from Central");
-    return { success: true };
+    console.log("[DataConn] Credentials fetched from Central");
+    return {
+      success: true,
+      dataUrl: data.data_url,
+      dataAnonKey: data.data_anon_key,
+    };
   } catch (err) {
     console.warn("[DataConn] Network error:", err);
     return { success: false, error: "network_error" };
@@ -150,19 +163,12 @@ export async function ensureDataClient(
   businessId: string,
   deviceId: string,
 ): Promise<SupabaseClient | null> {
-  // Always try Central first so we pick up rotated credentials.
+  // Always ask Central. No local credentials fallback.
   const result = await fetchAndSaveDataConnection(businessId, deviceId);
-  if (result.success) {
-    return getDataClient();
+  if (!result.success || !result.dataUrl || !result.dataAnonKey) {
+    console.warn("[DataConn] Could not obtain credentials:", result.error);
+    return null;
   }
 
-  // Fallback: if Central is unavailable, reuse stored credentials if present.
-  const existing = await getDataClient();
-  if (existing) {
-    console.warn("[DataConn] Central unavailable, using stored credentials");
-    return existing;
-  }
-
-  console.warn("[DataConn] Could not obtain credentials:", result.error);
-  return null;
+  return getOrCreateDataClient(result.dataUrl, result.dataAnonKey);
 }
