@@ -1086,11 +1086,17 @@ export function SalesSection() {
                 </Text>
               </YStack>
             ) : (
-              ListHeader
+              <>
+                {ListHeader}
+                <YStack px="$4" pt="$6" gap="$1" pb="$2">
+                  <Text fontSize="$3" fontWeight="700" color="$color10">
+                    Tickets
+                  </Text>
+                </YStack>
+              </>
             )
           }
           contentContainerStyle={{ paddingBottom: 40 }}
-          ItemSeparatorComponent={() => <Separator />}
           renderItem={({ item }) => (
             <Card
               bg="$color1"
