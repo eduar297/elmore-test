@@ -1,5 +1,6 @@
 import { PeriodSelector } from "@/components/admin/period-selector";
 import { StatCard } from "@/components/admin/stat-card";
+import { ICON_BTN_BG } from "@/constants/colors";
 import { useStore } from "@/contexts/store-context";
 import { useColors } from "@/hooks/use-colors";
 import { useExpenseRepository } from "@/hooks/use-expense-repository";
@@ -35,6 +36,7 @@ import {
   X,
   Zap,
 } from "@tamagui/lucide-icons";
+import * as Haptics from "expo-haptics";
 import { useFocusEffect } from "expo-router";
 import { useSQLiteContext } from "expo-sqlite";
 import { useCallback, useMemo, useState } from "react";
@@ -46,7 +48,7 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Card, Separator, Spinner, Text, XStack, YStack } from "tamagui";
+import { Card, Spinner, Text, XStack, YStack } from "tamagui";
 
 export function OverviewSection() {
   const db = useSQLiteContext();
@@ -476,17 +478,9 @@ export function OverviewSection() {
               icon={<BarChart3 size={16} color="$blue10" />}
               delta={ticketsDelta}
             />
-            <StatCard
-              label="Promedio"
-              value={`$${fmtMoney(avgTicket)}`}
-              detail={`$${fmtMoneyFull(avgTicket)}`}
-              color="$purple10"
-              icon={<TrendingUp size={16} color="$purple10" />}
-              delta={avgDelta}
-            />
           </XStack>
 
-          {/* KPI Row 2: Ganancia */}
+          {/* KPI Row 2 */}
           <XStack gap="$3">
             <StatCard
               label="Ganancia"
@@ -503,6 +497,15 @@ export function OverviewSection() {
                 )
               }
               delta={profitDelta}
+            />
+
+            <StatCard
+              label="Promedio"
+              value={`$${fmtMoney(avgTicket)}`}
+              detail={`$${fmtMoneyFull(avgTicket)}`}
+              color="$purple10"
+              icon={<TrendingUp size={16} color="$purple10" />}
+              delta={avgDelta}
             />
           </XStack>
 
@@ -675,7 +678,12 @@ export function OverviewSection() {
                     {bizAlerts.criticalStock > 0 && (
                       <Pressable
                         style={{ flex: 1, minWidth: "45%" }}
-                        onPress={() => setAlertModal("critical")}
+                        onPress={() => {
+                          Haptics.impactAsync(
+                            Haptics.ImpactFeedbackStyle.Light,
+                          );
+                          setAlertModal("critical");
+                        }}
                       >
                         <Card
                           bg="$red2"
@@ -710,7 +718,12 @@ export function OverviewSection() {
                     {bizAlerts.capitalLocked > 0 && (
                       <Pressable
                         style={{ flex: 1, minWidth: "45%" }}
-                        onPress={() => setAlertModal("capital")}
+                        onPress={() => {
+                          Haptics.impactAsync(
+                            Haptics.ImpactFeedbackStyle.Light,
+                          );
+                          setAlertModal("capital");
+                        }}
                       >
                         <Card
                           bg="$orange2"
@@ -745,7 +758,12 @@ export function OverviewSection() {
                     {bizAlerts.noSalesCount > 0 && (
                       <Pressable
                         style={{ flex: 1, minWidth: "45%" }}
-                        onPress={() => setAlertModal("noSales")}
+                        onPress={() => {
+                          Haptics.impactAsync(
+                            Haptics.ImpactFeedbackStyle.Light,
+                          );
+                          setAlertModal("noSales");
+                        }}
                       >
                         <Card
                           bg="$yellow2"
@@ -780,7 +798,12 @@ export function OverviewSection() {
                     {bizAlerts.lowMarginCount > 0 && (
                       <Pressable
                         style={{ flex: 1, minWidth: "45%" }}
-                        onPress={() => setAlertModal("lowMargin")}
+                        onPress={() => {
+                          Haptics.impactAsync(
+                            Haptics.ImpactFeedbackStyle.Light,
+                          );
+                          setAlertModal("lowMargin");
+                        }}
                       >
                         <Card
                           bg="$purple2"
@@ -815,7 +838,12 @@ export function OverviewSection() {
                     {bizAlerts.risingCount > 0 && (
                       <Pressable
                         style={{ flex: 1, minWidth: "45%" }}
-                        onPress={() => setAlertModal("rising")}
+                        onPress={() => {
+                          Haptics.impactAsync(
+                            Haptics.ImpactFeedbackStyle.Light,
+                          );
+                          setAlertModal("rising");
+                        }}
                       >
                         <Card
                           bg="$green2"
@@ -871,25 +899,43 @@ type AlertType = "critical" | "capital" | "noSales" | "lowMargin" | "rising";
 
 const ALERT_META: Record<
   AlertType,
-  { title: string; accent: string; bg: string }
+  {
+    title: string;
+    accent: string;
+    bg: string;
+    Icon: typeof ShoppingCart;
+  }
 > = {
-  critical: { title: "Compra urgente", accent: "$red10", bg: "$red2" },
+  critical: {
+    title: "Compra urgente",
+    accent: "$red10",
+    bg: "$red2",
+    Icon: ShoppingCart,
+  },
   capital: {
     title: "Capital inmovilizado",
     accent: "$orange10",
     bg: "$orange2",
+    Icon: DollarSign,
   },
   noSales: {
     title: "Sin ventas (+30 días)",
     accent: "$yellow10",
     bg: "$yellow2",
+    Icon: PackageX,
   },
   lowMargin: {
     title: "Margen bajo (<10%)",
     accent: "$purple10",
     bg: "$purple2",
+    Icon: TrendingDown,
   },
-  rising: { title: "Tendencia en alza", accent: "$green10", bg: "$green2" },
+  rising: {
+    title: "Tendencia en alza",
+    accent: "$green10",
+    bg: "$green2",
+    Icon: TrendingUp,
+  },
 };
 
 function BizAlertModal({
@@ -1015,15 +1061,36 @@ function BizAlertModal({
         style={{ flex: 1, backgroundColor: colors.modalBg }}
       >
         {/* Header */}
-        <XStack px="$4" py="$3" items="center" justify="space-between">
-          <Text fontSize="$5" fontWeight="bold" color={meta.accent as any}>
-            {meta.title}
-          </Text>
-          <TouchableOpacity onPress={onClose} hitSlop={12}>
-            <X size={22} color={colors.muted as any} />
+        <XStack
+          p="$3"
+          px="$4"
+          style={{ alignItems: "center", justifyContent: "space-between" }}
+          borderBottomWidth={1}
+          borderBottomColor="$borderColor"
+        >
+          <XStack style={{ alignItems: "center" }} gap="$2">
+            <meta.Icon size={18} color={meta.accent as any} />
+            <Text
+              style={{ fontSize: 16, fontWeight: "700", color: colors.text }}
+            >
+              {meta.title}
+            </Text>
+          </XStack>
+          <TouchableOpacity
+            onPress={onClose}
+            hitSlop={8}
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: 16,
+              backgroundColor: ICON_BTN_BG,
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <X size={18} color={colors.text as any} />
           </TouchableOpacity>
         </XStack>
-        <Separator />
 
         {/* Product list */}
         <ScrollView

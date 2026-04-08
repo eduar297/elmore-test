@@ -162,6 +162,7 @@ export function NotificationHistorySection({
               const sColor = severityColor(entry.severity, c);
               const CatIcon =
                 CATEGORY_ICON[entry.category as NotificationCategory] ?? Bell;
+              const isUnread = !entry.seen;
               return (
                 <View key={entry.id}>
                   {idx > 0 && (
@@ -169,7 +170,19 @@ export function NotificationHistorySection({
                       style={[styles.divider, { backgroundColor: c.divider }]}
                     />
                   )}
-                  <View style={[styles.workerRow, { paddingVertical: 12 }]}>
+                  <View
+                    style={[
+                      styles.workerRow,
+                      {
+                        paddingVertical: 12,
+                        borderLeftWidth: isUnread ? 3 : 0,
+                        borderLeftColor: isUnread ? c.blue : "transparent",
+                        backgroundColor: isUnread
+                          ? `${c.blue}08`
+                          : "transparent",
+                      },
+                    ]}
+                  >
                     <View
                       style={[
                         styles.avatar,
@@ -191,10 +204,24 @@ export function NotificationHistorySection({
                           gap: 6,
                         }}
                       >
+                        {isUnread && (
+                          <View
+                            style={{
+                              width: 7,
+                              height: 7,
+                              borderRadius: 4,
+                              backgroundColor: c.blue,
+                            }}
+                          />
+                        )}
                         <Text
                           style={[
                             styles.workerName,
-                            { color: c.text, fontSize: 14 },
+                            {
+                              color: c.text,
+                              fontSize: 14,
+                              fontWeight: isUnread ? "700" : "600",
+                            },
                           ]}
                           numberOfLines={1}
                         >

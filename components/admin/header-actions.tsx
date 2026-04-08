@@ -1,7 +1,7 @@
 import {
-    CloudSyncSection,
-    NotificationHistorySection,
-    SyncSection,
+  CloudSyncSection,
+  NotificationHistorySection,
+  SyncSection,
 } from "@/components/settings";
 import { SyncModeSelector } from "@/components/settings/sync-mode-selector";
 import { useNotifications } from "@/components/ui/notification-provider";
@@ -27,6 +27,10 @@ export function HeaderActions() {
   const openHistory = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setHistoryOpen(true);
+  }, []);
+
+  const closeHistory = useCallback(() => {
+    setHistoryOpen(false);
     markAllSeen();
   }, [markAllSeen]);
 
@@ -132,7 +136,7 @@ export function HeaderActions() {
         visible={historyOpen}
         animationType="slide"
         presentationStyle="pageSheet"
-        onRequestClose={() => setHistoryOpen(false)}
+        onRequestClose={closeHistory}
       >
         <SafeAreaView
           edges={["top"]}
@@ -152,7 +156,7 @@ export function HeaderActions() {
               </Text>
             </XStack>
             <TouchableOpacity
-              onPress={() => setHistoryOpen(false)}
+              onPress={closeHistory}
               hitSlop={8}
               style={styles.closeBtn}
             >

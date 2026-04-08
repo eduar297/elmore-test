@@ -16,13 +16,12 @@ interface ScreenTabsProps<T extends string> {
   accentColor?: string;
 }
 
-const TAB_WIDTH = 76;
+const TAB_WIDTH = 68;
 const RAIL_H_PADDING = 16;
-const RAIL_INNER_PAD_H = 12;
-const RAIL_INNER_PAD_V = 3;
-const TAB_GAP = 8;
+const RAIL_PAD = 4;
+const TAB_GAP = 4;
 const DIVIDER_WIDTH = 1;
-const DIVIDER_TOTAL = DIVIDER_WIDTH + TAB_GAP * 2; // 1px line + 8px margin each side = 17px
+const DIVIDER_TOTAL = DIVIDER_WIDTH + TAB_GAP * 2;
 
 export function ScreenTabs<T extends string>({
   tabs,
@@ -43,10 +42,9 @@ export function ScreenTabs<T extends string>({
   const shadowColor = theme.shadowColor?.val;
 
   const availableWidth = screenWidth - RAIL_H_PADDING * 2;
-  const innerWidth =
-    availableWidth - RAIL_INNER_PAD_H * 2 - DIVIDER_TOTAL * (tabs.length - 1);
-  const fitsInline = tabs.length * TAB_WIDTH <= innerWidth;
-  const tabWidth = fitsInline ? innerWidth / tabs.length : TAB_WIDTH;
+  const contentWidth =
+    tabs.length * TAB_WIDTH + DIVIDER_TOTAL * (tabs.length - 1) + RAIL_PAD * 2;
+  const fitsInline = contentWidth <= availableWidth;
 
   const handleSelect = useCallback(
     (key: T, index: number) => {
@@ -54,21 +52,20 @@ export function ScreenTabs<T extends string>({
       onSelect(key);
       if (!fitsInline) {
         const x =
-          index * (tabWidth + DIVIDER_TOTAL) -
+          index * (TAB_WIDTH + DIVIDER_TOTAL) -
           availableWidth / 2 +
-          tabWidth / 2;
+          TAB_WIDTH / 2;
         scrollRef.current?.scrollTo({ x: Math.max(0, x), animated: true });
       }
     },
-    [onSelect, fitsInline, tabWidth, availableWidth],
+    [onSelect, fitsInline, availableWidth],
   );
 
   const rail = (
     <View
       style={{
         flexDirection: "row",
-        paddingHorizontal: RAIL_INNER_PAD_H,
-        paddingVertical: RAIL_INNER_PAD_V,
+        padding: RAIL_PAD,
         alignItems: "stretch",
       }}
     >
@@ -79,14 +76,15 @@ export function ScreenTabs<T extends string>({
             <Pressable
               onPress={() => handleSelect(tab.key, i)}
               style={{
-                width: tabWidth,
-                minHeight: 40,
-                paddingVertical: 9,
+                flex: fitsInline ? 1 : undefined,
+                width: fitsInline ? undefined : TAB_WIDTH,
+                minHeight: 34,
+                paddingVertical: 6,
                 paddingHorizontal: 4,
                 alignItems: "center",
                 justifyContent: "center",
-                gap: 4,
-                borderRadius: 11,
+                gap: 2,
+                borderRadius: 9,
                 borderWidth: 1,
                 borderColor: isActive ? accent : "transparent",
                 backgroundColor: isActive ? activePillBg : "transparent",
@@ -97,9 +95,9 @@ export function ScreenTabs<T extends string>({
                 elevation: isActive ? 2 : 0,
               }}
             >
-              <tab.Icon size={17} color={isActive ? accent : inactiveText} />
+              <tab.Icon size={15} color={isActive ? accent : inactiveText} />
               <Text
-                fontSize={11}
+                fontSize={10}
                 fontWeight={isActive ? "700" : "400"}
                 numberOfLines={1}
                 style={{
@@ -115,7 +113,7 @@ export function ScreenTabs<T extends string>({
                 style={{
                   width: 1,
                   marginHorizontal: TAB_GAP,
-                  marginVertical: 8,
+                  marginVertical: 6,
                   borderRadius: 999,
                   backgroundColor: dividerColor,
                   opacity: 0.6,
@@ -131,10 +129,10 @@ export function ScreenTabs<T extends string>({
   return (
     <View
       mx="$4"
-      mt="$2"
-      mb="$3"
+      mt="$1"
+      mb="$2"
       style={{
-        borderRadius: 14,
+        borderRadius: 12,
         backgroundColor: railBg,
         borderWidth: 1,
         borderColor: railBorder,
