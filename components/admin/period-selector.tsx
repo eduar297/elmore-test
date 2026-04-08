@@ -5,11 +5,11 @@ import { Calendar, ChevronLeft, ChevronRight, X } from "@tamagui/lucide-icons";
 import * as Haptics from "expo-haptics";
 import { useEffect, useMemo, useState } from "react";
 import {
-    Modal,
-    Pressable,
-    Text as RNText,
-    StyleSheet,
-    View,
+  Modal,
+  Pressable,
+  Text as RNText,
+  StyleSheet,
+  View,
 } from "react-native";
 import type { DateData } from "react-native-calendars";
 import { Calendar as RNCalendar } from "react-native-calendars";
@@ -41,10 +41,10 @@ export function PeriodTabs({
   return (
     <XStack
       bg="$color2"
-      style={{ borderRadius: 10 }}
-      p="$1"
+      style={{ borderRadius: 9 }}
+      p="$0.5"
       gap={4}
-      height={38}
+      height={34}
     >
       {(["day", "week", "month", "year", "range"] as Period[]).map((p) => {
         const active = period === p;
@@ -64,7 +64,7 @@ export function PeriodTabs({
             }}
           >
             <Text
-              fontSize={12}
+              fontSize={11}
               fontWeight="700"
               color={active ? "white" : "$color10"}
             >
@@ -98,22 +98,21 @@ export function DateNavigator({
       borderWidth={1}
       borderColor="$borderColor"
       style={{ borderRadius: 12 }}
-      p="$2"
+      p="$1.5"
     >
       <XStack style={{ alignItems: "center", justifyContent: "space-between" }}>
         {!hideArrows && (
-          <Button size="$3" chromeless icon={ChevronLeft} onPress={onPrev} />
+          <Button size="$2" chromeless icon={ChevronLeft} onPress={onPrev} />
         )}
         <Pressable
           onPress={onCalendarPress}
           style={{ alignItems: "center", flex: 1 }}
         >
-          <Calendar size={14} color="$blue10" />
+          <Calendar size={13} color="$blue10" />
           <Text
-            fontSize="$3"
+            fontSize="$2"
             fontWeight="600"
             color="$color"
-            mt="$0.5"
             style={{ textAlign: "center" }}
           >
             {label}
@@ -121,7 +120,7 @@ export function DateNavigator({
         </Pressable>
         {!hideArrows && (
           <Button
-            size="$3"
+            size="$2"
             chromeless
             icon={ChevronRight}
             onPress={onNext}

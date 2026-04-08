@@ -685,6 +685,42 @@ export function SalesSection() {
         />
       </XStack>
 
+      {/* Export tickets PDF button */}
+      {tickets.length > 0 && (
+        <Button
+          size="$2"
+          bg="$blue3"
+          borderWidth={1}
+          borderColor="$blue6"
+          style={{ borderRadius: 12, minHeight: 44 }}
+          icon={
+            exporting ? (
+              <Spinner size="small" color="$blue10" />
+            ) : (
+              <Printer size={16} color="$blue10" />
+            )
+          }
+          disabled={exporting}
+          opacity={exporting ? 0.6 : 1}
+          onPress={async () => {
+            setExporting(true);
+            try {
+              await exportTicketsPDF(
+                tickets,
+                nav.periodLabel,
+                ticketRepo.findItemsByTicketId.bind(ticketRepo),
+              );
+            } finally {
+              setExporting(false);
+            }
+          }}
+        >
+          <Text fontSize="$2" fontWeight="600" color="$blue10">
+            {exporting ? "Generando…" : "Exportar ventas PDF"}
+          </Text>
+        </Button>
+      )}
+
       {/* Insights */}
       {insights.length > 0 && (
         <XStack gap="$3" flexWrap="wrap">
@@ -834,42 +870,6 @@ export function SalesSection() {
             />
           </YStack>
         </Card>
-      )}
-
-      {/* Export tickets PDF button */}
-      {tickets.length > 0 && (
-        <Button
-          size="$3"
-          bg="$blue3"
-          borderWidth={1}
-          borderColor="$blue6"
-          style={{ borderRadius: 12 }}
-          icon={
-            exporting ? (
-              <Spinner size="small" color="$blue10" />
-            ) : (
-              <Printer size={16} color="$blue10" />
-            )
-          }
-          disabled={exporting}
-          opacity={exporting ? 0.6 : 1}
-          onPress={async () => {
-            setExporting(true);
-            try {
-              await exportTicketsPDF(
-                tickets,
-                nav.periodLabel,
-                ticketRepo.findItemsByTicketId.bind(ticketRepo),
-              );
-            } finally {
-              setExporting(false);
-            }
-          }}
-        >
-          <Text fontSize="$3" fontWeight="600" color="$blue10">
-            {exporting ? "Generando…" : "Exportar ventas PDF"}
-          </Text>
-        </Button>
       )}
     </YStack>
   );
@@ -1189,7 +1189,7 @@ export function SalesSection() {
                               </Text>
                             ) : null}
                             <Text fontSize="$1" color="$color10">
-                              {item.quantity} x ${fmtMoney(item.unitPrice)}
+                              {item.quantity} x ${item.unitPrice}
                             </Text>
                           </YStack>
                           <Text fontSize="$3" fontWeight="600" color="$green10">
