@@ -7,5 +7,6 @@ export { StoresSection } from "./stores-section";
 export { SyncModeSelector } from "./sync-mode-selector";
 export type { SyncMode } from "./sync-mode-selector";
 export { SyncSection } from "./sync-section";
+export { WebSection } from "./web-section";
 export { WorkersSection } from "./workers-section";
 
