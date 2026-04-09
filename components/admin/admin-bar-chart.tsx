@@ -30,6 +30,8 @@ type AdminBarChartProps = {
   mostNegativeValue?: number;
   xAxisLabel?: string;
   yAxisLabel?: string;
+  showVerticalLines?: boolean;
+  hideRules?: boolean;
 };
 
 export function AdminBarChart({
@@ -40,11 +42,13 @@ export function AdminBarChart({
   mostNegativeValue,
   xAxisLabel,
   yAxisLabel,
+  showVerticalLines = true,
+  hideRules = true,
 }: AdminBarChartProps) {
   const colors = useColors();
 
   return (
-    <View>
+    <View style={{ overflow: "hidden" }}>
       {yAxisLabel ? (
         <Text
           style={{
@@ -59,15 +63,17 @@ export function AdminBarChart({
       ) : null}
       <BarChart
         data={data}
-        showVerticalLines={true}
+        showVerticalLines={showVerticalLines}
         barBorderRadius={4}
         showScrollIndicator={true}
         noOfSections={noOfSections}
-        hideRules={true}
+        hideRules={hideRules}
         yAxisTextStyle={{ fontSize: 10, color: colors.muted }}
         formatYLabel={fmtYLabel}
         yAxisThickness={1}
         xAxisThickness={1}
+        xAxisColor={colors.border}
+        yAxisColor={colors.border}
         isAnimated
         animationDuration={400}
         showLine={showLine}

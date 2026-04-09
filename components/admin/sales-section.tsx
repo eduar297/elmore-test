@@ -11,54 +11,54 @@ import type { Ticket, TicketItem } from "@/models/ticket";
 import type { User as UserModel } from "@/models/user";
 import { exportTicketsPDF } from "@/utils/export";
 import {
-  daysInMonth,
-  fmtMoney,
-  fmtMoneyFull,
-  fmtTime,
-  MONTH_NAMES_SHORT,
-  shiftDay,
-  shiftMonth,
-  shiftWeek,
-  shortDayLabel,
-  weekEndISO,
+    daysInMonth,
+    fmtMoney,
+    fmtMoneyFull,
+    fmtTime,
+    MONTH_NAMES_SHORT,
+    shiftDay,
+    shiftMonth,
+    shiftWeek,
+    shortDayLabel,
+    weekEndISO,
 } from "@/utils/format";
 import {
-  Ban,
-  ChevronRight,
-  CreditCard,
-  DollarSign,
-  Printer,
-  Receipt,
-  Search,
-  ShoppingCart,
-  TrendingUp,
-  User,
-  Users,
-  X,
+    Ban,
+    ChevronRight,
+    CreditCard,
+    DollarSign,
+    Printer,
+    Receipt,
+    Search,
+    ShoppingCart,
+    TrendingUp,
+    User,
+    Users,
+    X,
 } from "@tamagui/lucide-icons";
 import { useFocusEffect } from "expo-router";
 import { useSQLiteContext } from "expo-sqlite";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Alert,
-  FlatList,
-  Image,
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
+    Alert,
+    FlatList,
+    Image,
+    Modal,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    TouchableOpacity,
 } from "react-native";
 import { PieChart } from "react-native-gifted-charts";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
-  Button,
-  Card,
-  Separator,
-  Spinner,
-  Text,
-  XStack,
-  YStack,
+    Button,
+    Card,
+    Separator,
+    Spinner,
+    Text,
+    XStack,
+    YStack,
 } from "tamagui";
 import { AdminBarChart } from "./admin-bar-chart";
 import { PeriodSelector } from "./period-selector";
@@ -958,6 +958,7 @@ export function SalesSection() {
                 labelTextStyle: { fontSize: 9, color: "#888" },
               }))}
               showLine={false}
+              showVerticalLines={false}
               xAxisLabel="Producto"
               yAxisLabel="Ingresos ($)"
             />

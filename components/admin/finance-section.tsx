@@ -1146,6 +1146,7 @@ export function FinanceSection() {
                 </Text>
                 <AdminBarChart
                   data={hourlyChartData}
+                  hideRules={false}
                   xAxisLabel="Hora"
                   yAxisLabel="Monto ($)"
                 />
@@ -1168,6 +1169,7 @@ export function FinanceSection() {
                 </Text>
                 <AdminBarChart
                   data={weekChartData}
+                  hideRules={false}
                   xAxisLabel="Día"
                   yAxisLabel="Monto ($)"
                 />
@@ -1190,6 +1192,7 @@ export function FinanceSection() {
                 </Text>
                 <AdminBarChart
                   data={rangeChartData}
+                  hideRules={false}
                   xAxisLabel="Día"
                   yAxisLabel="Monto ($)"
                 />
@@ -1212,6 +1215,7 @@ export function FinanceSection() {
                 </Text>
                 <AdminBarChart
                   data={monthChartData}
+                  hideRules={false}
                   xAxisLabel="Día"
                   yAxisLabel="Monto ($)"
                 />
@@ -1275,7 +1279,9 @@ export function FinanceSection() {
                     </XStack>
                     <AdminBarChart
                       data={activeGroupedBarData}
+                      hideRules={false}
                       showLine={false}
+                      showVerticalLines={false}
                       xAxisLabel={
                         nav.period === "day"
                           ? "Hora"
@@ -1308,6 +1314,9 @@ export function FinanceSection() {
                     </Text>
                     <AdminBarChart
                       data={activeProfitData}
+                      hideRules={false}
+                      showLine={true}
+                      // showVerticalLines={false}
                       stepValue={profitStep}
                       noOfSections={profitSectionsAbove}
                       mostNegativeValue={
