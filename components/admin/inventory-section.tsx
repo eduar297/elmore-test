@@ -739,7 +739,7 @@ export function InventorySection() {
                     height={40}
                     style={{
                       borderRadius: 8,
-                      backgroundColor: "#e5e7eb",
+                      backgroundColor: c.divider,
                       alignItems: "center",
                       justifyContent: "center",
                     }}

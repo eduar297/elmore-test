@@ -555,8 +555,8 @@ export function SalesSection() {
         return {
           value: total,
           label: `${i}h`,
-          frontColor: total > 0 ? "#3b82f6" : "#555555",
-          labelTextStyle: { fontSize: 10, color: "#888" },
+          frontColor: total > 0 ? c.blue : c.muted,
+          labelTextStyle: { fontSize: 10, color: c.muted },
         };
       }).filter((item) => item.value > 0);
     }
@@ -566,8 +566,8 @@ export function SalesSection() {
         .map((d, i) => ({
           value: d.total,
           label: DAY_LABELS[i] ?? String(i + 1),
-          frontColor: d.total > 0 ? "#3b82f6" : "#555555",
-          labelTextStyle: { fontSize: 10, color: "#888" },
+          frontColor: d.total > 0 ? c.blue : c.muted,
+          labelTextStyle: { fontSize: 10, color: c.muted },
         }))
         .filter((item) => item.value > 0);
     }
@@ -577,8 +577,8 @@ export function SalesSection() {
       return Array.from({ length: days }, (_, i) => ({
         value: dataMap.get(i + 1) ?? 0,
         label: String(i + 1),
-        frontColor: (dataMap.get(i + 1) ?? 0) > 0 ? "#3b82f6" : "#555555",
-        labelTextStyle: { fontSize: 10, color: "#888" },
+        frontColor: (dataMap.get(i + 1) ?? 0) > 0 ? c.blue : c.muted,
+        labelTextStyle: { fontSize: 10, color: c.muted },
       })).filter((item) => item.value > 0);
     }
     if (nav.period === "range") {
@@ -590,8 +590,8 @@ export function SalesSection() {
           label: shortDayLabel(shiftDay(nav.dateRange.from, i))
             .replace(/\sde\s/g, " ")
             .slice(0, 6),
-          frontColor: d.total > 0 ? "#3b82f6" : "#555555",
-          labelTextStyle: { fontSize: 9, color: "#888" },
+          frontColor: d.total > 0 ? c.blue : c.muted,
+          labelTextStyle: { fontSize: 9, color: c.muted },
         }))
         .filter((item) => item.value > 0);
     }
@@ -600,8 +600,8 @@ export function SalesSection() {
       return {
         value: entry?.total ?? 0,
         label: MONTH_NAMES_SHORT[i],
-        frontColor: (entry?.total ?? 0) > 0 ? "#3b82f6" : "#555555",
-        labelTextStyle: { fontSize: 10, color: "#888" },
+        frontColor: (entry?.total ?? 0) > 0 ? c.blue : c.muted,
+        labelTextStyle: { fontSize: 10, color: c.muted },
         labelWidth: 28,
       };
     }).filter((item) => item.value > 0);
@@ -612,15 +612,17 @@ export function SalesSection() {
     yearlySales,
     nav.selectedMonth,
     nav.dateRange,
+    c.blue,
+    c.muted,
   ]);
 
   const paymentPieData = useMemo(() => {
     if (paymentBreakdown.length === 0) return [];
     return paymentBreakdown.map((p) => ({
       value: p.total,
-      color: p.method === "CASH" ? "#22c55e" : "#a855f7",
+      color: p.method === "CASH" ? c.green : c.purple,
     }));
-  }, [paymentBreakdown]);
+  }, [paymentBreakdown, c.green, c.purple]);
 
   const summaryTotal =
     nav.period === "day" ? daySummary.totalSales : monthlySummary.totalSales;
@@ -856,7 +858,6 @@ export function SalesSection() {
             </Text>
             <AdminBarChart
               data={chartData}
-              lineColor="#60a5fa"
               xAxisLabel={
                 nav.period === "day"
                   ? "Hora"
@@ -908,7 +909,7 @@ export function SalesSection() {
                       style={{
                         borderRadius: 5,
                         backgroundColor:
-                          p.method === "CASH" ? "#22c55e" : "#a855f7",
+                          p.method === "CASH" ? c.green : c.purple,
                       }}
                     />
                     <YStack flex={1}>
@@ -955,7 +956,7 @@ export function SalesSection() {
                     ? tp.productName.slice(0, 7) + "…"
                     : tp.productName,
                 frontColor: CHART_PALETTE[idx % CHART_PALETTE.length],
-                labelTextStyle: { fontSize: 9, color: "#888" },
+                labelTextStyle: { fontSize: 9, color: c.muted },
               }))}
               showLine={false}
               showVerticalLines={false}

@@ -7,9 +7,9 @@ function DeltaBadge({ delta }: { delta: number }) {
     <XStack
       px="$1"
       py={1}
+      bg={up ? "$green3" : "$red3"}
       style={{
         borderRadius: 6,
-        backgroundColor: up ? "#16a34a22" : "#dc262622",
         alignItems: "center",
       }}
     >
@@ -27,6 +27,8 @@ export function StatCard({
   color,
   detail,
   delta,
+  bg,
+  borderColor,
 }: {
   label: string;
   value: string | number;
@@ -35,14 +37,18 @@ export function StatCard({
   detail?: string;
   /** Percentage change vs previous period. */
   delta?: number;
+  /** Card background override (e.g. "$green2" for tinted cards). */
+  bg?: string;
+  /** Card border override (e.g. "$green6"). */
+  borderColor?: string;
 }) {
   return (
     <Card
       flex={1}
       p="$2"
-      bg="$color1"
+      bg={(bg ?? "$color1") as any}
       borderWidth={1}
-      borderColor="$borderColor"
+      borderColor={(borderColor ?? "$borderColor") as any}
       style={{ borderRadius: 12 }}
     >
       <YStack gap="$1">

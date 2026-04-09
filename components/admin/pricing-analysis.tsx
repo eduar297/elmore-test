@@ -1,6 +1,7 @@
 import { SearchInput } from "@/components/ui/search-input";
 import { CLASS_META_COLORS } from "@/constants/colors";
 import { useStore } from "@/contexts/store-context";
+import { useColors } from "@/hooks/use-colors";
 import { useProductRepository } from "@/hooks/use-product-repository";
 import { fmtMoney } from "@/utils/format";
 import type {
@@ -106,6 +107,7 @@ function AnalysisRow({
   onApply: () => void;
 }) {
   const p = item.product;
+  const c = useColors();
   const diff = item.suggestedPrice - p.salePrice;
   const diffPct =
     p.salePrice > 0 ? ((diff / p.salePrice) * 100).toFixed(1) : "—";
@@ -141,7 +143,7 @@ function AnalysisRow({
                 height={44}
                 style={{
                   borderRadius: 10,
-                  backgroundColor: "#e5e7eb",
+                  backgroundColor: c.divider,
                   alignItems: "center",
                   justifyContent: "center",
                 }}

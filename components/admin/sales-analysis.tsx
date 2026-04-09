@@ -5,6 +5,7 @@ import {
     STAGNANT_COLORS,
 } from "@/constants/colors";
 import { useStore } from "@/contexts/store-context";
+import { useColors } from "@/hooks/use-colors";
 import { useProductRepository } from "@/hooks/use-product-repository";
 import { fmtMoney } from "@/utils/format";
 import type {
@@ -175,6 +176,7 @@ function ProductThumb({
   uri?: string | null;
   size?: number;
 }) {
+  const c = useColors();
   if (uri) {
     return (
       <Image
@@ -190,7 +192,7 @@ function ProductThumb({
         width: size,
         height: size,
         borderRadius: size / 2,
-        backgroundColor: "#88888822",
+        backgroundColor: c.divider,
         alignItems: "center",
         justifyContent: "center",
       }}
@@ -243,6 +245,7 @@ function StagnantRow({
   onApply?: () => void;
 }) {
   const p = item.product;
+  const c = useColors();
   const daysLabel =
     item.daysSinceLastSale === null
       ? "Nunca vendido"
@@ -301,7 +304,7 @@ function StagnantRow({
           <DetailRow
             label="Capital bloqueado"
             value={`$${fmtMoney(item.capitalLocked)}`}
-            color="#ef4444"
+            color={c.danger}
           />
           <DetailRow
             label="Costo promedio/ud"
@@ -325,13 +328,13 @@ function StagnantRow({
           <DetailRow
             label="Ventas período reciente"
             value={`${item.recentUnits.toFixed(1)} uds`}
-            color={item.recentUnits < item.olderUnits ? "#ef4444" : "$color"}
+            color={item.recentUnits < item.olderUnits ? c.danger : "$color"}
           />
           {item.velocityDrop > 0 && (
             <DetailRow
               label="Caída de velocidad"
               value={`${Math.round(item.velocityDrop * 100)}%`}
-              color="#ef4444"
+              color={c.danger}
             />
           )}
           {discount && discount.viability !== "none" && (
@@ -340,12 +343,12 @@ function StagnantRow({
               <DetailRow
                 label="Precio sugerido"
                 value={`$${fmtMoney(discount.suggestedPrice)}`}
-                color="#22c55e"
+                color={c.green}
               />
               <DetailRow
                 label="Descuento"
                 value={`${Math.round(discount.discountPct * 100)}%`}
-                color="#f97316"
+                color={c.orange}
               />
               <DetailRow
                 label="Margen restante"
@@ -378,6 +381,7 @@ function DiscountRow({
   onApply: () => void;
 }) {
   const p = item.product;
+  const c = useColors();
   return (
     <Accordion.Item
       value={`dc-${p.id}`}
@@ -438,12 +442,12 @@ function DiscountRow({
           <DetailRow
             label="Precio sugerido"
             value={`$${fmtMoney(item.suggestedPrice)}`}
-            color="#22c55e"
+            color={c.green}
           />
           <DetailRow
             label="Descuento"
             value={`${Math.round(item.discountPct * 100)}%`}
-            color="#f97316"
+            color={c.orange}
           />
           <Separator my="$1" />
           <DetailRow
@@ -470,7 +474,7 @@ function DiscountRow({
           <DetailRow
             label="Potencial mensual (si reactiva)"
             value={`$${fmtMoney(item.potentialMonthlyRevenue)}`}
-            color="#22c55e"
+            color={c.green}
           />
 
           {item.viability !== "none" && (
@@ -493,6 +497,7 @@ function DiscountRow({
 // ── Row: Combo ────────────────────────────────────────────────────────────────
 
 function ComboRow({ item }: { item: ComboSuggestion }) {
+  const c = useColors();
   return (
     <Accordion.Item
       value={`co-${item.anchorProduct.id}-${item.partnerProduct.id}`}
@@ -565,12 +570,12 @@ function ComboRow({ item }: { item: ComboSuggestion }) {
           <DetailRow
             label="Precio combo sugerido"
             value={`$${fmtMoney(item.comboPrice)}`}
-            color="#22c55e"
+            color={c.green}
           />
           <DetailRow
             label="Ahorro para el cliente"
             value={`${Math.round(item.comboPct * 100)}%`}
-            color="#f97316"
+            color={c.orange}
           />
           <DetailRow
             label="Margen del combo"
@@ -1087,6 +1092,7 @@ export function SalesAnalysisSection({
   const db = useSQLiteContext();
   const { currentStore } = useStore();
   const productRepo = useProductRepository();
+  const c = useColors();
   const [report, setReport] = useState<SalesReport | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -1243,17 +1249,17 @@ export function SalesAnalysisSection({
         <KpiCard
           label="Capital bloqueado"
           value={`$${fmtMoney(report.totalCapitalLocked)}`}
-          color="#ef4444"
+          color={c.danger}
         />
         <KpiCard
           label="Sin movimiento"
           value={String(report.noSalesCount)}
-          color="#f97316"
+          color={c.orange}
         />
         <KpiCard
           label="Potencial/mes"
           value={`$${fmtMoney(report.totalPotentialRevenue)}`}
-          color="#22c55e"
+          color={c.green}
         />
         <KpiCard label="Combos" value={String(report.combosCount)} />
       </XStack>

@@ -1,4 +1,5 @@
 import { EXPENSE_CATEGORY_COLORS } from "@/constants/colors";
+import { useColors } from "@/hooks/use-colors";
 import { useExpenseRepository } from "@/hooks/use-expense-repository";
 import { usePeriodNavigation } from "@/hooks/use-period-navigation";
 import { usePurchaseRepository } from "@/hooks/use-purchase-repository";
@@ -46,6 +47,7 @@ export function FinanceSection() {
   const expenseRepo = useExpenseRepository();
 
   const nav = usePeriodNavigation();
+  const c = useColors();
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
 
@@ -438,23 +440,30 @@ export function FinanceSection() {
       items.push({
         label: "Compras",
         value: purchaseMerchandise,
-        color: "#3b82f6",
+        color: c.blue,
       });
     if (purchTransport > 0)
       items.push({
         label: "Transporte",
         value: purchTransport,
-        color: "#a855f7",
+        color: c.purple,
       });
     for (const ec of expensesByCategory) {
       items.push({
         label: EXPENSE_CATEGORIES[ec.category],
         value: ec.total,
-        color: EXPENSE_CATEGORY_COLORS[ec.category] ?? "#888",
+        color: EXPENSE_CATEGORY_COLORS[ec.category] ?? c.muted,
       });
     }
     return items;
-  }, [purchaseMerchandise, purchTransport, expensesByCategory]);
+  }, [
+    purchaseMerchandise,
+    purchTransport,
+    expensesByCategory,
+    c.blue,
+    c.purple,
+    c.muted,
+  ]);
 
   const pieTotalEgresos = egresoItems.reduce((s, i) => s + i.value, 0);
   const pieData = egresoItems.map((i) => ({ value: i.value, color: i.color }));
@@ -484,30 +493,30 @@ export function FinanceSection() {
       data.push({
         value: item.income,
         label: MONTH_NAMES_SHORT[item.month - 1],
-        frontColor: "#22c55e",
+        frontColor: c.green,
         spacing: 2,
-        labelTextStyle: { fontSize: 10, color: "#888" },
+        labelTextStyle: { fontSize: 10, color: c.muted },
         labelWidth: 30,
       });
       data.push({
         value: item.outflow,
-        frontColor: "#ef4444",
+        frontColor: c.danger,
         spacing: 14,
       });
     }
     return data;
-  }, [yearlyTrendData]);
+  }, [yearlyTrendData, c.green, c.danger, c.muted]);
 
   const profitTrendData = useMemo(
     () =>
       yearlyTrendData.map((item) => ({
         value: item.income - item.outflow,
         label: MONTH_NAMES_SHORT[item.month - 1],
-        frontColor: item.income - item.outflow >= 0 ? "#22c55e" : "#ef4444",
-        labelTextStyle: { fontSize: 10, color: "#888" },
+        frontColor: item.income - item.outflow >= 0 ? c.green : c.danger,
+        labelTextStyle: { fontSize: 10, color: c.muted },
         labelWidth: 28,
       })),
-    [yearlyTrendData],
+    [yearlyTrendData, c.green, c.danger, c.muted],
   );
 
   // Monthly daily grouped bar data (Ingresos vs Egresos by day)
@@ -526,18 +535,18 @@ export function FinanceSection() {
       data.push({
         value: item.income,
         label: String(item.day),
-        frontColor: "#22c55e",
+        frontColor: c.green,
         spacing: 2,
-        labelTextStyle: { fontSize: 9, color: "#888" },
+        labelTextStyle: { fontSize: 9, color: c.muted },
       });
       data.push({
         value: item.outflow,
-        frontColor: "#ef4444",
+        frontColor: c.danger,
         spacing: 10,
       });
     }
     return data;
-  }, [monthDailyTrend]);
+  }, [monthDailyTrend, c.green, c.danger, c.muted]);
 
   // Monthly daily profit trend data
   const monthProfitTrendData = useMemo(
@@ -547,10 +556,10 @@ export function FinanceSection() {
         .map((item) => ({
           value: item.income - item.outflow,
           label: String(item.day),
-          frontColor: item.income - item.outflow >= 0 ? "#22c55e" : "#ef4444",
-          labelTextStyle: { fontSize: 9, color: "#888" },
+          frontColor: item.income - item.outflow >= 0 ? c.green : c.danger,
+          labelTextStyle: { fontSize: 9, color: c.muted },
         })),
-    [monthDailyTrend],
+    [monthDailyTrend, c.green, c.danger, c.muted],
   );
 
   // Week daily grouped bar data (Ingresos vs Egresos by day)
@@ -570,19 +579,19 @@ export function FinanceSection() {
       data.push({
         value: item.income,
         label: item.label,
-        frontColor: "#22c55e",
+        frontColor: c.green,
         spacing: 2,
-        labelTextStyle: { fontSize: 10, color: "#888" },
+        labelTextStyle: { fontSize: 10, color: c.muted },
         labelWidth: 30,
       });
       data.push({
         value: item.outflow,
-        frontColor: "#ef4444",
+        frontColor: c.danger,
         spacing: 14,
       });
     }
     return data;
-  }, [weekDailyData]);
+  }, [weekDailyData, c.green, c.danger, c.muted]);
 
   // Week daily profit trend data
   const weekProfitTrendData = useMemo(
@@ -593,13 +602,12 @@ export function FinanceSection() {
             .map((item) => ({
               value: item.income - item.outflow,
               label: item.label,
-              frontColor:
-                item.income - item.outflow >= 0 ? "#22c55e" : "#ef4444",
-              labelTextStyle: { fontSize: 10, color: "#888" },
+              frontColor: item.income - item.outflow >= 0 ? c.green : c.danger,
+              labelTextStyle: { fontSize: 10, color: c.muted },
               labelWidth: 30,
             }))
         : [],
-    [weekDailyData],
+    [weekDailyData, c.green, c.danger, c.muted],
   );
 
   // Day hourly grouped bar data (Ingresos vs Egresos by hour)
@@ -615,18 +623,18 @@ export function FinanceSection() {
       data.push({
         value: item.income,
         label: `${item.hour}h`,
-        frontColor: "#22c55e",
+        frontColor: c.green,
         spacing: 2,
-        labelTextStyle: { fontSize: 10, color: "#888" },
+        labelTextStyle: { fontSize: 10, color: c.muted },
       });
       data.push({
         value: item.outflow,
-        frontColor: "#ef4444",
+        frontColor: c.danger,
         spacing: 10,
       });
     }
     return data;
-  }, [dayHourlyTrend]);
+  }, [dayHourlyTrend, c.green, c.danger, c.muted]);
 
   // Day hourly profit trend data
   const dayProfitTrendData = useMemo(
@@ -634,10 +642,10 @@ export function FinanceSection() {
       dayHourlyTrend.map((item) => ({
         value: item.income - item.outflow,
         label: `${item.hour}h`,
-        frontColor: item.income - item.outflow >= 0 ? "#22c55e" : "#ef4444",
-        labelTextStyle: { fontSize: 10, color: "#888" },
+        frontColor: item.income - item.outflow >= 0 ? c.green : c.danger,
+        labelTextStyle: { fontSize: 10, color: c.muted },
       })),
-    [dayHourlyTrend],
+    [dayHourlyTrend, c.green, c.danger, c.muted],
   );
 
   // Hourly chart for day view
@@ -649,11 +657,11 @@ export function FinanceSection() {
       return {
         value: total,
         label: `${i}h`,
-        frontColor: total > 0 ? "#22c55e" : "#555555",
-        labelTextStyle: { fontSize: 10, color: "#888" },
+        frontColor: total > 0 ? c.green : c.muted,
+        labelTextStyle: { fontSize: 10, color: c.muted },
       };
     }).filter((item) => item.value > 0);
-  }, [nav.period, hourlySales]);
+  }, [nav.period, hourlySales, c.green, c.muted]);
 
   // Week daily income bar chart
   const weekChartData = useMemo(() => {
@@ -662,11 +670,11 @@ export function FinanceSection() {
       .map((d) => ({
         value: d.income,
         label: d.label,
-        frontColor: d.income > 0 ? "#22c55e" : "#555555",
-        labelTextStyle: { fontSize: 10, color: "#888" },
+        frontColor: d.income > 0 ? c.green : c.muted,
+        labelTextStyle: { fontSize: 10, color: c.muted },
       }))
       .filter((item) => item.value > 0);
-  }, [nav.period, weekDailyData]);
+  }, [nav.period, weekDailyData, c.green, c.muted]);
 
   // Range daily income bar chart
   const rangeChartData = useMemo(() => {
@@ -675,11 +683,11 @@ export function FinanceSection() {
       .map((d) => ({
         value: d.income,
         label: d.label,
-        frontColor: d.income > 0 ? "#22c55e" : "#555555",
-        labelTextStyle: { fontSize: 9, color: "#888" },
+        frontColor: d.income > 0 ? c.green : c.muted,
+        labelTextStyle: { fontSize: 9, color: c.muted },
       }))
       .filter((item) => item.value > 0);
-  }, [nav.period, rangeDailyData]);
+  }, [nav.period, rangeDailyData, c.green, c.muted]);
 
   // Month daily income bar chart
   const monthChartData = useMemo(() => {
@@ -691,11 +699,11 @@ export function FinanceSection() {
       return {
         value: total,
         label: String(i + 1),
-        frontColor: total > 0 ? "#22c55e" : "#555555",
-        labelTextStyle: { fontSize: 9, color: "#888" },
+        frontColor: total > 0 ? c.green : c.muted,
+        labelTextStyle: { fontSize: 9, color: c.muted },
       };
     }).filter((item) => item.value > 0);
-  }, [nav.period, nav.selectedMonth, monthDailySales]);
+  }, [nav.period, nav.selectedMonth, monthDailySales, c.green, c.muted]);
 
   // Select the active trend data based on period
   const activeGroupedBarData = useMemo(() => {
@@ -1256,7 +1264,7 @@ export function FinanceSection() {
                           height={10}
                           style={{
                             borderRadius: 5,
-                            backgroundColor: "#22c55e",
+                            backgroundColor: c.green,
                           }}
                         />
                         <Text fontSize="$2" color="$color10">
@@ -1269,7 +1277,7 @@ export function FinanceSection() {
                           height={10}
                           style={{
                             borderRadius: 5,
-                            backgroundColor: "#ef4444",
+                            backgroundColor: c.danger,
                           }}
                         />
                         <Text fontSize="$2" color="$color10">
@@ -1315,8 +1323,8 @@ export function FinanceSection() {
                     <AdminBarChart
                       data={activeProfitData}
                       hideRules={false}
-                      showLine={true}
-                      // showVerticalLines={false}
+                      showLine={false}
+                      showVerticalLines={false}
                       stepValue={profitStep}
                       noOfSections={profitSectionsAbove}
                       mostNegativeValue={

@@ -90,9 +90,11 @@ export function AdminBarChart({
           <View
             style={{
               backgroundColor: colors.card,
+              borderColor: colors.border,
+              borderWidth: 1,
               paddingHorizontal: 8,
               paddingVertical: 4,
-              borderRadius: 6,
+              borderRadius: 10,
               marginBottom: 0,
               marginLeft: -6,
             }}

@@ -483,12 +483,14 @@ export function OverviewSection() {
           {/* KPI Row 2 */}
           <XStack gap="$3">
             <StatCard
-              label="Ganancia"
+              label={profit >= 0 ? "Ganancia" : "Pérdida"}
               value={`${profit >= 0 ? "" : "-"}$${fmtMoney(Math.abs(profit))}`}
               detail={`${profit >= 0 ? "" : "-"}$${fmtMoneyFull(
                 Math.abs(profit),
               )}`}
               color={profit >= 0 ? "$green10" : "$red10"}
+              bg={profit >= 0 ? "$green2" : "$red2"}
+              borderColor={profit >= 0 ? "$green6" : "$red6"}
               icon={
                 profit >= 0 ? (
                   <TrendingUp size={16} color="$green10" />

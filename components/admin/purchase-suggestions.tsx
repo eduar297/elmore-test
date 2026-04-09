@@ -1,34 +1,35 @@
 import { SearchInput } from "@/components/ui/search-input";
 import { BLUE_TINT, TREND_COLORS, URGENCY_COLORS } from "@/constants/colors";
 import { useStore } from "@/contexts/store-context";
+import { useColors } from "@/hooks/use-colors";
 import { fmtMoney } from "@/utils/format";
 import type {
-  PurchaseReport,
-  PurchaseSuggestion,
-  SalesTrend,
-  Urgency,
+    PurchaseReport,
+    PurchaseSuggestion,
+    SalesTrend,
+    Urgency,
 } from "@/utils/purchase-suggestions";
 import { runPurchaseSuggestions } from "@/utils/purchase-suggestions";
 import {
-  ArrowUpDown,
-  ChevronDown,
-  Package,
-  ShoppingCart,
+    ArrowUpDown,
+    ChevronDown,
+    Package,
+    ShoppingCart,
 } from "@tamagui/lucide-icons";
 import { useSQLiteContext } from "expo-sqlite";
 import { useCallback, useMemo, useState } from "react";
 import { Image, ScrollView } from "react-native";
 import {
-  Accordion,
-  Button,
-  Card,
-  Input,
-  Label,
-  Separator,
-  Spinner,
-  Text,
-  XStack,
-  YStack,
+    Accordion,
+    Button,
+    Card,
+    Input,
+    Label,
+    Separator,
+    Spinner,
+    Text,
+    XStack,
+    YStack,
 } from "tamagui";
 
 // ── Urgency helpers ──────────────────────────────────────────────────────────
@@ -121,6 +122,7 @@ function DetailRow({
 
 function SuggestionRow({ item }: { item: PurchaseSuggestion }) {
   const p = item.product;
+  const c = useColors();
   const daysStr =
     item.daysOfStock === Infinity ? "∞" : item.daysOfStock.toFixed(1);
 
@@ -154,7 +156,7 @@ function SuggestionRow({ item }: { item: PurchaseSuggestion }) {
                 height={36}
                 style={{
                   borderRadius: 8,
-                  backgroundColor: "#e5e7eb",
+                  backgroundColor: c.divider,
                   alignItems: "center",
                   justifyContent: "center",
                 }}
@@ -238,9 +240,9 @@ function SuggestionRow({ item }: { item: PurchaseSuggestion }) {
             value={`${item.adjustedDailyRate.toFixed(2)} uds/día`}
             color={
               item.salesTrend === "rising"
-                ? "#22c55e"
+                ? c.green
                 : item.salesTrend === "falling"
-                ? "#ef4444"
+                ? c.danger
                 : undefined
             }
           />
@@ -263,10 +265,10 @@ function SuggestionRow({ item }: { item: PurchaseSuggestion }) {
             value={`${(item.marginPct * 100).toFixed(1)}%`}
             color={
               item.marginPct >= 0.2
-                ? "#22c55e"
+                ? c.green
                 : item.marginPct >= 0.1
-                ? "#f59e0b"
-                : "#ef4444"
+                ? c.orange
+                : c.danger
             }
           />
           <DetailRow
@@ -277,11 +279,7 @@ function SuggestionRow({ item }: { item: PurchaseSuggestion }) {
             label="ROI"
             value={`${(item.roi * 100).toFixed(1)}%`}
             color={
-              item.roi >= 0.3
-                ? "#22c55e"
-                : item.roi >= 0.15
-                ? "#f59e0b"
-                : "#ef4444"
+              item.roi >= 0.3 ? c.green : item.roi >= 0.15 ? c.orange : c.danger
             }
           />
           <DetailRow
@@ -293,10 +291,10 @@ function SuggestionRow({ item }: { item: PurchaseSuggestion }) {
             value={`${item.stockTurnover.toFixed(1)}x`}
             color={
               item.stockTurnover >= 12
-                ? "#22c55e"
+                ? c.green
                 : item.stockTurnover >= 4
-                ? "#f59e0b"
-                : "#ef4444"
+                ? c.orange
+                : c.danger
             }
           />
 
@@ -308,7 +306,7 @@ function SuggestionRow({ item }: { item: PurchaseSuggestion }) {
                 value={`${item.suggestedQty} uds → $${fmtMoney(
                   item.estimatedCost,
                 )}`}
-                color="#3b82f6"
+                color={c.blue}
               />
             </>
           )}
