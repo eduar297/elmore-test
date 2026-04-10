@@ -6,13 +6,14 @@ import {
     ExternalLink,
     Globe,
     Instagram,
+    Link,
     MessageCircle,
     Palette,
     Phone,
     Save,
     Type,
 } from "@tamagui/lucide-icons";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
     ActivityIndicator,
     Alert,
@@ -38,7 +39,7 @@ const COLOR_OPTIONS = [
   "#06b6d4",
 ];
 
-export function WebSection() {
+export function WebSection({ visible }: { visible?: boolean }) {
   const c = useColors();
   const { businessId, deviceId } = useDevice();
 
@@ -47,7 +48,9 @@ export function WebSection() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [webEnabled, setWebEnabled] = useState(false);
+  const [webUrl, setWebUrl] = useState<string | null>(null);
   const [config, setConfig] = useState<WebConfig>({ ...DEFAULT_WEB_CONFIG });
+  const prevVisible = useRef(false);
 
   const load = useCallback(async () => {
     if (!businessId || !deviceId) return;
@@ -56,6 +59,7 @@ export function WebSection() {
     try {
       const result = await getWebConfig(businessId, deviceId);
       setWebEnabled(result.webEnabled);
+      setWebUrl(result.webUrl);
       setConfig(result.config);
     } catch (e) {
       setError((e as Error).message ?? "Error al cargar");
@@ -64,9 +68,13 @@ export function WebSection() {
     }
   }, [businessId, deviceId]);
 
+  // Reload every time the tab becomes visible
   useEffect(() => {
-    load();
-  }, [load]);
+    if (visible && !prevVisible.current) {
+      load();
+    }
+    prevVisible.current = !!visible;
+  }, [visible, load]);
 
   const patch = useCallback(
     (partial: Partial<WebConfig>) =>
@@ -147,6 +155,28 @@ export function WebSection() {
             trackColor={{ false: c.border, true: c.blue }}
           />
         </View>
+
+        {webEnabled && webUrl && (
+          <View
+            style={[
+              styles.prefRow,
+              { backgroundColor: c.blueLight, borderRadius: 10, padding: 10 },
+            ]}
+          >
+            <Link size={14} color={c.blue as any} />
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={[styles.fieldLabel, { color: c.muted }]}>
+                URL de tu página
+              </Text>
+              <Text
+                style={{ fontSize: 13, color: c.blue, fontWeight: "500" }}
+                selectable
+              >
+                {webUrl}
+              </Text>
+            </View>
+          </View>
+        )}
       </View>
 
       {/* ── Branding ─────────────────────────────────────────── */}
@@ -160,25 +190,6 @@ export function WebSection() {
           <Palette size={14} color={c.purple as any} />
           <Text style={[styles.cardTitle, { color: c.text }]}>Marca</Text>
         </View>
-
-        <Field label="Slug (URL)" c={c}>
-          <TextInput
-            style={[styles.input, { color: c.text, borderColor: c.border }]}
-            placeholderTextColor={c.muted}
-            placeholder="mi-tienda"
-            value={config.slug ?? ""}
-            onChangeText={(t) =>
-              patch({
-                slug: t
-                  .toLowerCase()
-                  .replace(/[^a-z0-9-]/g, "")
-                  .slice(0, 40),
-              })
-            }
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-        </Field>
 
         <Field label="Eslogan" c={c}>
           <TextInput

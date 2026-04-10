@@ -55,12 +55,20 @@ CREATE INDEX IF NOT EXISTS idx_activation_codes_code ON activation_codes (code);
 ALTER TABLE businesses
 ADD COLUMN IF NOT EXISTS web_enabled BOOLEAN NOT NULL DEFAULT false;
 
+-- 1d2. Web URL stored per business (set on creation)
+ALTER TABLE businesses
+ADD COLUMN IF NOT EXISTS web_url TEXT;
+
+-- Backfill web_url for existing businesses that don't have one
+UPDATE businesses
+SET web_url = 'https://morehub.app/' || id::TEXT
+WHERE web_url IS NULL;
+
 -- 1e. Web configs — per-business customisation for the public web page
 CREATE TABLE IF NOT EXISTS web_configs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid (),
     business_id UUID NOT NULL REFERENCES businesses (id) ON DELETE CASCADE,
     -- Branding
-    slug TEXT, -- URL-friendly identifier, e.g. "mi-tienda"
     logo_url TEXT,
     banner_url TEXT,
     primary_color TEXT NOT NULL DEFAULT '#3b82f6',
@@ -80,8 +88,7 @@ CREATE TABLE IF NOT EXISTS web_configs (
     -- Meta
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    CONSTRAINT web_configs_business_id_key UNIQUE (business_id),
-    CONSTRAINT web_configs_slug_key UNIQUE (slug)
+    CONSTRAINT web_configs_business_id_key UNIQUE (business_id)
 );
 
 ALTER TABLE web_configs ENABLE ROW LEVEL SECURITY;
@@ -226,6 +233,7 @@ BEGIN
   RETURN jsonb_build_object(
     'success',       true,
     'web_enabled',   v_biz.web_enabled,
+    'web_url',       v_biz.web_url,
     'config',        CASE WHEN v_wc.id IS NOT NULL THEN row_to_json(v_wc)::jsonb ELSE NULL END
   );
 END;
@@ -261,13 +269,12 @@ BEGIN
 
   -- Upsert web_configs
   INSERT INTO web_configs (
-    business_id, slug, logo_url, banner_url, primary_color,
+    business_id, logo_url, banner_url, primary_color,
     tagline, description, phone, whatsapp, address,
     instagram, facebook, tiktok,
     show_prices, show_stock, updated_at
   ) VALUES (
     p_business_id,
-    p_config->>'slug',
     p_config->>'logo_url',
     p_config->>'banner_url',
     COALESCE(p_config->>'primary_color', '#3b82f6'),
@@ -284,7 +291,6 @@ BEGIN
     now()
   )
   ON CONFLICT (business_id) DO UPDATE SET
-    slug          = EXCLUDED.slug,
     logo_url      = EXCLUDED.logo_url,
     banner_url    = EXCLUDED.banner_url,
     primary_color = EXCLUDED.primary_color,
@@ -374,6 +380,13 @@ BEGIN
   INSERT INTO businesses (name, data_center_id)
   VALUES (trim(p_name), p_data_center_id)
   RETURNING * INTO v_row;
+
+  -- Set web_url with the actual generated id
+  UPDATE businesses
+  SET web_url = 'https://morehub.app/' || v_row.id::TEXT
+  WHERE id = v_row.id
+  RETURNING * INTO v_row;
+
   RETURN v_row;
 END;
 $$;

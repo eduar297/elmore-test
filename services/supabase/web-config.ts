@@ -8,6 +8,7 @@ import { supabase } from "./client";
 
 export interface WebConfigResult {
   webEnabled: boolean;
+  webUrl: string | null;
   config: WebConfig;
 }
 
@@ -25,6 +26,7 @@ export async function getWebConfig(
 
   return {
     webEnabled: data.web_enabled ?? false,
+    webUrl: (data.web_url as string) ?? null,
     config: data.config
       ? parseWebConfig(data.config)
       : { ...DEFAULT_WEB_CONFIG },

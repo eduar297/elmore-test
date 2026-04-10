@@ -1,5 +1,4 @@
 export interface WebConfig {
-  slug: string | null;
   logoUrl: string | null;
   bannerUrl: string | null;
   primaryColor: string;
@@ -16,7 +15,6 @@ export interface WebConfig {
 }
 
 export const DEFAULT_WEB_CONFIG: WebConfig = {
-  slug: null,
   logoUrl: null,
   bannerUrl: null,
   primaryColor: "#3b82f6",
@@ -35,7 +33,6 @@ export const DEFAULT_WEB_CONFIG: WebConfig = {
 /** Convert snake_case DB row → camelCase model */
 export function parseWebConfig(row: Record<string, unknown>): WebConfig {
   return {
-    slug: (row.slug as string) ?? null,
     logoUrl: (row.logo_url as string) ?? null,
     bannerUrl: (row.banner_url as string) ?? null,
     primaryColor: (row.primary_color as string) ?? "#3b82f6",
@@ -55,7 +52,6 @@ export function parseWebConfig(row: Record<string, unknown>): WebConfig {
 /** Convert camelCase model → snake_case JSONB for the RPC */
 export function serializeWebConfig(c: WebConfig): Record<string, unknown> {
   return {
-    slug: c.slug,
     logo_url: c.logoUrl,
     banner_url: c.bannerUrl,
     primary_color: c.primaryColor,

@@ -1,11 +1,11 @@
 import {
-    CloudSyncSection,
-    PreferencesSection,
-    ProfileSection,
-    StoresSection,
-    SyncSection,
-    WebSection,
-    WorkersSection,
+  CloudSyncSection,
+  PreferencesSection,
+  ProfileSection,
+  StoresSection,
+  SyncSection,
+  WebSection,
+  WorkersSection,
 } from "@/components/settings";
 import type { SyncMode } from "@/components/settings/sync-mode-selector";
 import { SyncModeSelector } from "@/components/settings/sync-mode-selector";
@@ -13,12 +13,12 @@ import type { TabDef } from "@/components/ui/screen-tabs";
 import { ScreenTabs } from "@/components/ui/screen-tabs";
 import { useColors } from "@/hooks/use-colors";
 import {
-    Globe,
-    RefreshCw,
-    Settings,
-    Store,
-    UserCog,
-    Users,
+  Globe,
+  RefreshCw,
+  Settings,
+  Store,
+  UserCog,
+  Users,
 } from "@tamagui/lucide-icons";
 import React, { useState } from "react";
 import { StyleSheet, View } from "react-native";
@@ -30,8 +30,8 @@ const TABS: TabDef<SettingTab>[] = [
   { key: "workers", label: "Vendedores", Icon: Users },
   { key: "stores", label: "Tiendas", Icon: Store },
   { key: "sync", label: "Sincronizar", Icon: RefreshCw },
-  { key: "prefs", label: "Preferencias", Icon: Settings },
   { key: "web", label: "Página Web", Icon: Globe },
+  { key: "prefs", label: "Preferencias", Icon: Settings },
 ];
 
 export default function SettingsScreen() {
@@ -60,7 +60,7 @@ export default function SettingsScreen() {
         <PreferencesSection />
       </View>
       <View style={activeTab === "web" ? styles.visible : styles.hidden}>
-        <WebSection />
+        <WebSection visible={activeTab === "web"} />
       </View>
     </View>
   );
