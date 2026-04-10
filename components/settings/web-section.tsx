@@ -4,6 +4,7 @@ import { DEFAULT_WEB_CONFIG, type WebConfig } from "@/models/web-config";
 import { getWebConfig, updateWebConfig } from "@/services/supabase/web-config";
 import {
     ExternalLink,
+    Eye,
     Globe,
     Instagram,
     Link,
@@ -13,6 +14,7 @@ import {
     Save,
     Type,
 } from "@tamagui/lucide-icons";
+import * as WebBrowser from "expo-web-browser";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
     ActivityIndicator,
@@ -175,6 +177,29 @@ export function WebSection({ visible }: { visible?: boolean }) {
                 {webUrl}
               </Text>
             </View>
+            <TouchableOpacity
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 4,
+                backgroundColor: c.blue,
+                paddingHorizontal: 12,
+                paddingVertical: 8,
+                borderRadius: 8,
+              }}
+              activeOpacity={0.7}
+              onPress={() => {
+                const url = /^https?:\/\//i.test(webUrl)
+                  ? webUrl
+                  : `https://${webUrl}`;
+                WebBrowser.openBrowserAsync(url);
+              }}
+            >
+              <Eye size={14} color="#fff" />
+              <Text style={{ color: "#fff", fontSize: 13, fontWeight: "600" }}>
+                Preview
+              </Text>
+            </TouchableOpacity>
           </View>
         )}
       </View>
