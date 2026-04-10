@@ -6,15 +6,12 @@ import {
   ExternalLink,
   Eye,
   Globe,
-  Instagram,
   Link,
-  MessageCircle,
   Moon,
   Palette,
   Phone,
   Save,
   Sun,
-  Type,
 } from "@tamagui/lucide-icons";
 import * as WebBrowser from "expo-web-browser";
 import React, { useCallback, useEffect, useRef, useState } from "react";
@@ -137,7 +134,11 @@ export function WebSection({ visible }: { visible?: boolean }) {
 
   return (
     <View style={{ flex: 1 }}>
-      <ScrollView contentContainerStyle={styles.profileContent}>
+      <ScrollView
+        contentContainerStyle={styles.profileContent}
+        keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets
+      >
         {/* ── Enable / Disable ─────────────────────────────────── */}
         <View
           style={[
@@ -410,11 +411,7 @@ export function WebSection({ visible }: { visible?: boolean }) {
             </Text>
           </View>
 
-          <Field
-            label="Instagram"
-            c={c}
-            icon={<Instagram size={14} color={c.muted as any} />}
-          >
+          <Field label="Instagram" c={c}>
             <TextInput
               style={[styles.input, { color: c.text, borderColor: c.border }]}
               placeholderTextColor={c.muted}
@@ -425,11 +422,7 @@ export function WebSection({ visible }: { visible?: boolean }) {
             />
           </Field>
 
-          <Field
-            label="Facebook"
-            c={c}
-            icon={<Type size={14} color={c.muted as any} />}
-          >
+          <Field label="Facebook" c={c}>
             <TextInput
               style={[styles.input, { color: c.text, borderColor: c.border }]}
               placeholderTextColor={c.muted}
@@ -440,11 +433,7 @@ export function WebSection({ visible }: { visible?: boolean }) {
             />
           </Field>
 
-          <Field
-            label="TikTok"
-            c={c}
-            icon={<MessageCircle size={14} color={c.muted as any} />}
-          >
+          <Field label="TikTok" c={c}>
             <TextInput
               style={[styles.input, { color: c.text, borderColor: c.border }]}
               placeholderTextColor={c.muted}
