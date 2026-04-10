@@ -1,42 +1,51 @@
 import { useDevice } from "@/contexts/device-context";
+import { useStore } from "@/contexts/store-context";
 import { useColors } from "@/hooks/use-colors";
 import { DEFAULT_WEB_CONFIG, type WebConfig } from "@/models/web-config";
 import { getWebConfig, updateWebConfig } from "@/services/supabase/web-config";
 import {
-  ExternalLink,
-  Eye,
-  Globe,
-  Link,
-  Moon,
-  Palette,
-  Phone,
-  Save,
-  Sun,
+    Check,
+    Copy,
+    ExternalLink,
+    Eye,
+    Globe,
+    Moon,
+    Palette,
+    Phone,
+    Save,
+    Share2,
+    Store as StoreIcon,
+    Sun
 } from "@tamagui/lucide-icons";
+import * as Clipboard from "expo-clipboard";
 import * as WebBrowser from "expo-web-browser";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Modal,
-  ScrollView,
-  Switch,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Image,
+    Modal,
+    ScrollView,
+    Share,
+    Switch,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { runOnJS } from "react-native-reanimated";
 import ColorPicker, {
-  HueSlider,
-  Panel1,
-  Preview,
+    HueSlider,
+    Panel1,
+    Preview,
 } from "reanimated-color-picker";
 import { settingStyles as styles } from "./shared";
 
 export function WebSection({ visible }: { visible?: boolean }) {
   const c = useColors();
   const { businessId, deviceId } = useDevice();
+  const { stores } = useStore();
+  const [copiedStoreId, setCopiedStoreId] = useState<number | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
@@ -170,49 +179,234 @@ export function WebSection({ visible }: { visible?: boolean }) {
           </View>
 
           {webEnabled && webUrl && (
-            <View
-              style={[
-                styles.prefRow,
-                { backgroundColor: c.blueLight, borderRadius: 10, padding: 10 },
-              ]}
-            >
-              <Link size={14} color={c.blue as any} />
-              <View style={{ flex: 1, gap: 2 }}>
-                <Text style={[styles.fieldLabel, { color: c.muted }]}>
-                  URL de tu página
-                </Text>
-                <Text
-                  style={{ fontSize: 13, color: c.blue, fontWeight: "500" }}
-                  selectable
+            <View style={{ gap: 12 }}>
+              <View style={{ gap: 4 }}>
+                <View
+                  style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
                 >
-                  {webUrl}
+                  <StoreIcon size={14} color={c.muted as any} />
+                  <Text style={[styles.fieldLabel, { color: c.muted }]}>
+                    Cada tienda tiene su propia página web
+                  </Text>
+                </View>
+                <Text style={[styles.workerMeta, { color: c.muted }]}>
+                  Comparte el enlace de cada tienda para que tus clientes vean
+                  su catálogo
                 </Text>
               </View>
-              <TouchableOpacity
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  gap: 4,
-                  backgroundColor: c.blue,
-                  paddingHorizontal: 12,
-                  paddingVertical: 8,
-                  borderRadius: 8,
-                }}
-                activeOpacity={0.7}
-                onPress={() => {
-                  const url = /^https?:\/\//i.test(webUrl)
-                    ? webUrl
-                    : `https://${webUrl}`;
-                  WebBrowser.openBrowserAsync(url);
-                }}
-              >
-                <Eye size={14} color="#fff" />
-                <Text
-                  style={{ color: "#fff", fontSize: 13, fontWeight: "600" }}
+
+              {stores.map((store) => {
+                const baseUrl = /^https?:\/\//i.test(webUrl)
+                  ? webUrl
+                  : `https://${webUrl}`;
+                const storeUrl = `${baseUrl}/${store.id}`;
+                const isCopied = copiedStoreId === store.id;
+
+                return (
+                  <View
+                    key={store.id}
+                    style={{
+                      borderRadius: 14,
+                      borderWidth: 1,
+                      borderColor: c.border,
+                      backgroundColor: c.bg,
+                      overflow: "hidden",
+                    }}
+                  >
+                    {/* Store header */}
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        gap: 10,
+                        padding: 12,
+                        borderBottomWidth: 1,
+                        borderBottomColor: c.border,
+                      }}
+                    >
+                      {store.logoUri ? (
+                        <Image
+                          source={{ uri: store.logoUri }}
+                          style={{
+                            width: 36,
+                            height: 36,
+                            borderRadius: 10,
+                          }}
+                        />
+                      ) : (
+                        <View
+                          style={{
+                            width: 36,
+                            height: 36,
+                            borderRadius: 10,
+                            backgroundColor: store.color,
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                        >
+                          <Text
+                            style={{
+                              color: "#fff",
+                              fontSize: 16,
+                              fontWeight: "700",
+                            }}
+                          >
+                            {store.name.charAt(0).toUpperCase()}
+                          </Text>
+                        </View>
+                      )}
+                      <View style={{ flex: 1 }}>
+                        <Text
+                          style={{
+                            fontSize: 15,
+                            fontWeight: "600",
+                            color: c.text,
+                          }}
+                        >
+                          {store.name}
+                        </Text>
+                        <Text
+                          style={{
+                            fontSize: 12,
+                            color: c.muted,
+                            marginTop: 1,
+                          }}
+                          numberOfLines={1}
+                        >
+                          {storeUrl}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* Action buttons */}
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        padding: 8,
+                        gap: 8,
+                      }}
+                    >
+                      <TouchableOpacity
+                        style={{
+                          flex: 1,
+                          flexDirection: "row",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: 6,
+                          paddingVertical: 10,
+                          borderRadius: 10,
+                          backgroundColor: c.blueLight,
+                        }}
+                        activeOpacity={0.7}
+                        onPress={() => WebBrowser.openBrowserAsync(storeUrl)}
+                      >
+                        <Eye size={15} color={c.blue as any} />
+                        <Text
+                          style={{
+                            fontSize: 13,
+                            fontWeight: "600",
+                            color: c.blue,
+                          }}
+                        >
+                          Preview
+                        </Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={{
+                          flex: 1,
+                          flexDirection: "row",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: 6,
+                          paddingVertical: 10,
+                          borderRadius: 10,
+                          backgroundColor: isCopied ? c.greenLight : c.card,
+                          borderWidth: isCopied ? 0 : 1,
+                          borderColor: c.border,
+                        }}
+                        activeOpacity={0.7}
+                        onPress={async () => {
+                          try {
+                            await Clipboard.setStringAsync(storeUrl);
+                            setCopiedStoreId(store.id);
+                            setTimeout(() => setCopiedStoreId(null), 2000);
+                          } catch {
+                            // Clipboard may not be available
+                          }
+                        }}
+                      >
+                        {isCopied ? (
+                          <Check size={15} color={c.green as any} />
+                        ) : (
+                          <Copy size={15} color={c.text as any} />
+                        )}
+                        <Text
+                          style={{
+                            fontSize: 13,
+                            fontWeight: "600",
+                            color: isCopied ? c.green : c.text,
+                          }}
+                        >
+                          {isCopied ? "Copiado" : "Copiar"}
+                        </Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={{
+                          flex: 1,
+                          flexDirection: "row",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: 6,
+                          paddingVertical: 10,
+                          borderRadius: 10,
+                          backgroundColor: c.purpleLight,
+                        }}
+                        activeOpacity={0.7}
+                        onPress={() => {
+                          Share.share({
+                            message: `Mira el catálogo de ${store.name}: ${storeUrl}`,
+                            url: storeUrl,
+                          });
+                        }}
+                      >
+                        <Share2 size={15} color={c.purple as any} />
+                        <Text
+                          style={{
+                            fontSize: 13,
+                            fontWeight: "600",
+                            color: c.purple,
+                          }}
+                        >
+                          Compartir
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                );
+              })}
+
+              {stores.length === 0 && (
+                <View
+                  style={{
+                    paddingVertical: 20,
+                    alignItems: "center",
+                    gap: 6,
+                  }}
                 >
-                  Preview
-                </Text>
-              </TouchableOpacity>
+                  <StoreIcon size={24} color={c.muted as any} />
+                  <Text
+                    style={[
+                      styles.workerMeta,
+                      { color: c.muted, textAlign: "center" },
+                    ]}
+                  >
+                    No tienes tiendas creadas.{"\n"}Crea una en la sección de
+                    Tiendas.
+                  </Text>
+                </View>
+              )}
             </View>
           )}
         </View>
