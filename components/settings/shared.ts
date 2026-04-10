@@ -142,6 +142,7 @@ export const settingStyles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 15,
+    letterSpacing: 0,
   },
   feedbackRow: {
     flexDirection: "row",

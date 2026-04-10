@@ -406,6 +406,26 @@ BEGIN
 END;
 $$;
 
+-- 3b2. Update business web_url
+
+CREATE OR REPLACE FUNCTION console_update_business_web_url(
+  p_id UUID,
+  p_web_url TEXT
+)
+RETURNS businesses
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE v_row businesses;
+BEGIN
+  IF auth.uid() IS NULL THEN RAISE EXCEPTION 'unauthorized'; END IF;
+  UPDATE businesses SET web_url = trim(p_web_url) WHERE id = p_id RETURNING * INTO v_row;
+  IF NOT FOUND THEN RAISE EXCEPTION 'business_not_found'; END IF;
+  RETURN v_row;
+END;
+$$;
+
 -- 3c. Activation Codes
 
 CREATE OR REPLACE FUNCTION console_list_activation_codes(p_business_id UUID DEFAULT NULL)
@@ -488,6 +508,83 @@ DO $$ BEGIN
       ON web_configs FOR ALL USING (false);
   END IF;
 END $$;
+
+-- 3d. Web Configs (console)
+
+CREATE OR REPLACE FUNCTION console_list_web_configs()
+RETURNS SETOF web_configs
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF auth.uid() IS NULL THEN RAISE EXCEPTION 'unauthorized'; END IF;
+  RETURN QUERY SELECT * FROM web_configs ORDER BY updated_at DESC;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION console_upsert_web_config(
+  p_business_id UUID,
+  p_web_enabled BOOLEAN,
+  p_config JSONB DEFAULT '{}'::JSONB
+)
+RETURNS web_configs
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE v_row web_configs;
+BEGIN
+  IF auth.uid() IS NULL THEN RAISE EXCEPTION 'unauthorized'; END IF;
+
+  -- Toggle web_enabled flag on business
+  UPDATE businesses SET web_enabled = p_web_enabled WHERE id = p_business_id;
+
+  -- Upsert web_configs
+  INSERT INTO web_configs (
+    business_id, logo_url, banner_url, primary_color,
+    tagline, description, phone, whatsapp, address,
+    instagram, facebook, tiktok,
+    show_prices, show_stock, theme, updated_at
+  ) VALUES (
+    p_business_id,
+    p_config->>'logo_url',
+    p_config->>'banner_url',
+    COALESCE(p_config->>'primary_color', '#3b82f6'),
+    p_config->>'tagline',
+    p_config->>'description',
+    p_config->>'phone',
+    p_config->>'whatsapp',
+    p_config->>'address',
+    p_config->>'instagram',
+    p_config->>'facebook',
+    p_config->>'tiktok',
+    COALESCE((p_config->>'show_prices')::BOOLEAN, true),
+    COALESCE((p_config->>'show_stock')::BOOLEAN, false),
+    COALESCE(p_config->>'theme', 'light'),
+    now()
+  )
+  ON CONFLICT (business_id) DO UPDATE SET
+    logo_url      = EXCLUDED.logo_url,
+    banner_url    = EXCLUDED.banner_url,
+    primary_color = EXCLUDED.primary_color,
+    tagline       = EXCLUDED.tagline,
+    description   = EXCLUDED.description,
+    phone         = EXCLUDED.phone,
+    whatsapp      = EXCLUDED.whatsapp,
+    address       = EXCLUDED.address,
+    instagram     = EXCLUDED.instagram,
+    facebook      = EXCLUDED.facebook,
+    tiktok        = EXCLUDED.tiktok,
+    show_prices   = EXCLUDED.show_prices,
+    show_stock    = EXCLUDED.show_stock,
+    theme         = EXCLUDED.theme,
+    updated_at    = now()
+  RETURNING * INTO v_row;
+
+  RETURN v_row;
+END;
+$$;
 
 -- ── 5. Public storefront RPC (anonymous — no auth required) ─────────────────
 -- Returns business info + web_config + data center creds for rendering the
