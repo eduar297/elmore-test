@@ -21,6 +21,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Modal,
   ScrollView,
   Switch,
   Text,
@@ -28,26 +29,19 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import ColorPicker, {
+  HueSlider,
+  Panel1,
+  Preview,
+} from "reanimated-color-picker";
 import { settingStyles as styles } from "./shared";
-
-const COLOR_OPTIONS = [
-  "#3b82f6",
-  "#8b5cf6",
-  "#ec4899",
-  "#f59e0b",
-  "#10b981",
-  "#ef4444",
-  "#6366f1",
-  "#14b8a6",
-  "#f97316",
-  "#06b6d4",
-];
 
 export function WebSection({ visible }: { visible?: boolean }) {
   const c = useColors();
   const { businessId, deviceId } = useDevice();
 
   const [loading, setLoading] = useState(true);
+  const [colorPickerOpen, setColorPickerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -245,29 +239,95 @@ export function WebSection({ visible }: { visible?: boolean }) {
         </Field>
 
         <Field label="Color principal" c={c}>
-          <View
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => setColorPickerOpen(true)}
             style={{
               flexDirection: "row",
-              flexWrap: "wrap",
+              alignItems: "center",
               gap: 10,
+              borderRadius: 12,
+              borderWidth: 1,
+              borderColor: c.border,
+              paddingHorizontal: 14,
+              paddingVertical: 12,
             }}
           >
-            {COLOR_OPTIONS.map((color) => (
-              <TouchableOpacity
-                key={color}
-                onPress={() => patch({ primaryColor: color })}
-                activeOpacity={0.7}
+            <View
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: 14,
+                backgroundColor: config.primaryColor,
+              }}
+            />
+            <Text style={{ fontSize: 15, color: c.text, fontWeight: "500" }}>
+              {config.primaryColor}
+            </Text>
+          </TouchableOpacity>
+
+          <Modal
+            visible={colorPickerOpen}
+            animationType="slide"
+            transparent
+            onRequestClose={() => setColorPickerOpen(false)}
+          >
+            <View
+              style={{
+                flex: 1,
+                justifyContent: "flex-end",
+                backgroundColor: "rgba(0,0,0,0.4)",
+              }}
+            >
+              <View
                 style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: 16,
-                  backgroundColor: color,
-                  borderWidth: config.primaryColor === color ? 3 : 0,
-                  borderColor: "#fff",
+                  backgroundColor: c.card,
+                  borderTopLeftRadius: 20,
+                  borderTopRightRadius: 20,
+                  padding: 20,
+                  gap: 16,
                 }}
-              />
-            ))}
-          </View>
+              >
+                <Text
+                  style={{
+                    fontSize: 16,
+                    fontWeight: "700",
+                    color: c.text,
+                    textAlign: "center",
+                  }}
+                >
+                  Elige un color
+                </Text>
+
+                <ColorPicker
+                  value={config.primaryColor}
+                  onComplete={({ hex }) => patch({ primaryColor: hex })}
+                  style={{ gap: 16 }}
+                >
+                  <Preview hideInitialColor />
+                  <Panel1 />
+                  <HueSlider />
+                </ColorPicker>
+
+                <TouchableOpacity
+                  onPress={() => setColorPickerOpen(false)}
+                  activeOpacity={0.8}
+                  style={{
+                    backgroundColor: c.blue,
+                    borderRadius: 14,
+                    paddingVertical: 14,
+                    alignItems: "center",
+                  }}
+                >
+                  <Text
+                    style={{ color: "#fff", fontSize: 15, fontWeight: "700" }}
+                  >
+                    Listo
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </Modal>
         </Field>
       </View>
 
