@@ -16,28 +16,27 @@ import type { CreateProductInput, Product } from "@/models/product";
 import type { Unit, UnitCategory } from "@/models/unit";
 import { generateEAN13 } from "@/utils/barcode";
 import {
-  Bluetooth,
-  ChevronDown,
-  Package,
-  Pencil,
-  Plus,
-  ScanLine,
-  ShoppingCart,
-  TrendingDown,
-  TrendingUp,
-  X,
+    Bluetooth,
+    ChevronDown,
+    Package,
+    Pencil,
+    Plus,
+    ScanLine,
+    ShoppingCart,
+    TrendingDown,
+    TrendingUp,
+    X,
 } from "@tamagui/lucide-icons";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import {
-  Alert,
-  Image,
-  Modal,
-  ScrollView,
-  SectionList,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
+    Alert,
+    Image,
+    Modal,
+    SectionList,
+    StyleSheet,
+    TextInput,
+    TouchableOpacity
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button, Spinner, Text, XStack, YStack } from "tamagui";
@@ -640,41 +639,31 @@ export default function ProductsScreen() {
 
           {/* ── Create ── */}
           {modalMode === "create" && (
-            <ScrollView
-              keyboardShouldPersistTaps="handled"
-              automaticallyAdjustKeyboardInsets
-            >
-              <ProductForm
-                key={createCode}
-                code={createCode}
-                scanned={scannedCode}
-                units={allUnits}
-                onSubmit={handleCreate}
-                loading={creating}
-              />
-            </ScrollView>
+            <ProductForm
+              key={createCode}
+              code={createCode}
+              scanned={scannedCode}
+              units={allUnits}
+              onSubmit={handleCreate}
+              loading={creating}
+              onCancel={closeModal}
+            />
           )}
 
           {/* ── View / Edit (ProductCard) ── */}
           {modalMode === "view" && selectedProduct && (
-            <ScrollView
-              keyboardShouldPersistTaps="handled"
-              automaticallyAdjustKeyboardInsets
-              contentContainerStyle={{ padding: 16 }}
-            >
-              <ProductCard
-                product={selectedProduct}
-                units={allUnits}
-                editing={detailEditing}
-                unitSymbol={unitMap.get(selectedProduct.baseUnitId)?.symbol}
-                onSave={handleEdit}
-                onAddStock={handleAddStock}
-                onDelete={handleDeletePress}
-                saving={editSaving}
-                addingStock={addingStock}
-                deleting={deleting}
-              />
-            </ScrollView>
+            <ProductCard
+              product={selectedProduct}
+              units={allUnits}
+              editing={detailEditing}
+              unitSymbol={unitMap.get(selectedProduct.baseUnitId)?.symbol}
+              onSave={handleEdit}
+              onAddStock={handleAddStock}
+              onDelete={handleDeletePress}
+              saving={editSaving}
+              addingStock={addingStock}
+              deleting={deleting}
+            />
           )}
         </SafeAreaView>
       </Modal>

@@ -226,6 +226,17 @@ export function StoresSection() {
     Linking.openURL(url);
   }, []);
 
+  const canSave = name.trim().length > 0;
+  const hasChanges = editing
+    ? name !== editing.name ||
+      address !== (editing.address ?? "") ||
+      phone !== (editing.phone ?? "") ||
+      logoUri !== (editing.logoUri ?? null) ||
+      color !== (editing.color ?? "#3b82f6") ||
+      latitude !== (editing.latitude ?? null) ||
+      longitude !== (editing.longitude ?? null)
+    : true;
+
   return (
     <View style={styles.sectionRoot}>
       <View style={[styles.actionBar, { borderBottomColor: c.border }]}>
@@ -635,45 +646,60 @@ export function StoresSection() {
                   size="$4"
                 />
               </YStack>
-
-              {!!formError && (
-                <View
-                  style={[styles.feedbackRow, { backgroundColor: c.dangerBg }]}
-                >
-                  <AlertCircle size={15} color={c.danger as any} />
-                  <Text style={[styles.feedbackText, { color: c.danger }]}>
-                    {formError}
-                  </Text>
-                </View>
-              )}
-
-              <XStack gap="$2.5" mt="$1">
-                <Button
-                  flex={1}
-                  variant="outlined"
-                  onPress={() => setSheetOpen(false)}
-                  size="$4"
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  flex={1}
-                  theme="blue"
-                  onPress={handleSave}
-                  disabled={saving}
-                  opacity={saving ? 0.7 : 1}
-                  size="$4"
-                  icon={
-                    saving ? (
-                      <ActivityIndicator color="#fff" size="small" />
-                    ) : undefined
-                  }
-                >
-                  Guardar
-                </Button>
-              </XStack>
             </YStack>
           </ScrollView>
+
+          {/* ── Fixed footer ───────────────────────────────────── */}
+          <View
+            style={{
+              paddingHorizontal: 16,
+              paddingVertical: 12,
+              borderTopWidth: 1,
+              borderTopColor: c.border,
+              backgroundColor: c.modalBg,
+            }}
+          >
+            {!!formError && (
+              <View
+                style={[
+                  styles.feedbackRow,
+                  { backgroundColor: c.dangerBg, marginBottom: 10 },
+                ]}
+              >
+                <AlertCircle size={15} color={c.danger as any} />
+                <Text style={[styles.feedbackText, { color: c.danger }]}>
+                  {formError}
+                </Text>
+              </View>
+            )}
+            <XStack gap="$2.5">
+              <Button
+                flex={1}
+                variant="outlined"
+                onPress={() => setSheetOpen(false)}
+                size="$4"
+              >
+                Cancelar
+              </Button>
+              <Button
+                flex={1}
+                theme="blue"
+                onPress={handleSave}
+                disabled={!canSave || saving || (!!editing && !hasChanges)}
+                opacity={
+                  !canSave || saving || (!!editing && !hasChanges) ? 0.5 : 1
+                }
+                size="$4"
+                icon={
+                  saving ? (
+                    <ActivityIndicator color="#fff" size="small" />
+                  ) : undefined
+                }
+              >
+                Guardar
+              </Button>
+            </XStack>
+          </View>
         </SafeAreaView>
       </Modal>
     </View>

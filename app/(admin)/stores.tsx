@@ -15,6 +15,7 @@ import {
     ScrollView,
     StyleSheet,
     TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
@@ -39,10 +40,12 @@ interface StoreFormProps {
   initial?: Store;
   onSubmit: (data: CreateStoreInput) => void;
   loading?: boolean;
+  onCancel?: () => void;
 }
 
-function StoreForm({ initial, onSubmit, loading }: StoreFormProps) {
+function StoreForm({ initial, onSubmit, loading, onCancel }: StoreFormProps) {
   const uid = useId();
+  const c = useColors();
   const [name, setName] = useState(initial?.name ?? "");
   const [address, setAddress] = useState(initial?.address ?? "");
   const [phone, setPhone] = useState(initial?.phone ?? "");
@@ -55,74 +58,108 @@ function StoreForm({ initial, onSubmit, loading }: StoreFormProps) {
   }, [initial?.id]);
 
   const canSubmit = name.trim().length > 0;
+  const hasChanges = initial
+    ? name !== initial.name ||
+      address !== (initial.address ?? "") ||
+      phone !== (initial.phone ?? "")
+    : true;
 
   return (
-    <YStack gap="$3" p="$4">
-      <Text fontSize="$6" fontWeight="bold" color="$color">
-        {initial ? "Editar tienda" : "Nueva tienda"}
-      </Text>
-
-      <YStack gap="$1">
-        <Label htmlFor={`${uid}-name`} color="$color10" fontSize="$3">
-          Nombre *
-        </Label>
-        <Input
-          id={`${uid}-name`}
-          placeholder="Nombre de la tienda"
-          value={name}
-          onChangeText={setName}
-          returnKeyType="next"
-          size="$4"
-        />
-      </YStack>
-
-      <YStack gap="$1">
-        <Label htmlFor={`${uid}-address`} color="$color10" fontSize="$3">
-          Dirección
-        </Label>
-        <Input
-          id={`${uid}-address`}
-          placeholder="Av. Principal, Local #12..."
-          value={address}
-          onChangeText={setAddress}
-          returnKeyType="next"
-          size="$4"
-        />
-      </YStack>
-
-      <YStack gap="$1">
-        <Label htmlFor={`${uid}-phone`} color="$color10" fontSize="$3">
-          Teléfono
-        </Label>
-        <Input
-          id={`${uid}-phone`}
-          placeholder="+58 412..."
-          value={phone}
-          onChangeText={setPhone}
-          keyboardType="phone-pad"
-          returnKeyType="done"
-          size="$4"
-        />
-      </YStack>
-
-      <Button
-        theme="blue"
-        size="$4"
-        icon={loading ? <Spinner /> : undefined}
-        disabled={!canSubmit || loading}
-        onPress={() =>
-          onSubmit({
-            name: name.trim(),
-            address: address.trim() || null,
-            phone: phone.trim() || null,
-            logoUri: null,
-            color: "#3b82f6",
-          })
-        }
+    <View style={{ flex: 1 }}>
+      <ScrollView
+        keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets
       >
-        {initial ? "Guardar cambios" : "Crear tienda"}
-      </Button>
-    </YStack>
+        <YStack gap="$3" p="$4">
+          <Text fontSize="$6" fontWeight="bold" color="$color">
+            {initial ? "Editar tienda" : "Nueva tienda"}
+          </Text>
+
+          <YStack gap="$1">
+            <Label htmlFor={`${uid}-name`} color="$color10" fontSize="$3">
+              Nombre *
+            </Label>
+            <Input
+              id={`${uid}-name`}
+              placeholder="Nombre de la tienda"
+              value={name}
+              onChangeText={setName}
+              returnKeyType="next"
+              size="$4"
+            />
+          </YStack>
+
+          <YStack gap="$1">
+            <Label htmlFor={`${uid}-address`} color="$color10" fontSize="$3">
+              Dirección
+            </Label>
+            <Input
+              id={`${uid}-address`}
+              placeholder="Av. Principal, Local #12..."
+              value={address}
+              onChangeText={setAddress}
+              returnKeyType="next"
+              size="$4"
+            />
+          </YStack>
+
+          <YStack gap="$1">
+            <Label htmlFor={`${uid}-phone`} color="$color10" fontSize="$3">
+              Teléfono
+            </Label>
+            <Input
+              id={`${uid}-phone`}
+              placeholder="+58 412..."
+              value={phone}
+              onChangeText={setPhone}
+              keyboardType="phone-pad"
+              returnKeyType="done"
+              size="$4"
+            />
+          </YStack>
+        </YStack>
+      </ScrollView>
+
+      {/* ── Fixed footer ───────────────────────────────────── */}
+      <View
+        style={{
+          paddingHorizontal: 16,
+          paddingVertical: 12,
+          borderTopWidth: 1,
+          borderTopColor: c.border,
+          backgroundColor: c.modalBg,
+        }}
+      >
+        <XStack gap="$2.5">
+          {onCancel && (
+            <Button flex={1} variant="outlined" onPress={onCancel} size="$4">
+              Cancelar
+            </Button>
+          )}
+          <Button
+            flex={1}
+            theme="blue"
+            size="$4"
+            icon={loading ? <Spinner /> : undefined}
+            disabled={!canSubmit || loading || (!!initial && !hasChanges)}
+            opacity={
+              !canSubmit || loading || (!!initial && !hasChanges) ? 0.5 : 1
+            }
+            onPress={() =>
+              onSubmit({
+                name: name.trim(),
+                address: address.trim() || null,
+                phone: phone.trim() || null,
+                logoUri: null,
+                color: "#3b82f6",
+              })
+            }
+          >
+            {initial ? "Guardar cambios" : "Crear tienda"}
+          </Button>
+        </XStack>
+      </View>
+    </View>
   );
 }
 
@@ -348,9 +385,11 @@ export default function StoresScreen() {
               <X size={18} color="$color10" />
             </TouchableOpacity>
           </XStack>
-          <ScrollView keyboardShouldPersistTaps="handled">
-            <StoreForm onSubmit={handleCreate} loading={saving} />
-          </ScrollView>
+          <StoreForm
+            onSubmit={handleCreate}
+            loading={saving}
+            onCancel={() => setShowCreateSheet(false)}
+          />
         </SafeAreaView>
       </Modal>
 
@@ -478,13 +517,12 @@ export default function StoresScreen() {
               <X size={18} color="$color10" />
             </TouchableOpacity>
           </XStack>
-          <ScrollView keyboardShouldPersistTaps="handled">
-            <StoreForm
-              initial={selectedStore ?? undefined}
-              onSubmit={handleEdit}
-              loading={saving}
-            />
-          </ScrollView>
+          <StoreForm
+            initial={selectedStore ?? undefined}
+            onSubmit={handleEdit}
+            loading={saving}
+            onCancel={() => setShowEditSheet(false)}
+          />
         </SafeAreaView>
       </Modal>
     </YStack>

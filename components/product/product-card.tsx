@@ -5,24 +5,24 @@ import { useColors } from "@/hooks/use-colors";
 import type { CreateProductInput, Product, SaleMode } from "@/models/product";
 import type { Unit } from "@/models/unit";
 import {
-    Eye,
-    EyeOff,
-    Package,
-    PackagePlus,
-    Trash2,
+  Eye,
+  EyeOff,
+  Package,
+  PackagePlus,
+  Trash2,
 } from "@tamagui/lucide-icons";
 import { useEffect, useId, useState } from "react";
-import { Image, Switch } from "react-native";
+import { Image, ScrollView, Switch, View } from "react-native";
 import QRCode from "react-native-qrcode-svg";
 import {
-    Button,
-    Input,
-    Label,
-    Separator,
-    Spinner,
-    Text,
-    XStack,
-    YStack,
+  Button,
+  Input,
+  Label,
+  Separator,
+  Spinner,
+  Text,
+  XStack,
+  YStack,
 } from "tamagui";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -114,6 +114,16 @@ export function ProductCard({
   const parsedStockQty = parseFloat(stockQty);
   const canAddStock = !isNaN(parsedStockQty) && parsedStockQty > 0;
 
+  const hasChanges =
+    name !== product.name ||
+    costPrice !== String(product.costPrice) ||
+    salePrice !== String(product.salePrice) ||
+    unitId !== String(product.baseUnitId) ||
+    saleMode !== product.saleMode ||
+    photoUri !== (product.photoUri ?? null) ||
+    visible !== product.visible ||
+    details !== (product.details ?? "");
+
   const handleSave = () => {
     if (!canSave) return;
     onSave({
@@ -143,358 +153,404 @@ export function ProductCard({
 
   if (!editing) {
     return (
-      <YStack gap="$2">
-        {/* Photo */}
-        {product.photoUri && (
-          <Image
-            source={{ uri: product.photoUri }}
-            style={{
-              width: "100%",
-              height: 220,
-              borderRadius: 14,
-            }}
-            resizeMode="cover"
-          />
-        )}
+      <View style={{ flex: 1 }}>
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ padding: 16 }}
+        >
+          <YStack gap="$2">
+            {/* Photo */}
+            {product.photoUri && (
+              <Image
+                source={{ uri: product.photoUri }}
+                style={{
+                  width: "100%",
+                  height: 220,
+                  borderRadius: 14,
+                }}
+                resizeMode="cover"
+              />
+            )}
 
-        {/* Code (barcode + QR) */}
-        <YStack bg="$color2" style={{ borderRadius: 14 }} p="$3" gap="$2">
-          <XStack gap="$2.5">
+            {/* Code (barcode + QR) */}
+            <YStack bg="$color2" style={{ borderRadius: 14 }} p="$3" gap="$2">
+              <XStack gap="$2.5">
+                <YStack
+                  flex={2}
+                  bg="white"
+                  style={{
+                    borderRadius: 10,
+                    overflow: "hidden",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                  py="$2"
+                >
+                  <BarcodeDisplay
+                    code={product.code}
+                    width={180}
+                    barHeight={48}
+                    showText={false}
+                  />
+                </YStack>
+                <YStack
+                  flex={1}
+                  bg="white"
+                  style={{
+                    borderRadius: 10,
+                    overflow: "hidden",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                  p="$2"
+                >
+                  <QRCode
+                    value={product.code}
+                    size={76}
+                    backgroundColor="white"
+                  />
+                </YStack>
+              </XStack>
+              <Text
+                fontSize="$2"
+                color="$color10"
+                letterSpacing={2}
+                style={{ textAlign: "center" }}
+              >
+                {product.code}
+              </Text>
+            </YStack>
+
+            {/* Info rows */}
             <YStack
-              flex={2}
-              bg="white"
-              style={{
-                borderRadius: 10,
-                overflow: "hidden",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-              py="$2"
+              bg="$color2"
+              style={{ borderRadius: 14, overflow: "hidden" }}
+              px="$4"
             >
-              <BarcodeDisplay
-                code={product.code}
-                width={180}
-                barHeight={48}
-                showText={false}
+              <InfoRow
+                label="Precio costo"
+                value={`$${product.costPrice.toFixed(2)}`}
+              />
+              <Separator />
+              <InfoRow
+                label="Precio venta"
+                value={`$${product.salePrice.toFixed(2)}`}
+              />
+              <Separator />
+              <InfoRow label="Margen" value={margin ? `${margin}%` : "—"} />
+            </YStack>
+
+            {product.details ? (
+              <YStack
+                bg="$color2"
+                style={{ borderRadius: 14, overflow: "hidden" }}
+                px="$4"
+                py="$3"
+              >
+                <Text color="$color10" fontSize="$3" mb="$1">
+                  Detalles
+                </Text>
+                <Text color="$color" fontSize="$3" lineHeight={20}>
+                  {product.details}
+                </Text>
+              </YStack>
+            ) : null}
+
+            <YStack
+              bg="$color2"
+              style={{ borderRadius: 14, overflow: "hidden" }}
+              px="$4"
+            >
+              <InfoRow
+                label="Stock disponible"
+                value={`${product.stockBaseQty} ${unitSymbol ?? "uds"}`}
+              />
+              <Separator />
+              <InfoRow
+                label="Modo de venta"
+                value={product.saleMode === "UNIT" ? "Por unidad" : "Variable"}
+              />
+              <Separator />
+              <InfoRow
+                label="Visible"
+                value={product.visible ? "Sí" : "No — oculto"}
               />
             </YStack>
-            <YStack
-              flex={1}
-              bg="white"
-              style={{
-                borderRadius: 10,
-                overflow: "hidden",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-              p="$2"
-            >
-              <QRCode value={product.code} size={76} backgroundColor="white" />
-            </YStack>
-          </XStack>
-          <Text
-            fontSize="$2"
-            color="$color10"
-            letterSpacing={2}
-            style={{ textAlign: "center" }}
-          >
-            {product.code}
-          </Text>
-        </YStack>
 
-        {/* Info rows */}
-        <YStack
-          bg="$color2"
-          style={{ borderRadius: 14, overflow: "hidden" }}
-          px="$4"
-        >
-          <InfoRow
-            label="Precio costo"
-            value={`$${product.costPrice.toFixed(2)}`}
-          />
-          <Separator />
-          <InfoRow
-            label="Precio venta"
-            value={`$${product.salePrice.toFixed(2)}`}
-          />
-          <Separator />
-          <InfoRow label="Margen" value={margin ? `${margin}%` : "—"} />
-        </YStack>
-
-        {product.details ? (
-          <YStack
-            bg="$color2"
-            style={{ borderRadius: 14, overflow: "hidden" }}
-            px="$4"
-            py="$3"
-          >
-            <Text color="$color10" fontSize="$3" mb="$1">
-              Detalles
-            </Text>
-            <Text color="$color" fontSize="$3" lineHeight={20}>
-              {product.details}
-            </Text>
+            {/* Delete */}
           </YStack>
-        ) : null}
+        </ScrollView>
 
-        <YStack
-          bg="$color2"
-          style={{ borderRadius: 14, overflow: "hidden" }}
-          px="$4"
+        {/* ── Fixed footer ───────────────────────────────── */}
+        <View
+          style={{
+            paddingHorizontal: 16,
+            paddingVertical: 12,
+            borderTopWidth: 1,
+            borderTopColor: c.border,
+            backgroundColor: c.modalBg,
+          }}
         >
-          <InfoRow
-            label="Stock disponible"
-            value={`${product.stockBaseQty} ${unitSymbol ?? "uds"}`}
-          />
-          <Separator />
-          <InfoRow
-            label="Modo de venta"
-            value={product.saleMode === "UNIT" ? "Por unidad" : "Variable"}
-          />
-          <Separator />
-          <InfoRow
-            label="Visible"
-            value={product.visible ? "Sí" : "No — oculto"}
-          />
-        </YStack>
-
-        {/* Delete */}
-        <Button
-          mt="$2"
-          theme="red"
-          variant="outlined"
-          size="$3.5"
-          icon={deleting ? <Spinner size="small" /> : <Trash2 size={16} />}
-          onPress={onDelete}
-          disabled={deleting}
-        >
-          {deleting ? "Eliminando..." : "Eliminar producto"}
-        </Button>
-      </YStack>
+          <Button
+            theme="red"
+            variant="outlined"
+            size="$3.5"
+            icon={deleting ? <Spinner size="small" /> : <Trash2 size={16} />}
+            onPress={onDelete}
+            disabled={deleting}
+          >
+            {deleting ? "Eliminando..." : "Eliminar producto"}
+          </Button>
+        </View>
+      </View>
     );
   }
 
   // ── EDIT VIEW ──────────────────────────────────────────────────────────────
 
   return (
-    <YStack gap="$3">
-      {/* Photo */}
-      <YStack gap="$1">
-        <Label color="$color10" fontSize="$3">
-          Foto
-        </Label>
-        <PhotoPicker uri={photoUri} onChange={setPhotoUri} />
-      </YStack>
+    <View style={{ flex: 1 }}>
+      <ScrollView
+        keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets
+        contentContainerStyle={{ padding: 16 }}
+      >
+        <YStack gap="$3">
+          {/* Photo */}
+          <YStack gap="$1">
+            <Label color="$color10" fontSize="$3">
+              Foto
+            </Label>
+            <PhotoPicker uri={photoUri} onChange={setPhotoUri} />
+          </YStack>
 
-      {/* Code (read-only) */}
-      <YStack bg="$color2" style={{ borderRadius: 14 }} p="$3" gap="$2">
-        <XStack gap="$2">
-          <YStack
-            flex={2}
-            bg="white"
-            style={{
-              borderRadius: 10,
-              overflow: "hidden",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-            py="$2"
-          >
-            <BarcodeDisplay
-              code={product.code}
-              width={170}
-              barHeight={40}
-              showText={false}
+          {/* Code (read-only) */}
+          <YStack bg="$color2" style={{ borderRadius: 14 }} p="$3" gap="$2">
+            <XStack gap="$2">
+              <YStack
+                flex={2}
+                bg="white"
+                style={{
+                  borderRadius: 10,
+                  overflow: "hidden",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+                py="$2"
+              >
+                <BarcodeDisplay
+                  code={product.code}
+                  width={170}
+                  barHeight={40}
+                  showText={false}
+                />
+              </YStack>
+              <YStack
+                flex={1}
+                bg="white"
+                style={{
+                  borderRadius: 10,
+                  overflow: "hidden",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+                p="$2"
+              >
+                <QRCode
+                  value={product.code}
+                  size={64}
+                  backgroundColor="white"
+                />
+              </YStack>
+            </XStack>
+            <Text fontSize="$1" color="$color8" style={{ textAlign: "center" }}>
+              {product.code} — no editable
+            </Text>
+          </YStack>
+
+          {/* Name */}
+          <YStack gap="$1">
+            <Label htmlFor={`${uid}-name`} color="$color10" fontSize="$3">
+              Nombre
+            </Label>
+            <Input
+              id={`${uid}-name`}
+              placeholder="Nombre del producto"
+              value={name}
+              onChangeText={setName}
+              returnKeyType="done"
+              size="$4"
             />
           </YStack>
-          <YStack
-            flex={1}
-            bg="white"
-            style={{
-              borderRadius: 10,
-              overflow: "hidden",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-            p="$2"
-          >
-            <QRCode value={product.code} size={64} backgroundColor="white" />
+
+          {/* Details */}
+          <YStack gap="$1">
+            <Label htmlFor={`${uid}-details`} color="$color10" fontSize="$3">
+              Detalles
+            </Label>
+            <Input
+              id={`${uid}-details`}
+              placeholder="Descripción, ingredientes, notas…"
+              value={details}
+              onChangeText={setDetails}
+              multiline
+              numberOfLines={3}
+              size="$4"
+              style={{ minHeight: 80 }}
+            />
           </YStack>
-        </XStack>
-        <Text fontSize="$1" color="$color8" style={{ textAlign: "center" }}>
-          {product.code} — no editable
-        </Text>
-      </YStack>
 
-      {/* Name */}
-      <YStack gap="$1">
-        <Label htmlFor={`${uid}-name`} color="$color10" fontSize="$3">
-          Nombre
-        </Label>
-        <Input
-          id={`${uid}-name`}
-          placeholder="Nombre del producto"
-          value={name}
-          onChangeText={setName}
-          returnKeyType="done"
-          size="$4"
-        />
-      </YStack>
+          {/* Prices side-by-side */}
+          <XStack gap="$3">
+            <YStack flex={1} gap="$1">
+              <Label htmlFor={`${uid}-cost`} color="$color10" fontSize="$3">
+                Precio costo
+              </Label>
+              <Input
+                id={`${uid}-cost`}
+                placeholder="0.00"
+                value={costPrice}
+                onChangeText={setCostPrice}
+                keyboardType="decimal-pad"
+                returnKeyType="done"
+                size="$4"
+              />
+            </YStack>
+            <YStack flex={1} gap="$1">
+              <Label htmlFor={`${uid}-sale`} color="$color10" fontSize="$3">
+                Precio venta
+              </Label>
+              <Input
+                id={`${uid}-sale`}
+                placeholder="0.00"
+                value={salePrice}
+                onChangeText={setSalePrice}
+                keyboardType="decimal-pad"
+                returnKeyType="done"
+                size="$4"
+              />
+            </YStack>
+          </XStack>
 
-      {/* Details */}
-      <YStack gap="$1">
-        <Label htmlFor={`${uid}-details`} color="$color10" fontSize="$3">
-          Detalles
-        </Label>
-        <Input
-          id={`${uid}-details`}
-          placeholder="Descripción, ingredientes, notas…"
-          value={details}
-          onChangeText={setDetails}
-          multiline
-          numberOfLines={3}
-          size="$4"
-          style={{ minHeight: 80, textAlignVertical: "top" }}
-        />
-      </YStack>
+          {/* Unit */}
+          <YStack gap="$1">
+            <Label color="$color10" fontSize="$3">
+              Unidad base
+            </Label>
+            <UnitPicker units={units} value={unitId} onChange={setUnitId} />
+          </YStack>
 
-      {/* Prices side-by-side */}
-      <XStack gap="$3">
-        <YStack flex={1} gap="$1">
-          <Label htmlFor={`${uid}-cost`} color="$color10" fontSize="$3">
-            Precio costo
-          </Label>
-          <Input
-            id={`${uid}-cost`}
-            placeholder="0.00"
-            value={costPrice}
-            onChangeText={setCostPrice}
-            keyboardType="decimal-pad"
-            returnKeyType="done"
-            size="$4"
-          />
+          {/* Sale mode */}
+          <YStack gap="$1">
+            <Label color="$color10" fontSize="$3">
+              Modo de venta
+            </Label>
+            <XStack gap="$2">
+              <Button
+                flex={1}
+                theme={saleMode === "UNIT" ? "blue" : undefined}
+                onPress={() => setSaleMode("UNIT")}
+                size="$3.5"
+              >
+                Por unidad
+              </Button>
+              <Button
+                flex={1}
+                theme={saleMode === "VARIABLE" ? "blue" : undefined}
+                onPress={() => setSaleMode("VARIABLE")}
+                size="$3.5"
+              >
+                Variable
+              </Button>
+            </XStack>
+          </YStack>
+
+          {/* Visible toggle */}
+          <XStack
+            gap="$3"
+            style={{ alignItems: "center", justifyContent: "space-between" }}
+          >
+            <XStack gap="$2" style={{ alignItems: "center", flex: 1 }}>
+              {visible ? (
+                <Eye size={18} color="$green10" />
+              ) : (
+                <EyeOff size={18} color="$color8" />
+              )}
+              <Label
+                color="$color10"
+                fontSize="$3"
+                style={{ margin: 0, lineHeight: 18 }}
+              >
+                Visible para vendedores
+              </Label>
+            </XStack>
+            <Switch
+              value={visible}
+              onValueChange={setVisible}
+              trackColor={{ false: c.border, true: c.blue }}
+            />
+          </XStack>
+
+          {/* ── Add stock (inline) ── */}
+          <Separator my="$1" />
+          <YStack gap="$2">
+            <XStack items="center" gap="$2">
+              <PackagePlus size={16} color="$green10" />
+              <Text fontSize="$4" fontWeight="600" color="$color">
+                Añadir stock
+              </Text>
+              <Text fontSize="$2" color="$color10" ml="auto">
+                Actual: {product.stockBaseQty} {unitSymbol ?? "uds"}
+              </Text>
+            </XStack>
+            <XStack gap="$2" items="center">
+              <Input
+                flex={1}
+                placeholder="Cantidad"
+                value={stockQty}
+                onChangeText={setStockQty}
+                keyboardType="numeric"
+                returnKeyType="done"
+                size="$4"
+              />
+              <Button
+                theme="green"
+                size="$4"
+                icon={
+                  addingStock ? <Spinner size="small" /> : <Package size={16} />
+                }
+                disabled={addingStock || !canAddStock}
+                onPress={() => canAddStock && onAddStock(parsedStockQty)}
+              >
+                {addingStock ? "..." : "Añadir"}
+              </Button>
+            </XStack>
+          </YStack>
         </YStack>
-        <YStack flex={1} gap="$1">
-          <Label htmlFor={`${uid}-sale`} color="$color10" fontSize="$3">
-            Precio venta
-          </Label>
-          <Input
-            id={`${uid}-sale`}
-            placeholder="0.00"
-            value={salePrice}
-            onChangeText={setSalePrice}
-            keyboardType="decimal-pad"
-            returnKeyType="done"
-            size="$4"
-          />
-        </YStack>
-      </XStack>
+      </ScrollView>
 
-      {/* Unit */}
-      <YStack gap="$1">
-        <Label color="$color10" fontSize="$3">
-          Unidad base
-        </Label>
-        <UnitPicker units={units} value={unitId} onChange={setUnitId} />
-      </YStack>
-
-      {/* Sale mode */}
-      <YStack gap="$1">
-        <Label color="$color10" fontSize="$3">
-          Modo de venta
-        </Label>
-        <XStack gap="$2">
-          <Button
-            flex={1}
-            theme={saleMode === "UNIT" ? "blue" : undefined}
-            onPress={() => setSaleMode("UNIT")}
-            size="$3.5"
-          >
-            Por unidad
-          </Button>
-          <Button
-            flex={1}
-            theme={saleMode === "VARIABLE" ? "blue" : undefined}
-            onPress={() => setSaleMode("VARIABLE")}
-            size="$3.5"
-          >
-            Variable
-          </Button>
-        </XStack>
-      </YStack>
-
-      {/* Visible toggle */}
-      <XStack
-        gap="$3"
-        style={{ alignItems: "center", justifyContent: "space-between" }}
+      {/* ── Fixed footer ───────────────────────────────── */}
+      <View
+        style={{
+          paddingHorizontal: 16,
+          paddingVertical: 12,
+          borderTopWidth: 1,
+          borderTopColor: c.border,
+          backgroundColor: c.modalBg,
+        }}
       >
-        <XStack gap="$2" style={{ alignItems: "center", flex: 1 }}>
-          {visible ? (
-            <Eye size={18} color="$green10" />
-          ) : (
-            <EyeOff size={18} color="$color8" />
-          )}
-          <Label
-            color="$color10"
-            fontSize="$3"
-            style={{ margin: 0, lineHeight: 18 }}
-          >
-            Visible para vendedores
-          </Label>
-        </XStack>
-        <Switch
-          value={visible}
-          onValueChange={setVisible}
-          trackColor={{ false: c.border, true: c.blue }}
-        />
-      </XStack>
-
-      {/* Save */}
-      <Button
-        size="$4"
-        theme="blue"
-        disabled={saving || !canSave}
-        onPress={handleSave}
-        icon={saving ? <Spinner /> : undefined}
-      >
-        {saving ? "Guardando..." : "Guardar cambios"}
-      </Button>
-
-      {/* ── Add stock (inline) ── */}
-      <Separator my="$1" />
-      <YStack gap="$2">
-        <XStack items="center" gap="$2">
-          <PackagePlus size={16} color="$green10" />
-          <Text fontSize="$4" fontWeight="600" color="$color">
-            Añadir stock
-          </Text>
-          <Text fontSize="$2" color="$color10" ml="auto">
-            Actual: {product.stockBaseQty} {unitSymbol ?? "uds"}
-          </Text>
-        </XStack>
-        <XStack gap="$2" items="center">
-          <Input
-            flex={1}
-            placeholder="Cantidad"
-            value={stockQty}
-            onChangeText={setStockQty}
-            keyboardType="numeric"
-            returnKeyType="done"
-            size="$4"
-          />
-          <Button
-            theme="green"
-            size="$4"
-            icon={
-              addingStock ? <Spinner size="small" /> : <Package size={16} />
-            }
-            disabled={addingStock || !canAddStock}
-            onPress={() => canAddStock && onAddStock(parsedStockQty)}
-          >
-            {addingStock ? "..." : "Añadir"}
-          </Button>
-        </XStack>
-      </YStack>
-    </YStack>
+        {/* Save */}
+        <Button
+          size="$4"
+          theme="blue"
+          disabled={saving || !canSave || !hasChanges}
+          opacity={saving || !canSave || !hasChanges ? 0.5 : 1}
+          onPress={handleSave}
+          icon={saving ? <Spinner /> : undefined}
+        >
+          {saving ? "Guardando..." : "Guardar cambios"}
+        </Button>
+      </View>
+    </View>
   );
 }

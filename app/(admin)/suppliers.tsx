@@ -10,6 +10,7 @@ import {
     ScrollView,
     StyleSheet,
     TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
@@ -38,10 +39,17 @@ interface SupplierFormProps {
   initial?: Supplier;
   onSubmit: (data: CreateSupplierInput) => void;
   loading?: boolean;
+  onCancel?: () => void;
 }
 
-function SupplierForm({ initial, onSubmit, loading }: SupplierFormProps) {
+function SupplierForm({
+  initial,
+  onSubmit,
+  loading,
+  onCancel,
+}: SupplierFormProps) {
   const uid = useId();
+  const c = useColors();
   const [name, setName] = useState(initial?.name ?? "");
   const [contactName, setContactName] = useState(initial?.contactName ?? "");
   const [phone, setPhone] = useState(initial?.phone ?? "");
@@ -61,120 +69,157 @@ function SupplierForm({ initial, onSubmit, loading }: SupplierFormProps) {
   }, [initial?.id]);
 
   const canSubmit = name.trim().length > 0;
+  const hasChanges = initial
+    ? name !== initial.name ||
+      contactName !== (initial.contactName ?? "") ||
+      phone !== (initial.phone ?? "") ||
+      email !== (initial.email ?? "") ||
+      address !== (initial.address ?? "") ||
+      notes !== (initial.notes ?? "")
+    : true;
 
   return (
-    <YStack gap="$3" p="$4">
-      <Text fontSize="$6" fontWeight="bold" color="$color">
-        {initial ? "Editar proveedor" : "Nuevo proveedor"}
-      </Text>
-
-      <YStack gap="$1">
-        <Label htmlFor={`${uid}-name`} color="$color10" fontSize="$3">
-          Nombre *
-        </Label>
-        <Input
-          id={`${uid}-name`}
-          placeholder="Nombre del proveedor"
-          value={name}
-          onChangeText={setName}
-          returnKeyType="next"
-          size="$4"
-        />
-      </YStack>
-
-      <YStack gap="$1">
-        <Label htmlFor={`${uid}-contact`} color="$color10" fontSize="$3">
-          Persona de contacto
-        </Label>
-        <Input
-          id={`${uid}-contact`}
-          placeholder="Nombre completo"
-          value={contactName}
-          onChangeText={setContactName}
-          returnKeyType="next"
-          size="$4"
-        />
-      </YStack>
-
-      <XStack gap="$3">
-        <YStack flex={1} gap="$1">
-          <Label htmlFor={`${uid}-phone`} color="$color10" fontSize="$3">
-            Teléfono
-          </Label>
-          <Input
-            id={`${uid}-phone`}
-            placeholder="+58 412..."
-            value={phone}
-            onChangeText={setPhone}
-            keyboardType="phone-pad"
-            returnKeyType="next"
-            size="$4"
-          />
-        </YStack>
-        <YStack flex={1} gap="$1">
-          <Label htmlFor={`${uid}-email`} color="$color10" fontSize="$3">
-            Email
-          </Label>
-          <Input
-            id={`${uid}-email`}
-            placeholder="correo@mail.com"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            returnKeyType="next"
-            size="$4"
-          />
-        </YStack>
-      </XStack>
-
-      <YStack gap="$1">
-        <Label htmlFor={`${uid}-address`} color="$color10" fontSize="$3">
-          Dirección
-        </Label>
-        <Input
-          id={`${uid}-address`}
-          placeholder="Av. Principal, Local #12..."
-          value={address}
-          onChangeText={setAddress}
-          returnKeyType="next"
-          size="$4"
-        />
-      </YStack>
-
-      <YStack gap="$1">
-        <Label htmlFor={`${uid}-notes`} color="$color10" fontSize="$3">
-          Notas
-        </Label>
-        <TextArea
-          id={`${uid}-notes`}
-          placeholder="Condiciones de pago, horarios, observaciones..."
-          value={notes}
-          onChangeText={setNotes}
-          numberOfLines={3}
-          size="$4"
-        />
-      </YStack>
-
-      <Button
-        theme="blue"
-        size="$4"
-        icon={loading ? <Spinner /> : undefined}
-        disabled={!canSubmit || loading}
-        onPress={() =>
-          onSubmit({
-            name: name.trim(),
-            contactName: contactName.trim() || null,
-            phone: phone.trim() || null,
-            email: email.trim() || null,
-            address: address.trim() || null,
-            notes: notes.trim() || null,
-          })
-        }
+    <View style={{ flex: 1 }}>
+      <ScrollView
+        keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets
       >
-        {initial ? "Guardar cambios" : "Crear proveedor"}
-      </Button>
-    </YStack>
+        <YStack gap="$3" p="$4">
+          <Text fontSize="$6" fontWeight="bold" color="$color">
+            {initial ? "Editar proveedor" : "Nuevo proveedor"}
+          </Text>
+
+          <YStack gap="$1">
+            <Label htmlFor={`${uid}-name`} color="$color10" fontSize="$3">
+              Nombre *
+            </Label>
+            <Input
+              id={`${uid}-name`}
+              placeholder="Nombre del proveedor"
+              value={name}
+              onChangeText={setName}
+              returnKeyType="next"
+              size="$4"
+            />
+          </YStack>
+
+          <YStack gap="$1">
+            <Label htmlFor={`${uid}-contact`} color="$color10" fontSize="$3">
+              Persona de contacto
+            </Label>
+            <Input
+              id={`${uid}-contact`}
+              placeholder="Nombre completo"
+              value={contactName}
+              onChangeText={setContactName}
+              returnKeyType="next"
+              size="$4"
+            />
+          </YStack>
+
+          <XStack gap="$3">
+            <YStack flex={1} gap="$1">
+              <Label htmlFor={`${uid}-phone`} color="$color10" fontSize="$3">
+                Teléfono
+              </Label>
+              <Input
+                id={`${uid}-phone`}
+                placeholder="+58 412..."
+                value={phone}
+                onChangeText={setPhone}
+                keyboardType="phone-pad"
+                returnKeyType="next"
+                size="$4"
+              />
+            </YStack>
+            <YStack flex={1} gap="$1">
+              <Label htmlFor={`${uid}-email`} color="$color10" fontSize="$3">
+                Email
+              </Label>
+              <Input
+                id={`${uid}-email`}
+                placeholder="correo@mail.com"
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                returnKeyType="next"
+                size="$4"
+              />
+            </YStack>
+          </XStack>
+
+          <YStack gap="$1">
+            <Label htmlFor={`${uid}-address`} color="$color10" fontSize="$3">
+              Dirección
+            </Label>
+            <Input
+              id={`${uid}-address`}
+              placeholder="Av. Principal, Local #12..."
+              value={address}
+              onChangeText={setAddress}
+              returnKeyType="next"
+              size="$4"
+            />
+          </YStack>
+
+          <YStack gap="$1">
+            <Label htmlFor={`${uid}-notes`} color="$color10" fontSize="$3">
+              Notas
+            </Label>
+            <TextArea
+              id={`${uid}-notes`}
+              placeholder="Condiciones de pago, horarios, observaciones..."
+              value={notes}
+              onChangeText={setNotes}
+              numberOfLines={3}
+              size="$4"
+            />
+          </YStack>
+        </YStack>
+      </ScrollView>
+
+      {/* ── Fixed footer ───────────────────────────────────── */}
+      <View
+        style={{
+          paddingHorizontal: 16,
+          paddingVertical: 12,
+          borderTopWidth: 1,
+          borderTopColor: c.border,
+          backgroundColor: c.modalBg,
+        }}
+      >
+        <XStack gap="$2.5">
+          {onCancel && (
+            <Button flex={1} variant="outlined" onPress={onCancel} size="$4">
+              Cancelar
+            </Button>
+          )}
+          <Button
+            flex={1}
+            theme="blue"
+            size="$4"
+            icon={loading ? <Spinner /> : undefined}
+            disabled={!canSubmit || loading || (!!initial && !hasChanges)}
+            opacity={
+              !canSubmit || loading || (!!initial && !hasChanges) ? 0.5 : 1
+            }
+            onPress={() =>
+              onSubmit({
+                name: name.trim(),
+                contactName: contactName.trim() || null,
+                phone: phone.trim() || null,
+                email: email.trim() || null,
+                address: address.trim() || null,
+                notes: notes.trim() || null,
+              })
+            }
+          >
+            {initial ? "Guardar cambios" : "Crear proveedor"}
+          </Button>
+        </XStack>
+      </View>
+    </View>
   );
 }
 
@@ -395,12 +440,11 @@ export default function SuppliersScreen() {
               <X size={18} color="$color" />
             </TouchableOpacity>
           </XStack>
-          <ScrollView
-            keyboardShouldPersistTaps="handled"
-            contentContainerStyle={{ paddingBottom: 40 }}
-          >
-            <SupplierForm onSubmit={handleCreate} loading={saving} />
-          </ScrollView>
+          <SupplierForm
+            onSubmit={handleCreate}
+            loading={saving}
+            onCancel={() => setShowCreateSheet(false)}
+          />
         </SafeAreaView>
       </Modal>
 
@@ -551,16 +595,12 @@ export default function SuppliersScreen() {
               <X size={18} color="$color" />
             </TouchableOpacity>
           </XStack>
-          <ScrollView
-            keyboardShouldPersistTaps="handled"
-            contentContainerStyle={{ paddingBottom: 40 }}
-          >
-            <SupplierForm
-              initial={selectedSupplier ?? undefined}
-              onSubmit={handleEdit}
-              loading={saving}
-            />
-          </ScrollView>
+          <SupplierForm
+            initial={selectedSupplier ?? undefined}
+            onSubmit={handleEdit}
+            loading={saving}
+            onCancel={() => setShowEditSheet(false)}
+          />
         </SafeAreaView>
       </Modal>
     </YStack>

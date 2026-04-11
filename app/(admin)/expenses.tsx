@@ -4,24 +4,25 @@ import { ChevronDown, Plus, Receipt, Trash2, X } from "@tamagui/lucide-icons";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useId, useState } from "react";
 import {
-  Alert,
-  FlatList,
-  Modal,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
+    Alert,
+    FlatList,
+    Modal,
+    ScrollView,
+    StyleSheet,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
-  Button,
-  Card,
-  Input,
-  Label,
-  Spinner,
-  Text,
-  TextArea,
-  XStack,
-  YStack,
+    Button,
+    Card,
+    Input,
+    Label,
+    Spinner,
+    Text,
+    TextArea,
+    XStack,
+    YStack,
 } from "tamagui";
 
 import { PeriodSelector } from "@/components/admin/period-selector";
@@ -159,6 +160,7 @@ function CategoryPicker({
 function ExpenseForm({
   onSubmit,
   loading,
+  onCancel,
 }: {
   onSubmit: (data: {
     category: ExpenseCategory;
@@ -167,8 +169,10 @@ function ExpenseForm({
     date: string;
   }) => void;
   loading?: boolean;
+  onCancel?: () => void;
 }) {
   const uid = useId();
+  const c = useColors();
   const [category, setCategory] = useState<ExpenseCategory>("OTHER");
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
@@ -181,83 +185,110 @@ function ExpenseForm({
     date.length === 10;
 
   return (
-    <YStack gap="$3" p="$4">
-      <Text fontSize="$6" fontWeight="bold" color="$color">
-        Nuevo gasto
-      </Text>
-
-      {/* Category */}
-      <YStack gap="$1">
-        <Label htmlFor={`${uid}-cat`} color="$color10" fontSize="$3">
-          Categoría
-        </Label>
-        <CategoryPicker value={category} onChange={setCategory} />
-      </YStack>
-
-      {/* Description */}
-      <YStack gap="$1">
-        <Label htmlFor={`${uid}-desc`} color="$color10" fontSize="$3">
-          Descripción *
-        </Label>
-        <TextArea
-          id={`${uid}-desc`}
-          placeholder="Ej: Pago de electricidad marzo"
-          value={description}
-          onChangeText={setDescription}
-          size="$4"
-          numberOfLines={3}
-          verticalAlign="top"
-        />
-      </YStack>
-
-      {/* Amount + Date */}
-      <XStack gap="$3">
-        <YStack flex={1} gap="$1">
-          <Label htmlFor={`${uid}-amount`} color="$color10" fontSize="$3">
-            Monto ($) *
-          </Label>
-          <Input
-            id={`${uid}-amount`}
-            placeholder="0.00"
-            value={amount}
-            onChangeText={setAmount}
-            keyboardType="decimal-pad"
-            returnKeyType="done"
-            size="$4"
-          />
-        </YStack>
-        <YStack flex={1} gap="$1">
-          <Label htmlFor={`${uid}-date`} color="$color10" fontSize="$3">
-            Fecha
-          </Label>
-          <Input
-            id={`${uid}-date`}
-            placeholder="YYYY-MM-DD"
-            value={date}
-            onChangeText={setDate}
-            returnKeyType="done"
-            size="$4"
-          />
-        </YStack>
-      </XStack>
-
-      <Button
-        theme="blue"
-        size="$4"
-        icon={loading ? <Spinner /> : undefined}
-        disabled={!canSubmit || loading}
-        onPress={() =>
-          onSubmit({
-            category,
-            description: description.trim(),
-            amount: parseFloat(amount),
-            date,
-          })
-        }
+    <View style={{ flex: 1 }}>
+      <ScrollView
+        keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets
       >
-        Registrar gasto
-      </Button>
-    </YStack>
+        <YStack gap="$3" p="$4">
+          <Text fontSize="$6" fontWeight="bold" color="$color">
+            Nuevo gasto
+          </Text>
+
+          {/* Category */}
+          <YStack gap="$1">
+            <Label htmlFor={`${uid}-cat`} color="$color10" fontSize="$3">
+              Categoría
+            </Label>
+            <CategoryPicker value={category} onChange={setCategory} />
+          </YStack>
+
+          {/* Description */}
+          <YStack gap="$1">
+            <Label htmlFor={`${uid}-desc`} color="$color10" fontSize="$3">
+              Descripción *
+            </Label>
+            <TextArea
+              id={`${uid}-desc`}
+              placeholder="Ej: Pago de electricidad marzo"
+              value={description}
+              onChangeText={setDescription}
+              size="$4"
+              numberOfLines={3}
+              verticalAlign="top"
+            />
+          </YStack>
+
+          {/* Amount + Date */}
+          <XStack gap="$3">
+            <YStack flex={1} gap="$1">
+              <Label htmlFor={`${uid}-amount`} color="$color10" fontSize="$3">
+                Monto ($) *
+              </Label>
+              <Input
+                id={`${uid}-amount`}
+                placeholder="0.00"
+                value={amount}
+                onChangeText={setAmount}
+                keyboardType="decimal-pad"
+                returnKeyType="done"
+                size="$4"
+              />
+            </YStack>
+            <YStack flex={1} gap="$1">
+              <Label htmlFor={`${uid}-date`} color="$color10" fontSize="$3">
+                Fecha
+              </Label>
+              <Input
+                id={`${uid}-date`}
+                placeholder="YYYY-MM-DD"
+                value={date}
+                onChangeText={setDate}
+                returnKeyType="done"
+                size="$4"
+              />
+            </YStack>
+          </XStack>
+        </YStack>
+      </ScrollView>
+
+      {/* ── Fixed footer ─────────────────────────────────────── */}
+      <View
+        style={{
+          paddingHorizontal: 16,
+          paddingVertical: 12,
+          borderTopWidth: 1,
+          borderTopColor: c.border,
+          backgroundColor: c.modalBg,
+        }}
+      >
+        <XStack gap="$2.5">
+          {onCancel && (
+            <Button flex={1} variant="outlined" onPress={onCancel} size="$4">
+              Cancelar
+            </Button>
+          )}
+          <Button
+            flex={1}
+            theme="blue"
+            size="$4"
+            icon={loading ? <Spinner /> : undefined}
+            disabled={!canSubmit || loading}
+            opacity={!canSubmit || loading ? 0.5 : 1}
+            onPress={() =>
+              onSubmit({
+                category,
+                description: description.trim(),
+                amount: parseFloat(amount),
+                date,
+              })
+            }
+          >
+            Registrar gasto
+          </Button>
+        </XStack>
+      </View>
+    </View>
   );
 }
 
@@ -579,11 +610,23 @@ export default function ExpensesScreen() {
               </YStack>
 
               {/* Delete button */}
+            </ScrollView>
+          )}
+
+          {selectedExpense && (
+            <View
+              style={{
+                paddingHorizontal: 16,
+                paddingVertical: 12,
+                borderTopWidth: 1,
+                borderTopColor: c.border,
+                backgroundColor: c.modalBg,
+              }}
+            >
               <Button
                 theme="red"
                 size="$4"
                 icon={Trash2}
-                mt="$4"
                 onPress={() => {
                   setSelectedExpense(null);
                   handleDelete(selectedExpense);
@@ -591,7 +634,7 @@ export default function ExpensesScreen() {
               >
                 Eliminar gasto
               </Button>
-            </ScrollView>
+            </View>
           )}
         </SafeAreaView>
       </Modal>
@@ -628,12 +671,11 @@ export default function ExpensesScreen() {
               <X size={18} color="$color" />
             </TouchableOpacity>
           </XStack>
-          <ScrollView
-            keyboardShouldPersistTaps="handled"
-            contentContainerStyle={{ paddingBottom: 40 }}
-          >
-            <ExpenseForm onSubmit={handleCreate} loading={saving} />
-          </ScrollView>
+          <ExpenseForm
+            onSubmit={handleCreate}
+            loading={saving}
+            onCancel={() => setShowCreateSheet(false)}
+          />
         </SafeAreaView>
       </Modal>
     </YStack>

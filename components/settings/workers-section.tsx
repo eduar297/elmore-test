@@ -6,25 +6,25 @@ import { useUserRepository } from "@/hooks/use-user-repository";
 import type { User } from "@/models/user";
 import { hashPin } from "@/utils/auth";
 import {
-  AlertCircle,
-  Edit3,
-  Plus,
-  Trash2,
-  Users,
-  X,
+    AlertCircle,
+    Edit3,
+    Plus,
+    Trash2,
+    Users,
+    X,
 } from "@tamagui/lucide-icons";
 import { useFocusEffect } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  Modal,
-  ScrollView as RNScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Image,
+    Modal,
+    ScrollView as RNScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button, Input, Text as TText, XStack, YStack } from "tamagui";
@@ -157,6 +157,19 @@ export function WorkersSection() {
     },
     [userRepo, load],
   );
+
+  const canSave = (() => {
+    if (!name.trim()) return false;
+    if (!editing && !pin) return false;
+    if (pin && pin.length < 4) return false;
+    if (pin && pin !== pinConfirm) return false;
+    return true;
+  })();
+  const hasChanges = editing
+    ? name !== editing.name ||
+      photoUri !== (editing.photoUri ?? null) ||
+      pin.length > 0
+    : true;
 
   return (
     <View style={styles.sectionRoot}>
@@ -376,45 +389,60 @@ export function WorkersSection() {
                   />
                 </YStack>
               )}
-
-              {!!formError && (
-                <View
-                  style={[styles.feedbackRow, { backgroundColor: c.dangerBg }]}
-                >
-                  <AlertCircle size={15} color={c.danger as any} />
-                  <Text style={[styles.feedbackText, { color: c.danger }]}>
-                    {formError}
-                  </Text>
-                </View>
-              )}
-
-              <XStack gap="$2.5" mt="$1">
-                <Button
-                  flex={1}
-                  variant="outlined"
-                  onPress={() => setSheetOpen(false)}
-                  size="$4"
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  flex={1}
-                  theme="green"
-                  onPress={handleSave}
-                  disabled={saving}
-                  opacity={saving ? 0.7 : 1}
-                  size="$4"
-                  icon={
-                    saving ? (
-                      <ActivityIndicator color="#fff" size="small" />
-                    ) : undefined
-                  }
-                >
-                  Guardar
-                </Button>
-              </XStack>
             </YStack>
           </RNScrollView>
+
+          {/* ── Fixed footer ───────────────────────────────────── */}
+          <View
+            style={{
+              paddingHorizontal: 16,
+              paddingVertical: 12,
+              borderTopWidth: 1,
+              borderTopColor: c.border,
+              backgroundColor: c.modalBg,
+            }}
+          >
+            {!!formError && (
+              <View
+                style={[
+                  styles.feedbackRow,
+                  { backgroundColor: c.dangerBg, marginBottom: 10 },
+                ]}
+              >
+                <AlertCircle size={15} color={c.danger as any} />
+                <Text style={[styles.feedbackText, { color: c.danger }]}>
+                  {formError}
+                </Text>
+              </View>
+            )}
+            <XStack gap="$2.5">
+              <Button
+                flex={1}
+                variant="outlined"
+                onPress={() => setSheetOpen(false)}
+                size="$4"
+              >
+                Cancelar
+              </Button>
+              <Button
+                flex={1}
+                theme="green"
+                onPress={handleSave}
+                disabled={!canSave || saving || (!!editing && !hasChanges)}
+                opacity={
+                  !canSave || saving || (!!editing && !hasChanges) ? 0.5 : 1
+                }
+                size="$4"
+                icon={
+                  saving ? (
+                    <ActivityIndicator color="#fff" size="small" />
+                  ) : undefined
+                }
+              >
+                Guardar
+              </Button>
+            </XStack>
+          </View>
         </SafeAreaView>
       </Modal>
     </View>
