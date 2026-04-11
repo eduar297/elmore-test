@@ -273,16 +273,13 @@ export function StoresSection() {
                       style={[styles.divider, { backgroundColor: c.divider }]}
                     />
                   )}
-                  <TouchableOpacity
-                    style={styles.workerRow}
-                    onPress={() => handleSwitchStore(s)}
-                    activeOpacity={0.7}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Seleccionar tienda ${s.name}${
-                      isActive ? ", activa" : ""
-                    }`}
-                  >
-                    <View
+                  <View style={styles.workerRow}>
+                    <TouchableOpacity
+                      onPress={() => handleSwitchStore(s)}
+                      activeOpacity={0.7}
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected: isActive }}
+                      accessibilityLabel={`Seleccionar tienda ${s.name}`}
                       style={[
                         styles.avatar,
                         {
@@ -310,7 +307,7 @@ export function StoresSection() {
                           }
                         />
                       )}
-                    </View>
+                    </TouchableOpacity>
                     <View style={styles.workerInfo}>
                       <View
                         style={{
@@ -392,7 +389,7 @@ export function StoresSection() {
                         <Trash2 size={17} color={c.danger as any} />
                       </TouchableOpacity>
                     </View>
-                  </TouchableOpacity>
+                  </View>
                 </View>
               );
             })}
