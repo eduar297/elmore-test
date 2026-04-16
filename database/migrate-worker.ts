@@ -124,6 +124,20 @@ export async function migrateWorkerDb(db: SQLiteDatabase) {
   );
   let currentVersion = result?.user_version ?? 0;
 
+  /** Safely add a column only if it doesn't already exist. */
+  const addColumnIfMissing = async (
+    table: string,
+    column: string,
+    def: string,
+  ) => {
+    const cols = await db.getAllAsync<{ name: string }>(
+      `SELECT name FROM pragma_table_info('${table}')`,
+    );
+    if (!cols.some((c) => c.name === column)) {
+      await db.execAsync(`ALTER TABLE ${table} ADD COLUMN ${column} ${def};`);
+    }
+  };
+
   if (currentVersion < 1) {
     // Migrate tickets from INTEGER id to TEXT (UUID)
     const colInfo = await db.getAllAsync<{ type: string }>(
@@ -179,10 +193,8 @@ export async function migrateWorkerDb(db: SQLiteDatabase) {
 
   if (currentVersion < 2) {
     // Add columns for delta sync: catalog hash + profile hash + photo manifest
-    await db.execAsync(`
-      ALTER TABLE sync_metadata ADD COLUMN last_catalog_hash TEXT;
-      ALTER TABLE sync_metadata ADD COLUMN last_profile_hash TEXT;
-    `);
+    await addColumnIfMissing("sync_metadata", "last_catalog_hash", "TEXT");
+    await addColumnIfMissing("sync_metadata", "last_profile_hash", "TEXT");
     currentVersion = 2;
   }
 
@@ -205,21 +217,45 @@ export async function migrateWorkerDb(db: SQLiteDatabase) {
   }
 
   if (currentVersion < 5) {
-    // Add createdAt to tables missing it
-    // NOTE: ALTER TABLE ADD COLUMN requires a constant default in SQLite
-    await db.execAsync(`
-      ALTER TABLE products ADD COLUMN createdAt TEXT NOT NULL DEFAULT '1970-01-01 00:00:00';
-      ALTER TABLE ticket_items ADD COLUMN createdAt TEXT NOT NULL DEFAULT '1970-01-01 00:00:00';
-    `);
+    // Add createdAt / updatedAt to tables that may be missing them.
+    // Tables created fresh already include these columns, so we must
+    // check before adding to avoid "duplicate column name" errors.
+    await addColumnIfMissing(
+      "products",
+      "createdAt",
+      "TEXT NOT NULL DEFAULT '1970-01-01 00:00:00'",
+    );
+    await addColumnIfMissing(
+      "ticket_items",
+      "createdAt",
+      "TEXT NOT NULL DEFAULT '1970-01-01 00:00:00'",
+    );
 
-    // Add updatedAt to all syncable worker tables
-    await db.execAsync(`
-      ALTER TABLE stores ADD COLUMN updatedAt TEXT NOT NULL DEFAULT '1970-01-01 00:00:00';
-      ALTER TABLE products ADD COLUMN updatedAt TEXT NOT NULL DEFAULT '1970-01-01 00:00:00';
-      ALTER TABLE users ADD COLUMN updatedAt TEXT NOT NULL DEFAULT '1970-01-01 00:00:00';
-      ALTER TABLE tickets ADD COLUMN updatedAt TEXT NOT NULL DEFAULT '1970-01-01 00:00:00';
-      ALTER TABLE ticket_items ADD COLUMN updatedAt TEXT NOT NULL DEFAULT '1970-01-01 00:00:00';
-    `);
+    await addColumnIfMissing(
+      "stores",
+      "updatedAt",
+      "TEXT NOT NULL DEFAULT '1970-01-01 00:00:00'",
+    );
+    await addColumnIfMissing(
+      "products",
+      "updatedAt",
+      "TEXT NOT NULL DEFAULT '1970-01-01 00:00:00'",
+    );
+    await addColumnIfMissing(
+      "users",
+      "updatedAt",
+      "TEXT NOT NULL DEFAULT '1970-01-01 00:00:00'",
+    );
+    await addColumnIfMissing(
+      "tickets",
+      "updatedAt",
+      "TEXT NOT NULL DEFAULT '1970-01-01 00:00:00'",
+    );
+    await addColumnIfMissing(
+      "ticket_items",
+      "updatedAt",
+      "TEXT NOT NULL DEFAULT '1970-01-01 00:00:00'",
+    );
 
     // Backfill existing rows with real timestamps
     await db.execAsync(`
@@ -235,21 +271,17 @@ export async function migrateWorkerDb(db: SQLiteDatabase) {
 
   if (currentVersion < 6) {
     // Add syncedAt column so tickets survive after sync
-    await db.execAsync(`
-      ALTER TABLE tickets ADD COLUMN syncedAt TEXT;
-    `);
+    await addColumnIfMissing("tickets", "syncedAt", "TEXT");
     currentVersion = 6;
   }
 
   if (currentVersion < 7) {
-    await db.execAsync(`
-      ALTER TABLE products ADD COLUMN photoHash TEXT;
-      ALTER TABLE products ADD COLUMN cloudPhotoPath TEXT;
-      ALTER TABLE users ADD COLUMN photoHash TEXT;
-      ALTER TABLE users ADD COLUMN cloudPhotoPath TEXT;
-      ALTER TABLE stores ADD COLUMN logoHash TEXT;
-      ALTER TABLE stores ADD COLUMN cloudLogoPath TEXT;
-    `);
+    await addColumnIfMissing("products", "photoHash", "TEXT");
+    await addColumnIfMissing("products", "cloudPhotoPath", "TEXT");
+    await addColumnIfMissing("users", "photoHash", "TEXT");
+    await addColumnIfMissing("users", "cloudPhotoPath", "TEXT");
+    await addColumnIfMissing("stores", "logoHash", "TEXT");
+    await addColumnIfMissing("stores", "cloudLogoPath", "TEXT");
     currentVersion = 7;
   }
 
