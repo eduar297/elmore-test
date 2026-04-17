@@ -40,7 +40,7 @@ export function PreferencesSection() {
   const { resetDevice } = useDevice();
   const { user } = useAuth();
   const userRepo = useUserRepository();
-  const { refreshStores, setCurrentStore, currentStore } = useStore();
+  const { refreshStores, setCurrentStore, currentStore, stores } = useStore();
 
   const [resettingDb, setResettingDb] = useState(false);
   const [seeding, setSeeding] = useState(false);
@@ -234,6 +234,7 @@ export function PreferencesSection() {
             </View>
             <Switch
               value={showStoreBubble}
+              disabled={stores.length === 1}
               onValueChange={setShowStoreBubble}
               trackColor={{ false: c.border, true: c.blue }}
               accessibilityLabel="Activar burbuja de tienda"
