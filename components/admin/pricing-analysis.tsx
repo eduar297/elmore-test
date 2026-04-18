@@ -638,6 +638,7 @@ export function PricingAnalysisSection({
           <YStack
             px="$4"
             py="$3"
+            pb={100}
             borderTopWidth={1}
             borderColor="$borderColor"
             bg="$background"

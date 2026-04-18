@@ -331,6 +331,7 @@ export function AdminSales() {
         <YStack
           px="$4"
           py="$3"
+          pb={100}
           gap="$3"
           borderTopWidth={1}
           borderColor="$borderColor"

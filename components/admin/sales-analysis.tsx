@@ -671,7 +671,7 @@ function StagnantSection({
   return (
     <ScrollView
       style={{ flex: 1 }}
-      contentContainerStyle={{ paddingBottom: 40 }}
+      contentContainerStyle={{ paddingBottom: 100 }}
       keyboardShouldPersistTaps="handled"
     >
       {/* Filter pills */}
@@ -846,7 +846,7 @@ function DiscountSection({
   return (
     <ScrollView
       style={{ flex: 1 }}
-      contentContainerStyle={{ paddingBottom: 40 }}
+      contentContainerStyle={{ paddingBottom: 100 }}
       keyboardShouldPersistTaps="handled"
     >
       {/* Filter pills */}
@@ -1005,7 +1005,7 @@ function ComboSection({ items }: { items: ComboSuggestion[] }) {
   return (
     <ScrollView
       style={{ flex: 1 }}
-      contentContainerStyle={{ paddingBottom: 40 }}
+      contentContainerStyle={{ paddingBottom: 100 }}
       keyboardShouldPersistTaps="handled"
     >
       {/* Search */}
@@ -1296,6 +1296,7 @@ export function SalesAnalysisSection({
             <YStack
               px="$4"
               py="$3"
+              pb={100}
               borderTopWidth={1}
               borderColor="$borderColor"
               bg="$background"
@@ -1320,6 +1321,7 @@ export function SalesAnalysisSection({
             <YStack
               px="$4"
               py="$3"
+              pb={100}
               borderTopWidth={1}
               borderColor="$borderColor"
               bg="$background"

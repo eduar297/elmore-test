@@ -481,7 +481,7 @@ export function PurchaseSuggestionsSection() {
       {report && (
         <ScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={{ paddingBottom: 40 }}
+          contentContainerStyle={{ paddingBottom: 100 }}
           keyboardShouldPersistTaps="handled"
         >
           {/* KPIs */}
