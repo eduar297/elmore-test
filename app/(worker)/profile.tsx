@@ -11,6 +11,7 @@ import {
     Lock,
     LogOut,
     Receipt,
+    RefreshCw,
     Smartphone,
     User as UserIcon,
 } from "@tamagui/lucide-icons";
@@ -33,7 +34,7 @@ export default function WorkerProfileScreen() {
   const theme = useTheme();
   const userRepo = useUserRepository();
   const { user, setUser, logout } = useAuth();
-  const { deviceId } = useDevice();
+  const { deviceId, resetDevice } = useDevice();
   const { workerName } = useLan();
   const router = useRouter();
   const navigation = useNavigation();
@@ -121,6 +122,21 @@ export default function WorkerProfileScreen() {
     },
     [user, userRepo, setUser],
   );
+
+  const handleChangeRole = useCallback(() => {
+    Alert.alert(
+      "Cambiar rol del dispositivo",
+      "Esto borrará el rol de este dispositivo y volverás a la pantalla de selección. ¿Continuar?",
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Cambiar rol",
+          style: "destructive",
+          onPress: () => resetDevice(),
+        },
+      ],
+    );
+  }, [resetDevice]);
 
   const handleLogout = useCallback(() => {
     Alert.alert(
@@ -378,6 +394,21 @@ export default function WorkerProfileScreen() {
             )}
           </TouchableOpacity>
         </View>
+
+        {/* Change role */}
+        <TouchableOpacity
+          style={[
+            styles.logoutBtn,
+            { borderColor: c.danger, backgroundColor: c.dangerBg },
+          ]}
+          onPress={handleChangeRole}
+          activeOpacity={0.8}
+        >
+          <RefreshCw size={18} color={c.danger as any} />
+          <Text style={[styles.logoutText, { color: c.danger }]}>
+            Cambiar rol del dispositivo
+          </Text>
+        </TouchableOpacity>
 
         {/* Logout */}
         <TouchableOpacity

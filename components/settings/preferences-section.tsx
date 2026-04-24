@@ -4,31 +4,31 @@ import { useDevice } from "@/contexts/device-context";
 import { usePreferences } from "@/contexts/preferences-context";
 import { useStore } from "@/contexts/store-context";
 import {
-  resetDatabase,
-  seedBasicSimulation,
-  seedSimulation,
+    resetDatabase,
+    seedBasicSimulation,
+    seedSimulation,
 } from "@/database/seed-simulation";
 import { useColors } from "@/hooks/use-colors";
 import { useUserRepository } from "@/hooks/use-user-repository";
 import { hashPin } from "@/utils/auth";
 import {
-  Database,
-  Play,
-  RefreshCw,
-  Store,
-  Trash2,
-  TriangleAlert,
+    Database,
+    Play,
+    RefreshCw,
+    Store,
+    Trash2,
+    TriangleAlert,
 } from "@tamagui/lucide-icons";
 import { useSQLiteContext } from "expo-sqlite";
 import React, { useCallback, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  ScrollView,
-  Switch,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    ScrollView,
+    Switch,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { NotificationCards } from "./notifications-section";
 import { settingStyles as styles } from "./shared";
@@ -49,13 +49,23 @@ export function PreferencesSection() {
   const [success, setSuccess] = useState("");
   const [pinDialogOpen, setPinDialogOpen] = useState(false);
   const [pinDialogMode, setPinDialogMode] = useState<
-    "reset" | "seedBasic" | "seedFull" | "changeRole" | null
+    "reset" | "seedBasic" | "seedFull" | null
   >(null);
 
   const handleChangeRole = useCallback(() => {
-    setPinDialogMode("changeRole");
-    setPinDialogOpen(true);
-  }, []);
+    Alert.alert(
+      "Cambiar rol del dispositivo",
+      "Esto borrará el rol de este dispositivo y volverás a la pantalla de selección. Requiere reactivación para administrador. ¿Estás seguro?",
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Sí, cambiar rol",
+          style: "destructive",
+          onPress: () => resetDevice(),
+        },
+      ],
+    );
+  }, [resetDevice]);
 
   const verifyAdminPin = useCallback(
     async (pin: string): Promise<boolean> => {
@@ -178,19 +188,6 @@ export function PreferencesSection() {
                   setSeeding(false);
                 }
               },
-            },
-          ],
-        );
-      } else if (pinDialogMode === "changeRole") {
-        Alert.alert(
-          "Cambiar rol del dispositivo",
-          "Esto borrará el rol de este dispositivo y volverás a la pantalla de selección. ¿Estás seguro?",
-          [
-            { text: "Cancelar", style: "cancel" },
-            {
-              text: "Sí, cambiar rol",
-              style: "destructive",
-              onPress: () => resetDevice(),
             },
           ],
         );
@@ -425,9 +422,7 @@ export function PreferencesSection() {
             ? "Ingresa tu PIN de administrador para limpiar la base de datos"
             : pinDialogMode === "seedFull"
             ? "Ingresa tu PIN de administrador para iniciar la simulación completa"
-            : pinDialogMode === "seedBasic"
-            ? "Ingresa tu PIN de administrador para iniciar la simulación básica"
-            : "Ingresa tu PIN de administrador para cambiar el rol del dispositivo"
+            : "Ingresa tu PIN de administrador para iniciar la simulación básica"
         }
         onConfirm={handlePinConfirm}
         onCancel={() => setPinDialogOpen(false)}

@@ -3,14 +3,14 @@ import { useDevice } from "@/contexts/device-context";
 import type { UserRole } from "@/models/user";
 import type { DeviceRole } from "@/utils/device";
 import {
-    ChevronRight,
-    LayoutDashboard,
-    Monitor,
-    Package,
-    Receipt,
-    ScanLine,
-    ShieldCheck,
-    TrendingUp,
+  ChevronRight,
+  LayoutDashboard,
+  Monitor,
+  Package,
+  Receipt,
+  ScanLine,
+  ShieldCheck,
+  TrendingUp,
 } from "@tamagui/lucide-icons";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
@@ -164,7 +164,7 @@ function Slide({
 export default function HomeScreen() {
   const router = useRouter();
   const theme = useTheme();
-  const { deviceRole, selectRole, resetDevice } = useDevice();
+  const { deviceRole, selectRole, resetDevice, isResetting } = useDevice();
   const isDark =
     (theme.background?.val ?? "").startsWith("#0") ||
     (theme.background?.val ?? "").startsWith("#1");
@@ -200,11 +200,13 @@ export default function HomeScreen() {
   }, [resetDevice]);
 
   // If device already has a role, redirect to the corresponding panel
+  // Skip redirect while a reset is in progress (deviceRole still holds old value)
   useEffect(() => {
+    if (isResetting) return;
     if (deviceRole === "ADMIN") router.replace("/(admin)/dashboard" as any);
     else if (deviceRole === "WORKER") router.replace("/(worker)" as any);
     else if (deviceRole === "DISPLAY") router.replace("/(display)" as any);
-  }, [deviceRole, router]);
+  }, [deviceRole, isResetting, router]);
 
   const [activeSlide, setActiveSlide] = useState(0);
   const [showActivation, setShowActivation] = useState(false);

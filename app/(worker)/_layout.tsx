@@ -165,7 +165,23 @@ function WaitingForAdmin({ onReset }: { onReset: () => void }) {
 
 // ── Layout ──────────────────────────────────────────────────────────────────
 
+/**
+ * Thin shell: guards against rendering the SQLite-dependent inner layout
+ * while a device reset is in progress (SQLiteProvider may already be unmounting).
+ */
 export default function WorkerLayout() {
+  const { isResetting } = useDevice();
+
+  // During reset, SQLiteProvider is about to unmount. Return nothing so
+  // WorkerLayoutInner (which calls useSQLiteContext) is never invoked.
+  if (isResetting) {
+    return null;
+  }
+
+  return <WorkerLayoutInner />;
+}
+
+function WorkerLayoutInner() {
   const c = useColors();
   const theme = useTheme();
   const tint = theme.blue10?.val;
