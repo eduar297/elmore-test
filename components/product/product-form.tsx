@@ -1,11 +1,17 @@
 import { BarcodeDisplay } from "@/components/product/barcode-display";
+import {
+  PriceTierEditorRow,
+  PriceTiersEditor,
+  normalizePriceTierRows,
+  validatePriceTierRows,
+} from "@/components/product/price-tiers-editor";
 import { PhotoPicker } from "@/components/ui/photo-picker";
 import { UnitPicker } from "@/components/ui/unit-picker";
 import { useColors } from "@/hooks/use-colors";
 import type { CreateProductInput, Product, SaleMode } from "@/models/product";
 import type { Unit } from "@/models/unit";
 import { Eye, EyeOff } from "@tamagui/lucide-icons";
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { ScrollView, Switch, View } from "react-native";
 import QRCode from "react-native-qrcode-svg";
 import { Button, Input, Label, Spinner, Text, XStack, YStack } from "tamagui";
@@ -62,15 +68,44 @@ export function ProductForm({
   );
   const [visible, setVisible] = useState(isEdit ? product.visible : true);
   const [details, setDetails] = useState(isEdit ? product.details ?? "" : "");
+  const [tierRows, setTierRows] = useState<PriceTierEditorRow[]>(() =>
+    isEdit
+      ? (product.priceTiers ?? []).map((tier) => ({
+          id: tier.id,
+          minQty: String(tier.minQty),
+          maxQty: tier.maxQty === null ? "" : String(tier.maxQty),
+          price: String(tier.price),
+        }))
+      : [],
+  );
+
+  useEffect(() => {
+    if (isEdit) {
+      setTierRows(
+        (product.priceTiers ?? []).map((tier) => ({
+          id: tier.id,
+          minQty: String(tier.minQty),
+          maxQty: tier.maxQty === null ? "" : String(tier.maxQty),
+          price: String(tier.price),
+        })),
+      );
+    } else {
+      setTierRows([]);
+    }
+  }, [isEdit, product]);
 
   const parsedCost = parseFloat(costPrice);
   const parsedSale = parseFloat(salePrice);
+  const tierError = validatePriceTierRows(tierRows);
+  const normalizedTiers = normalizePriceTierRows(tierRows);
+
   const canSubmit =
     name.trim().length > 0 &&
     !isNaN(parsedCost) &&
     parsedCost > 0 &&
     (!isEdit || (!isNaN(parsedSale) && parsedSale > 0)) &&
-    unitId.length > 0;
+    unitId.length > 0 &&
+    !tierError;
 
   const handleSubmit = () => {
     if (!canSubmit) return;
@@ -86,6 +121,7 @@ export function ProductForm({
       baseUnitId: parseInt(unitId, 10),
       photoUri,
       details: details.trim() || null,
+      priceTiers: normalizedTiers.length > 0 ? normalizedTiers : undefined,
     });
   };
 
@@ -94,6 +130,8 @@ export function ProductForm({
       <ScrollView
         keyboardShouldPersistTaps="handled"
         automaticallyAdjustKeyboardInsets
+        contentContainerStyle={{ paddingBottom: 140 }}
+        style={{ flex: 1 }}
       >
         <YStack gap="$3" p="$4">
           {/* Photo */}
@@ -255,6 +293,12 @@ export function ProductForm({
               </Button>
             </XStack>
           </YStack>
+
+          <PriceTiersEditor
+            rows={tierRows}
+            onChange={setTierRows}
+            error={tierError}
+          />
 
           {/* Visible to workers (edit only) */}
           {isEdit && (

@@ -1,4 +1,10 @@
 import { BarcodeDisplay } from "@/components/product/barcode-display";
+import {
+  PriceTierEditorRow,
+  PriceTiersEditor,
+  normalizePriceTierRows,
+  validatePriceTierRows,
+} from "@/components/product/price-tiers-editor";
 import { PhotoPicker } from "@/components/ui/photo-picker";
 import { UnitPicker } from "@/components/ui/unit-picker";
 import { useColors } from "@/hooks/use-colors";
@@ -87,6 +93,16 @@ export function ProductCard({
   const [visible, setVisible] = useState(product.visible);
   const [stockQty, setStockQty] = useState("");
   const [details, setDetails] = useState(product.details ?? "");
+  const [tierRows, setTierRows] = useState<PriceTierEditorRow[]>(
+    product.priceTiers?.length
+      ? product.priceTiers.map((tier) => ({
+          id: tier.id,
+          minQty: String(tier.minQty),
+          maxQty: tier.maxQty === null ? "" : String(tier.maxQty),
+          price: String(tier.price),
+        }))
+      : [],
+  );
 
   // Reset form fields when switching into edit mode or product changes
   useEffect(() => {
@@ -99,20 +115,46 @@ export function ProductCard({
     setVisible(product.visible);
     setStockQty("");
     setDetails(product.details ?? "");
+    setTierRows(
+      product.priceTiers?.length
+        ? product.priceTiers.map((tier) => ({
+            id: tier.id,
+            minQty: String(tier.minQty),
+            maxQty: tier.maxQty === null ? "" : String(tier.maxQty),
+            price: String(tier.price),
+          }))
+        : [],
+    );
   }, [product, editing]);
 
   const parsedCost = parseFloat(costPrice);
   const parsedSale = parseFloat(salePrice);
+  const tierError = validatePriceTierRows(tierRows);
+  const normalizedTierRows = normalizePriceTierRows(tierRows);
+
   const canSave =
     name.trim().length > 0 &&
     !isNaN(parsedCost) &&
     parsedCost > 0 &&
     !isNaN(parsedSale) &&
     parsedSale > 0 &&
-    unitId.length > 0;
+    unitId.length > 0 &&
+    !tierError;
 
   const parsedStockQty = parseFloat(stockQty);
   const canAddStock = !isNaN(parsedStockQty) && parsedStockQty > 0;
+
+  const hasTierChanges =
+    normalizedTierRows.length !== (product.priceTiers?.length ?? 0) ||
+    normalizedTierRows.some((tier, index) => {
+      const existing = product.priceTiers?.[index];
+      return (
+        !existing ||
+        existing.minQty !== tier.minQty ||
+        existing.maxQty !== tier.maxQty ||
+        existing.price !== tier.price
+      );
+    });
 
   const hasChanges =
     name !== product.name ||
@@ -122,7 +164,8 @@ export function ProductCard({
     saleMode !== product.saleMode ||
     photoUri !== (product.photoUri ?? null) ||
     visible !== product.visible ||
-    details !== (product.details ?? "");
+    details !== (product.details ?? "") ||
+    hasTierChanges;
 
   const handleSave = () => {
     if (!canSave) return;
@@ -138,6 +181,7 @@ export function ProductCard({
       baseUnitId: parseInt(unitId, 10),
       photoUri,
       details: details.trim() || null,
+      priceTiers: normalizedTierRows.length > 0 ? normalizedTierRows : [],
     });
   };
 
@@ -238,6 +282,29 @@ export function ProductCard({
               />
               <Separator />
               <InfoRow label="Margen" value={margin ? `${margin}%` : "—"} />
+              {product.priceTiers && product.priceTiers.length > 0 ? (
+                <>
+                  <Separator />
+                  <YStack py="$2">
+                    <Text color="$color10" fontSize="$3" fontWeight="600">
+                      Precios por cantidad
+                    </Text>
+                    {product.priceTiers.map((tier) => (
+                      <Text
+                        key={`${tier.minQty}-${tier.maxQty ?? "open"}-${
+                          tier.price
+                        }`}
+                        color="$color"
+                        fontSize="$2"
+                      >
+                        {tier.minQty}
+                        {tier.maxQty !== null ? `–${tier.maxQty}` : "+"}: $
+                        {tier.price.toFixed(2)}
+                      </Text>
+                    ))}
+                  </YStack>
+                </>
+              ) : null}
             </YStack>
 
             {product.details ? (
@@ -313,7 +380,8 @@ export function ProductCard({
       <ScrollView
         keyboardShouldPersistTaps="handled"
         automaticallyAdjustKeyboardInsets
-        contentContainerStyle={{ padding: 16 }}
+        contentContainerStyle={{ padding: 16, paddingBottom: 180 }}
+        style={{ flex: 1 }}
       >
         <YStack gap="$3">
           {/* Photo */}
@@ -464,6 +532,12 @@ export function ProductCard({
               </Button>
             </XStack>
           </YStack>
+
+          <PriceTiersEditor
+            rows={tierRows}
+            onChange={setTierRows}
+            error={tierError}
+          />
 
           {/* Visible toggle */}
           <XStack

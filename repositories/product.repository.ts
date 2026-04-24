@@ -1,5 +1,6 @@
 import type {
     CreateProductInput,
+    PriceTierInput,
     Product,
     UpdateProductInput,
 } from "@/models/product";
@@ -32,6 +33,45 @@ export class ProductRepository extends BaseRepository<
     return { ...row, visible: !!row.visible };
   }
 
+  private async findTiersByProductId(productId: number) {
+    const rows = await this.db.getAllAsync<any>(
+      "SELECT * FROM product_price_tiers WHERE productId = ? ORDER BY minQty ASC",
+      [productId],
+    );
+    return rows.map((row) => ({
+      id: row.id,
+      productId: row.productId,
+      minQty: row.minQty,
+      maxQty: row.maxQty,
+      price: row.price,
+    }));
+  }
+
+  private async attachPriceTiers(products: Product[]) {
+    if (products.length === 0) return products;
+    const ids = products.map((product) => product.id);
+    const placeholders = ids.map(() => "?").join(", ");
+    const rows = await this.db.getAllAsync<any>(
+      `SELECT * FROM product_price_tiers WHERE productId IN (${placeholders}) ORDER BY productId, minQty ASC`,
+      ids,
+    );
+    const grouped: Record<number, any[]> = {};
+    for (const row of rows) {
+      grouped[row.productId] = grouped[row.productId] ?? [];
+      grouped[row.productId].push({
+        id: row.id,
+        productId: row.productId,
+        minQty: row.minQty,
+        maxQty: row.maxQty,
+        price: row.price,
+      });
+    }
+    return products.map((product) => ({
+      ...product,
+      priceTiers: grouped[product.id] ?? [],
+    }));
+  }
+
   async findAll(orderBy?: string): Promise<Product[]> {
     if (this.storeId !== undefined) {
       const rows = await this.db.getAllAsync<any>(
@@ -40,12 +80,12 @@ export class ProductRepository extends BaseRepository<
         }`,
         [this.storeId],
       );
-      return rows.map(this.mapRow);
+      return this.attachPriceTiers(rows.map(this.mapRow));
     }
     const rows = await this.db.getAllAsync<any>(
       `SELECT * FROM products ORDER BY ${orderBy ?? "name ASC"}`,
     );
-    return rows.map(this.mapRow);
+    return this.attachPriceTiers(rows.map(this.mapRow));
   }
 
   /** Only visible products, sorted by name. Used for worker views. */
@@ -55,12 +95,12 @@ export class ProductRepository extends BaseRepository<
         "SELECT * FROM products WHERE visible = 1 AND storeId = ? ORDER BY name ASC",
         [this.storeId],
       );
-      return rows.map(this.mapRow);
+      return this.attachPriceTiers(rows.map(this.mapRow));
     }
     const rows = await this.db.getAllAsync<any>(
       "SELECT * FROM products WHERE visible = 1 ORDER BY name ASC",
     );
-    return rows.map(this.mapRow);
+    return this.attachPriceTiers(rows.map(this.mapRow));
   }
 
   async findById(id: number): Promise<Product | null> {
@@ -68,7 +108,10 @@ export class ProductRepository extends BaseRepository<
       "SELECT * FROM products WHERE id = ?",
       [id],
     );
-    return row ? this.mapRow(row) : null;
+    if (!row) return null;
+    const product = this.mapRow(row);
+    product.priceTiers = await this.findTiersByProductId(id);
+    return product;
   }
 
   async findByCode(code: string): Promise<Product | null> {
@@ -77,13 +120,13 @@ export class ProductRepository extends BaseRepository<
         "SELECT * FROM products WHERE code = ? AND storeId = ?",
         [code, this.storeId],
       );
-      return row ? this.mapRow(row) : null;
+      return row ? this.findById(row.id) : null;
     }
     const row = await this.db.getFirstAsync<any>(
       "SELECT * FROM products WHERE code = ?",
       [code],
     );
-    return row ? this.mapRow(row) : null;
+    return row ? this.findById(row.id) : null;
   }
 
   /** Find a visible product by code (for worker scanner). */
@@ -93,13 +136,13 @@ export class ProductRepository extends BaseRepository<
         "SELECT * FROM products WHERE code = ? AND visible = 1 AND storeId = ?",
         [code, this.storeId],
       );
-      return row ? this.mapRow(row) : null;
+      return row ? this.findById(row.id) : null;
     }
     const row = await this.db.getFirstAsync<any>(
       "SELECT * FROM products WHERE code = ? AND visible = 1",
       [code],
     );
-    return row ? this.mapRow(row) : null;
+    return row ? this.findById(row.id) : null;
   }
 
   async create(input: CreateProductInput): Promise<Product> {
@@ -122,7 +165,6 @@ export class ProductRepository extends BaseRepository<
     const created = await this.findByCode(input.code);
     if (!created) throw new Error("Producto creado pero no encontrado");
 
-    // If a photo was provided, compute its hash and clear cloud path
     if (created.photoUri) {
       const hash = this.computePhotoHash(created.photoUri);
       if (hash) {
@@ -131,10 +173,14 @@ export class ProductRepository extends BaseRepository<
           hash,
           created.id,
         );
-        return { ...created, photoHash: hash, cloudPhotoPath: null };
       }
     }
-    return created;
+
+    if (input.priceTiers && input.priceTiers.length > 0) {
+      await this.savePriceTiers(created.id, input.priceTiers);
+    }
+
+    return this.findById(created.id);
   }
 
   async update(id: number, input: UpdateProductInput): Promise<Product> {
@@ -191,9 +237,32 @@ export class ProductRepository extends BaseRepository<
       );
     }
 
+    if (input.priceTiers !== undefined) {
+      await this.savePriceTiers(id, input.priceTiers);
+    }
+
     const updated = await this.findById(id);
     if (!updated) throw new Error("Producto no encontrado");
     return updated;
+  }
+
+  private async savePriceTiers(
+    productId: number,
+    tiers: PriceTierInput[],
+  ): Promise<void> {
+    await this.db.runAsync(
+      "DELETE FROM product_price_tiers WHERE productId = ?",
+      productId,
+    );
+    for (const [index, tier] of tiers.entries()) {
+      await this.db.runAsync(
+        "INSERT INTO product_price_tiers (productId, minQty, maxQty, price) VALUES (?, ?, ?, ?)",
+        productId,
+        tier.minQty,
+        tier.maxQty,
+        tier.price,
+      );
+    }
   }
 
   /** Bulk-update sale prices for multiple products. */

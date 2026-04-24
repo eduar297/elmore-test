@@ -59,6 +59,16 @@ export async function migrateWorkerDb(db: SQLiteDatabase) {
       FOREIGN KEY (baseUnitId) REFERENCES units(id)
     );
 
+    CREATE TABLE IF NOT EXISTS product_price_tiers (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      productId INTEGER NOT NULL REFERENCES products(id),
+      minQty REAL NOT NULL,
+      maxQty REAL,
+      price REAL NOT NULL,
+      createdAt TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+      updatedAt TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+    );
+
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
@@ -118,7 +128,7 @@ export async function migrateWorkerDb(db: SQLiteDatabase) {
   `);
 
   // ── Versioned migrations ────────────────────────────────────────────────
-  const WORKER_DB_VERSION = 7;
+  const WORKER_DB_VERSION = 8;
   const result = await db.getFirstAsync<{ user_version: number }>(
     "PRAGMA user_version",
   );
@@ -283,6 +293,21 @@ export async function migrateWorkerDb(db: SQLiteDatabase) {
     await addColumnIfMissing("stores", "logoHash", "TEXT");
     await addColumnIfMissing("stores", "cloudLogoPath", "TEXT");
     currentVersion = 7;
+  }
+
+  if (currentVersion < 8) {
+    await db.execAsync(`
+      CREATE TABLE IF NOT EXISTS product_price_tiers (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        productId INTEGER NOT NULL REFERENCES products(id),
+        minQty REAL NOT NULL,
+        maxQty REAL,
+        price REAL NOT NULL,
+        createdAt TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+        updatedAt TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+      );
+    `);
+    currentVersion = 8;
   }
 
   // Ensure updatedAt triggers exist (idempotent)

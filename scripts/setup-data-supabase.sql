@@ -94,6 +94,25 @@ ALTER TABLE products ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "products_business_isolation" ON products FOR ALL USING (true);
 
+-- ── 4b. Product price tiers ──────────────────────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS product_price_tiers (
+    id BIGINT NOT NULL,
+    business_id UUID NOT NULL,
+    product_id BIGINT NOT NULL,
+    min_qty REAL NOT NULL,
+    max_qty REAL,
+    price REAL NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT now() NOT NULL,
+    PRIMARY KEY (business_id, id),
+    FOREIGN KEY (business_id, product_id) REFERENCES products (business_id, id)
+);
+
+ALTER TABLE product_price_tiers ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "product_price_tiers_business_isolation" ON product_price_tiers FOR ALL USING (true);
+
 -- ── 5. Users ─────────────────────────────────────────────────────────────────
 
 CREATE TABLE IF NOT EXISTS users (
@@ -257,6 +276,8 @@ CREATE POLICY "expenses_business_isolation" ON expenses FOR ALL USING (true);
 -- ── 12. Indexes ──────────────────────────────────────────────────────────────
 
 CREATE INDEX IF NOT EXISTS idx_products_business ON products (business_id);
+
+CREATE INDEX IF NOT EXISTS idx_product_price_tiers_business ON product_price_tiers (business_id);
 
 CREATE INDEX IF NOT EXISTS idx_tickets_business ON tickets (business_id);
 

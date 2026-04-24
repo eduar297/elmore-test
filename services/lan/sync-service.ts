@@ -164,20 +164,36 @@ export interface CatalogPreparation {
 export async function prepareCatalogMeta(
   db: SQLiteDatabase,
 ): Promise<CatalogPreparation> {
-  const [stores, workers, products, units, unitCategories] = await Promise.all([
-    db.getAllAsync("SELECT * FROM stores ORDER BY id"),
-    db.getAllAsync(
-      "SELECT id, name, role, pinHash, photoUri, storeId, createdAt FROM users WHERE role = 'WORKER' ORDER BY id",
-    ),
-    db.getAllAsync("SELECT * FROM products ORDER BY id"),
-    db.getAllAsync("SELECT * FROM units ORDER BY id"),
-    db.getAllAsync("SELECT * FROM unit_categories ORDER BY id"),
-  ]);
+  const [stores, workers, products, productTiers, units, unitCategories] =
+    await Promise.all([
+      db.getAllAsync("SELECT * FROM stores ORDER BY id"),
+      db.getAllAsync(
+        "SELECT id, name, role, pinHash, photoUri, storeId, createdAt FROM users WHERE role = 'WORKER' ORDER BY id",
+      ),
+      db.getAllAsync("SELECT * FROM products ORDER BY id"),
+      db.getAllAsync(
+        "SELECT * FROM product_price_tiers ORDER BY productId, minQty",
+      ),
+      db.getAllAsync("SELECT * FROM units ORDER BY id"),
+      db.getAllAsync("SELECT * FROM unit_categories ORDER BY id"),
+    ]);
+
+  const tierMap = new Map<number, unknown[]>();
+  for (const tier of productTiers as any[]) {
+    const productId = tier.productId as number;
+    if (!tierMap.has(productId)) {
+      tierMap.set(productId, []);
+    }
+    tierMap.get(productId)!.push(tier);
+  }
 
   const payload: SyncCatalogData = {
     stores,
     workers,
-    products,
+    products: (products as any[]).map((product) => ({
+      ...product,
+      priceTiers: tierMap.get(product.id) ?? [],
+    })),
     units,
     unitCategories,
   };
@@ -586,6 +602,18 @@ export async function applyReceivedCatalog(
           product.updatedAt ?? product.createdAt ?? null,
         ],
       );
+
+      await tx.runAsync("DELETE FROM product_price_tiers WHERE productId = ?", [
+        product.id,
+      ]);
+      if (Array.isArray(product.priceTiers)) {
+        for (const tier of product.priceTiers) {
+          await tx.runAsync(
+            "INSERT INTO product_price_tiers (productId, minQty, maxQty, price) VALUES (?, ?, ?, ?)",
+            [product.id, tier.minQty, tier.maxQty ?? null, tier.price],
+          );
+        }
+      }
     }
 
     // 6. Delete items that admin removed — admin is source of truth
@@ -601,9 +629,14 @@ export async function applyReceivedCatalog(
         adminProductIds,
       );
       summary.deletedProducts = delProducts.changes;
+      await tx.runAsync(
+        `DELETE FROM product_price_tiers WHERE productId NOT IN (${phProducts})`,
+        adminProductIds,
+      );
     } else {
       const delProducts = await tx.runAsync("DELETE FROM products");
       summary.deletedProducts = delProducts.changes;
+      await tx.runAsync("DELETE FROM product_price_tiers");
     }
 
     // Delete workers not in admin's catalog

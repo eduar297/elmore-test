@@ -19,12 +19,29 @@ import {
   ScanLine,
   Search,
 } from "@tamagui/lucide-icons";
+
 import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert, FlatList, Modal, TextInput } from "react-native";
 import { Button, Text, XStack, YStack } from "tamagui";
 
 // ── Main screen ──────────────────────────────────────────────────────────────
+
+function getTieredPrice(product: Product, quantity: number): number {
+  const qty = Math.max(1, quantity);
+  const tiers = [...(product.priceTiers ?? [])].sort(
+    (a, b) => a.minQty - b.minQty,
+  );
+  for (const tier of tiers) {
+    const minQty = tier.minQty;
+    const maxQty = tier.maxQty ?? Number.POSITIVE_INFINITY;
+    if (qty >= minQty && qty <= maxQty) {
+      return tier.price;
+    }
+  }
+
+  return product.salePrice;
+}
 
 export default function WorkerScreen() {
   const tickets = useTicketRepository();
@@ -66,10 +83,12 @@ export default function WorkerScreen() {
       if (idx >= 0) {
         const current = prev[idx];
         if (current.quantity >= product.stockBaseQty) return prev;
+        const nextQty = current.quantity + 1;
         const updated = [...prev];
         updated[idx] = {
           ...current,
-          quantity: current.quantity + 1,
+          quantity: nextQty,
+          unitPrice: getTieredPrice(product, nextQty),
         };
         return updated;
       }
@@ -79,7 +98,7 @@ export default function WorkerScreen() {
         {
           product,
           quantity: 1,
-          unitPrice: product.salePrice,
+          unitPrice: getTieredPrice(product, 1),
         },
       ];
     });
@@ -92,7 +111,10 @@ export default function WorkerScreen() {
       if (idx >= 0) {
         return prev.filter((c) => c.product.id !== product.id);
       }
-      return [...prev, { product, quantity: 1, unitPrice: product.salePrice }];
+      return [
+        ...prev,
+        { product, quantity: 1, unitPrice: getTieredPrice(product, 1) },
+      ];
     });
   }, []);
 
@@ -149,7 +171,14 @@ export default function WorkerScreen() {
       patch: Partial<Pick<CartItem, "quantity" | "unitPrice">>,
     ) => {
       setCart((prev) =>
-        prev.map((c) => (c.product.id === productId ? { ...c, ...patch } : c)),
+        prev.map((c) => {
+          if (c.product.id !== productId) return c;
+          const updated = { ...c, ...patch };
+          if (patch.quantity !== undefined) {
+            updated.unitPrice = getTieredPrice(c.product, patch.quantity);
+          }
+          return updated;
+        }),
       );
     },
     [],

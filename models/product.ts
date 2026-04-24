@@ -1,5 +1,19 @@
 export type SaleMode = "UNIT" | "VARIABLE";
 
+export interface PriceTier {
+  id: number;
+  productId: number;
+  minQty: number;
+  maxQty: number | null;
+  price: number;
+}
+
+export interface PriceTierInput {
+  minQty: number;
+  maxQty: number | null;
+  price: number;
+}
+
 export interface Product {
   id: number;
   name: string;
@@ -25,12 +39,19 @@ export interface Product {
   storeId: number;
   createdAt: string;
   updatedAt: string;
+  priceTiers?: PriceTier[];
 }
 
 export type CreateProductInput = Omit<
   Product,
-  "id" | "storeId" | "createdAt" | "updatedAt" | "photoHash" | "cloudPhotoPath"
->;
+  | "id"
+  | "storeId"
+  | "createdAt"
+  | "updatedAt"
+  | "photoHash"
+  | "cloudPhotoPath"
+  | "priceTiers"
+> & { priceTiers?: PriceTierInput[] };
 export type UpdateProductInput = Partial<
   Omit<
     Product,
@@ -40,5 +61,6 @@ export type UpdateProductInput = Partial<
     | "updatedAt"
     | "photoHash"
     | "cloudPhotoPath"
+    | "priceTiers"
   >
->;
+> & { priceTiers?: PriceTierInput[] };

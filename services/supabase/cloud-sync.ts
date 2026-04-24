@@ -2,9 +2,9 @@ import type { SQLiteBindValue, SQLiteDatabase } from "expo-sqlite";
 
 import { ensureDataClient, hasDataConnection } from "./client";
 import {
-  cleanupOrphanedCloudPhotos,
-  downloadPhotosFromCloud,
-  uploadPhotosToCloud,
+    cleanupOrphanedCloudPhotos,
+    downloadPhotosFromCloud,
+    uploadPhotosToCloud,
 } from "./photo-sync";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -101,6 +101,20 @@ const TABLE_MAPPINGS: TableMapping[] = [
       cloudPhotoPath: "cloud_photo_path",
       details: "details",
       storeId: "store_id",
+      createdAt: "created_at",
+      updatedAt: "updated_at",
+    },
+  },
+  {
+    sqliteTable: "product_price_tiers",
+    pgTable: "product_price_tiers",
+    idType: "number",
+    columns: {
+      id: "id",
+      productId: "product_id",
+      minQty: "min_qty",
+      maxQty: "max_qty",
+      price: "price",
       createdAt: "created_at",
       updatedAt: "updated_at",
     },
