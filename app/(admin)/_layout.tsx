@@ -60,7 +60,6 @@ export default function AdminLayout() {
           ),
         }}
       />
-      <Tabs.Screen name="expenses" options={{ href: null }} />
       <Tabs.Screen
         name="settings"
         options={{
