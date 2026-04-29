@@ -1,6 +1,6 @@
-import { CartItemRow } from "@/components/worker/cart-item-row";
 import { CheckoutSheet } from "@/components/worker/checkout-sheet";
-import { ProductSearchModal } from "@/components/worker/product-search-modal";
+import { EnhancedCartItemRow } from "@/components/worker/enhanced-cart-item-row";
+import { EnhancedProductSearchModal } from "@/components/worker/enhanced-product-search-modal";
 import type { CartItem } from "@/components/worker/types";
 import { useAuth } from "@/contexts/auth-context";
 import { useStore } from "@/contexts/store-context";
@@ -11,6 +11,7 @@ import { useScannerGun } from "@/hooks/use-scanner-gun";
 import { useTicketRepository } from "@/hooks/use-ticket-repository";
 import type { Product } from "@/models/product";
 import type { PaymentMethod } from "@/models/ticket";
+import { getTieredPrice } from "@/utils/pricing";
 import {
   AlertCircle,
   Bluetooth,
@@ -54,12 +55,24 @@ export function AdminSales() {
       if (idx >= 0) {
         const current = prev[idx];
         if (current.quantity >= product.stockBaseQty) return prev;
+        const nextQty = current.quantity + 1;
         const updated = [...prev];
-        updated[idx] = { ...current, quantity: current.quantity + 1 };
+        updated[idx] = {
+          ...current,
+          quantity: nextQty,
+          unitPrice: getTieredPrice(product, nextQty),
+        };
         return updated;
       }
       if (product.stockBaseQty <= 0) return prev;
-      return [...prev, { product, quantity: 1, unitPrice: product.salePrice }];
+      return [
+        ...prev,
+        {
+          product,
+          quantity: 1,
+          unitPrice: getTieredPrice(product, 1),
+        },
+      ];
     });
   }, []);
 
@@ -67,7 +80,10 @@ export function AdminSales() {
     setCart((prev) => {
       const idx = prev.findIndex((c) => c.product.id === product.id);
       if (idx >= 0) return prev.filter((c) => c.product.id !== product.id);
-      return [...prev, { product, quantity: 1, unitPrice: product.salePrice }];
+      return [
+        ...prev,
+        { product, quantity: 1, unitPrice: getTieredPrice(product, 1) },
+      ];
     });
   }, []);
 
@@ -126,7 +142,14 @@ export function AdminSales() {
       patch: Partial<Pick<CartItem, "quantity" | "unitPrice">>,
     ) => {
       setCart((prev) =>
-        prev.map((c) => (c.product.id === productId ? { ...c, ...patch } : c)),
+        prev.map((c) => {
+          if (c.product.id !== productId) return c;
+          const updated = { ...c, ...patch };
+          if (patch.quantity !== undefined) {
+            updated.unitPrice = getTieredPrice(c.product, patch.quantity);
+          }
+          return updated;
+        }),
       );
     },
     [],
@@ -135,6 +158,19 @@ export function AdminSales() {
   const removeCartItem = useCallback((productId: number) => {
     setCart((prev) => prev.filter((c) => c.product.id !== productId));
   }, []);
+
+  // Handle price updates from enhanced cart items
+  const updateCartItemPrice = useCallback(
+    (productId: number, newPrice: number) => {
+      setCart((prev) =>
+        prev.map((c) => {
+          if (c.product.id !== productId) return c;
+          return { ...c, unitPrice: newPrice };
+        }),
+      );
+    },
+    [],
+  );
 
   const clearCart = useCallback(() => {
     setCart([]);
@@ -200,13 +236,16 @@ export function AdminSales() {
 
   const renderCartItem = useCallback(
     ({ item }: { item: CartItem }) => (
-      <CartItemRow
+      <EnhancedCartItemRow
         item={item}
         onChangeQty={(q) => updateCartItem(item.product.id, { quantity: q })}
         onRemove={() => removeCartItem(item.product.id)}
+        onPriceUpdate={(newPrice) =>
+          updateCartItemPrice(item.product.id, newPrice)
+        }
       />
     ),
-    [updateCartItem, removeCartItem],
+    [updateCartItem, removeCartItem, updateCartItemPrice],
   );
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -367,7 +406,7 @@ export function AdminSales() {
         onRequestClose={() => setShowSearchSheet(false)}
       >
         <YStack flex={1} bg="$background" theme={themeName as any}>
-          <ProductSearchModal
+          <EnhancedProductSearchModal
             visible={showSearchSheet}
             onClose={() => {
               setShowSearchSheet(false);

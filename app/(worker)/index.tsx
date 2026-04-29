@@ -1,6 +1,6 @@
-import { CartItemRow } from "@/components/worker/cart-item-row";
 import { CheckoutSheet } from "@/components/worker/checkout-sheet";
-import { ProductSearchModal } from "@/components/worker/product-search-modal";
+import { EnhancedCartItemRow } from "@/components/worker/enhanced-cart-item-row";
+import { EnhancedProductSearchModal } from "@/components/worker/enhanced-product-search-modal";
 import type { CartItem } from "@/components/worker/types";
 import { useAuth } from "@/contexts/auth-context";
 import { useLan } from "@/contexts/lan-context";
@@ -12,13 +12,14 @@ import { useTicketRepository } from "@/hooks/use-ticket-repository";
 import type { Product } from "@/models/product";
 import type { PaymentMethod } from "@/models/ticket";
 import type { CartItemWire } from "@/services/lan/protocol";
+import { getTieredPrice } from "@/utils/pricing";
 import {
-    AlertCircle,
-    Bluetooth,
-    Receipt,
-    ScanLine,
-    Search,
-    X,
+  AlertCircle,
+  Bluetooth,
+  Receipt,
+  ScanLine,
+  Search,
+  X,
 } from "@tamagui/lucide-icons";
 
 import { useFocusEffect } from "expo-router";
@@ -27,22 +28,6 @@ import { Alert, FlatList, Modal, TextInput } from "react-native";
 import { Button, Text, XStack, YStack } from "tamagui";
 
 // ── Main screen ──────────────────────────────────────────────────────────────
-
-function getTieredPrice(product: Product, quantity: number): number {
-  const qty = Math.max(1, quantity);
-  const tiers = [...(product.priceTiers ?? [])].sort(
-    (a, b) => a.minQty - b.minQty,
-  );
-  for (const tier of tiers) {
-    const minQty = tier.minQty;
-    const maxQty = tier.maxQty ?? Number.POSITIVE_INFINITY;
-    if (qty >= minQty && qty <= maxQty) {
-      return tier.price;
-    }
-  }
-
-  return product.salePrice;
-}
 
 export default function WorkerScreen() {
   const tickets = useTicketRepository();
@@ -189,6 +174,19 @@ export default function WorkerScreen() {
     setCart((prev) => prev.filter((c) => c.product.id !== productId));
   }, []);
 
+  // Handle price updates from enhanced cart items
+  const updateCartItemPrice = useCallback(
+    (productId: number, newPrice: number) => {
+      setCart((prev) =>
+        prev.map((c) => {
+          if (c.product.id !== productId) return c;
+          return { ...c, unitPrice: newPrice };
+        }),
+      );
+    },
+    [],
+  );
+
   const clearCart = useCallback(() => {
     setCart([]);
     setShowCheckout(false);
@@ -266,13 +264,16 @@ export default function WorkerScreen() {
 
   const renderCartItem = useCallback(
     ({ item }: { item: CartItem }) => (
-      <CartItemRow
+      <EnhancedCartItemRow
         item={item}
         onChangeQty={(q) => updateCartItem(item.product.id, { quantity: q })}
         onRemove={() => removeCartItem(item.product.id)}
+        onPriceUpdate={(newPrice) =>
+          updateCartItemPrice(item.product.id, newPrice)
+        }
       />
     ),
-    [updateCartItem, removeCartItem],
+    [updateCartItem, removeCartItem, updateCartItemPrice],
   );
 
   return (
@@ -447,7 +448,7 @@ export default function WorkerScreen() {
         onRequestClose={() => setShowSearchSheet(false)}
       >
         <YStack flex={1} bg="$background" theme={themeName as any}>
-          <ProductSearchModal
+          <EnhancedProductSearchModal
             visible={showSearchSheet}
             onClose={() => {
               setShowSearchSheet(false);
