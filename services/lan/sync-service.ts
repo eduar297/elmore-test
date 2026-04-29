@@ -63,30 +63,46 @@ async function collectPhotosSelective(
 /**
  * Save base64 photos to disk and return a map: originalUri → newLocalUri.
  * Skips photos that already exist locally.
+ * Improved with better error handling and logging.
  */
 function savePhotos(photos: Record<string, string>): Record<string, string> {
   if (!PHOTOS_DIR.exists) PHOTOS_DIR.create();
   const uriMap: Record<string, string> = {};
+
   for (const [origUri, b64] of Object.entries(photos)) {
-    // If the file already exists locally at origUri, keep it
     try {
-      const existing = new File(origUri);
-      if (existing.exists) {
-        uriMap[origUri] = origUri;
-        continue;
+      // If the file already exists locally at origUri, keep it
+      try {
+        const existing = new File(origUri);
+        if (existing.exists) {
+          uriMap[origUri] = origUri;
+          console.log(`[Sync] Photo already exists locally: ${origUri}`);
+          continue;
+        }
+      } catch {
+        // ignore — probably a different device's path
       }
-    } catch {
-      // ignore — probably a different device's path
+
+      // Save to a new local file
+      const filename = `photo_${Date.now()}_${Math.random()
+        .toString(36)
+        .slice(2, 6)}.jpg`;
+      const dest = new File(PHOTOS_DIR, filename);
+      dest.create();
+      dest.write(b64, { encoding: "base64" });
+      uriMap[origUri] = dest.uri;
+      console.log(`[Sync] Photo saved successfully: ${origUri} → ${dest.uri}`);
+    } catch (error) {
+      console.error(`[Sync] Failed to save photo ${origUri}:`, error);
+      // Don't add to uriMap so photo transfer is marked as failed
     }
-    // Save to a new local file
-    const filename = `photo_${Date.now()}_${Math.random()
-      .toString(36)
-      .slice(2, 6)}.jpg`;
-    const dest = new File(PHOTOS_DIR, filename);
-    dest.create();
-    dest.write(b64, { encoding: "base64" });
-    uriMap[origUri] = dest.uri;
   }
+
+  console.log(
+    `[Sync] Photo transfer summary: ${Object.keys(uriMap).length}/${
+      Object.keys(photos).length
+    } successful`,
+  );
   return uriMap;
 }
 
@@ -552,10 +568,27 @@ export async function applyReceivedCatalog(
 
     // 5. Upsert products (track price changes & new products)
     for (const product of data.products as any[]) {
-      // Remap product photo URI
-      const localPhotoUri = product.photoUri
-        ? photoMap[product.photoUri] ?? product.photoUri
-        : null;
+      // Remap product photo URI - SOLO usar photo local si existe
+      let localPhotoUri: string | null = null;
+      if (product.photoUri) {
+        // Verificar si se transfirió correctamente en photoMap
+        const mappedUri = photoMap[product.photoUri];
+        if (mappedUri) {
+          // ✅ Foto transferida correctamente - usar nueva URI local
+          localPhotoUri = mappedUri;
+        } else {
+          // ❌ Foto no transferida - buscar si ya existía localmente
+          const existing = await tx.getFirstAsync<{
+            id: number;
+            photoUri: string | null;
+          }>("SELECT id, photoUri FROM products WHERE id = ?", [product.id]);
+          // Mantener foto local existente o null si no se puede transferir
+          localPhotoUri = existing?.photoUri ?? null;
+          console.warn(
+            `[Sync] Photo not transferred for product ${product.name} (${product.id}), keeping existing local photo`,
+          );
+        }
+      }
 
       const existing = await tx.getFirstAsync<{
         id: number;

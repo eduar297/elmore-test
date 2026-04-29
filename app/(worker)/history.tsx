@@ -2,47 +2,48 @@ import { PeriodSelector } from "@/components/admin/period-selector";
 import { StatCard } from "@/components/admin/stat-card";
 import { ICON_BTN_BG } from "@/constants/colors";
 import { useAuth } from "@/contexts/auth-context";
+import { useLan } from "@/contexts/lan-context";
 import { useColors } from "@/hooks/use-colors";
 import { usePeriodNavigation } from "@/hooks/use-period-navigation";
 import { useTicketRepository } from "@/hooks/use-ticket-repository";
 import type { Ticket, TicketItem } from "@/models/ticket";
 import {
-  daysInMonth,
-  fmtMoney,
-  fmtMoneyFull,
-  weekEndISO,
+    daysInMonth,
+    fmtMoney,
+    fmtMoneyFull,
+    weekEndISO,
 } from "@/utils/format";
 import {
-  Banknote,
-  Check,
-  ClipboardList,
-  Clock,
-  CreditCard,
-  DollarSign,
-  Package,
-  ShoppingCart,
-  X,
+    Banknote,
+    Check,
+    ClipboardList,
+    Clock,
+    CreditCard,
+    DollarSign,
+    Package,
+    ShoppingCart,
+    X,
 } from "@tamagui/lucide-icons";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  FlatList,
-  Image,
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
+    FlatList,
+    Image,
+    Modal,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    TouchableOpacity,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
-  Card,
-  Separator,
-  Spinner,
-  Text,
-  XStack,
-  YStack,
-  useTheme,
+    Card,
+    Separator,
+    Spinner,
+    Text,
+    XStack,
+    YStack,
+    useTheme,
 } from "tamagui";
 
 function formatTime(iso: string) {
@@ -229,6 +230,7 @@ export default function HistoryScreen() {
   const ticketRepo = useTicketRepository();
   const c = useColors();
   const { user } = useAuth();
+  const { ticketSyncVersion } = useLan();
   const nav = usePeriodNavigation("day");
 
   // Data
@@ -301,6 +303,11 @@ export default function HistoryScreen() {
   useEffect(() => {
     loadTickets();
   }, [loadTickets]);
+
+  // 🚀 Real-time ticket sync updates when admin syncs
+  useEffect(() => {
+    loadTickets();
+  }, [ticketSyncVersion, loadTickets]);
 
   // ── Filtered tickets + counts ───────────────────────────────────────────
   const syncCounts = useMemo(() => {

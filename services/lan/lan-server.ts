@@ -58,7 +58,7 @@ export class LanServer {
   private syncReceivedBytes = new Map<string, number>();
   private syncInProgress = new Set<string>();
   private _pairingCode = "";
-  private _ipAddress = "";
+  private _ipAddresses: string[] = []; // Changed to array for multiple IPs
   private _running = false;
   private _storeName = "";
   private callbacks: LanServerCallbacks = {};
@@ -68,7 +68,10 @@ export class LanServer {
     return this._pairingCode;
   }
   get ipAddress() {
-    return this._ipAddress;
+    return this._ipAddresses[0] || "";
+  }
+  get ipAddresses() {
+    return [...this._ipAddresses];
   }
   get running() {
     return this._running;
@@ -92,6 +95,63 @@ export class LanServer {
     this.callbacks = cb;
   }
 
+  private async detectNetworkInterfaces(): Promise<string[]> {
+    const ips: string[] = [];
+
+    try {
+      // Primary IP from expo-network
+      const primaryIp = await Network.getIpAddressAsync();
+      if (primaryIp && !ips.includes(primaryIp)) {
+        ips.push(primaryIp);
+      }
+
+      // Try to get network state for additional info
+      const networkState = await Network.getNetworkStateAsync();
+      console.log("[LanServer] Network state:", networkState);
+
+      // For hotspot detection, look for common hotspot IP ranges
+      const hotspotRanges = [
+        "192.168.43.", // Android hotspot
+        "172.20.10.", // iOS hotspot
+        "192.168.1.", // Common WiFi
+        "10.0.0.", // Some networks
+        "192.168.0.", // Common WiFi
+      ];
+
+      // If we're likely acting as hotspot (common patterns)
+      if (primaryIp) {
+        const isHotspot = hotspotRanges.some(
+          (range) =>
+            primaryIp.startsWith(range) &&
+            (primaryIp.endsWith(".1") || // Gateway
+              primaryIp.endsWith(".43") || // Android default
+              primaryIp.endsWith(".10.1")), // iOS default
+        );
+
+        if (isHotspot) {
+          console.log("[LanServer] Detected hotspot configuration");
+          // When acting as hotspot, we typically have the gateway IP
+          // Add it if not already included
+          if (!ips.includes(primaryIp)) {
+            ips.push(primaryIp);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn("[LanServer] Failed to detect network interfaces:", err);
+      // Fallback to basic IP detection
+      try {
+        const fallbackIp = await Network.getIpAddressAsync();
+        if (fallbackIp) ips.push(fallbackIp);
+      } catch {
+        // Last resort
+        ips.push("0.0.0.0");
+      }
+    }
+
+    return ips.length > 0 ? ips : ["0.0.0.0"];
+  }
+
   async start(storeName: string): Promise<void> {
     // Stop any previous instance to avoid EADDRINUSE on hot-reload
     if (this._running) {
@@ -100,7 +160,9 @@ export class LanServer {
 
     this._storeName = storeName;
     this._pairingCode = generateCode();
-    this._ipAddress = await Network.getIpAddressAsync();
+    this._ipAddresses = await this.detectNetworkInterfaces();
+
+    console.log(`[LanServer] Detected IP addresses:`, this._ipAddresses);
 
     await this.startTcpServer();
     this.publishZeroconf();

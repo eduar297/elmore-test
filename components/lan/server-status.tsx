@@ -3,26 +3,26 @@ import { useLan } from "@/contexts/lan-context";
 import { useColors } from "@/hooks/use-colors";
 import { LAN_PORT } from "@/services/lan/protocol";
 import {
-  Copy,
-  Monitor,
-  MonitorOff,
-  Wifi,
-  WifiOff,
-  X,
+    Copy,
+    Monitor,
+    MonitorOff,
+    Wifi,
+    WifiOff,
+    X,
 } from "@tamagui/lucide-icons";
 import * as Clipboard from "expo-clipboard";
 import { useState } from "react";
 import {
-  Alert,
-  Modal,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
+    Alert,
+    Modal,
+    ScrollView,
+    StyleSheet,
+    TouchableOpacity,
 } from "react-native";
 import QRCode from "react-native-qrcode-svg";
 import {
-  SafeAreaView,
-  useSafeAreaInsets,
+    SafeAreaView,
+    useSafeAreaInsets,
 } from "react-native-safe-area-context";
 import { Button, Text, XStack, YStack } from "tamagui";
 
@@ -78,6 +78,7 @@ function ServerSheet({
     stopServer,
     pairingCode,
     serverIp,
+    serverIps,
     connectedDisplays,
   } = useLan();
   const c = useColors();
@@ -170,10 +171,30 @@ function ServerSheet({
                 {serverRunning ? "Servidor activo" : "Servidor apagado"}
               </Text>
               {serverRunning && (
-                <Text fontSize="$2" color="$color10">
-                  IP: {serverIp} · {connectedDisplays} pantalla
-                  {connectedDisplays !== 1 ? "s" : ""}
-                </Text>
+                <YStack gap="$1">
+                  <Text fontSize="$2" color="$color10">
+                    {connectedDisplays} pantalla
+                    {connectedDisplays !== 1 ? "s" : ""} conectada
+                    {connectedDisplays !== 1 ? "s" : ""}
+                  </Text>
+                  {serverIps.length > 1 ? (
+                    <YStack gap="$0.5">
+                      <Text fontSize="$1" fontWeight="600" color="$color10">
+                        IPs disponibles:
+                      </Text>
+                      {serverIps.map((ip, index) => (
+                        <Text key={ip} fontSize="$1" color="$color10">
+                          • {ip}
+                          {index === 0 ? " (principal)" : ""}
+                        </Text>
+                      ))}
+                    </YStack>
+                  ) : (
+                    <Text fontSize="$2" color="$color10">
+                      IP: {serverIp}
+                    </Text>
+                  )}
+                </YStack>
               )}
             </YStack>
           </XStack>

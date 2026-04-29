@@ -8,32 +8,32 @@ import { useStore } from "@/contexts/store-context";
 import { useColors } from "@/hooks/use-colors";
 import type { SyncCatalogData } from "@/services/lan/protocol";
 import {
-  applyReceivedCatalog,
-  checkCatalogNeeds,
-  getLastSyncAt,
-  markTicketsSynced,
-  prepareTicketsPayload,
-  saveCatalogHash,
-  type CatalogChangeSummary,
+    applyReceivedCatalog,
+    checkCatalogNeeds,
+    getLastSyncAt,
+    markTicketsSynced,
+    prepareTicketsPayload,
+    saveCatalogHash,
+    type CatalogChangeSummary,
 } from "@/services/lan/sync-service";
 import {
-  Download,
-  LayoutList,
-  ScanLine,
-  Server,
-  User,
-  Wifi,
+    Download,
+    LayoutList,
+    ScanLine,
+    Server,
+    User,
+    Wifi,
 } from "@tamagui/lucide-icons";
 import { Tabs } from "expo-router";
 import { useSQLiteContext } from "expo-sqlite";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { useTheme } from "tamagui";
 
@@ -49,8 +49,14 @@ function formatBytes(bytes: number) {
 
 function WaitingForAdmin({ onReset }: { onReset: () => void }) {
   const c = useColors();
-  const { connectionStatus, syncStatus, syncProgress, workerName, serverIp } =
-    useLan();
+  const {
+    connectionStatus,
+    syncStatus,
+    syncProgress,
+    workerName,
+    serverIp,
+    serverIps,
+  } = useLan();
 
   const progressFraction =
     syncProgress && syncProgress.totalBytes > 0
@@ -95,7 +101,13 @@ function WaitingForAdmin({ onReset }: { onReset: () => void }) {
       title: "Esperando datos",
       subtitle:
         "El administrador debe sincronizar este Worker desde su app antes de poder iniciar sesión." +
-        (serverIp ? `\n\nIP: ${serverIp}` : ""),
+        (serverIps.length > 1
+          ? `\n\nIPs disponibles:\n${serverIps
+              .map((ip, index) => `• ${ip}${index === 0 ? " (principal)" : ""}`)
+              .join("\n")}`
+          : serverIp
+          ? `\n\nIP: ${serverIp}`
+          : ""),
       color: "#22c55e",
       showProgress: false,
     };
@@ -201,6 +213,7 @@ function WorkerLayoutInner() {
     sendSyncPrepareAck,
     sendTickets,
     bumpCatalogVersion,
+    bumpTicketSyncVersion,
   } = useLan();
   const { notify } = useNotifications();
   const [hasSynced, setHasSynced] = useState<boolean | null>(null); // null = loading
@@ -426,6 +439,8 @@ function WorkerLayoutInner() {
         console.log(
           `[Worker] Marked ${marked} tickets as synced after admin confirmed receipt`,
         );
+        // Trigger immediate UI update
+        bumpTicketSyncVersion();
       } catch (err) {
         console.error(`[Worker] markTicketsSynced FAILED:`, err);
       }
@@ -433,7 +448,7 @@ function WorkerLayoutInner() {
     return () => {
       onSyncTicketsAckReceived.current = null;
     };
-  }, [db, onSyncTicketsAckReceived]);
+  }, [db, onSyncTicketsAckReceived, bumpTicketSyncVersion]);
 
   // Show loading while checking DB
   if (hasSynced === null) {

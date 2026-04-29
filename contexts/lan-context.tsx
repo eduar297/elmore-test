@@ -56,6 +56,7 @@ interface LanContextValue {
   broadcastClear: () => void;
   pairingCode: string;
   serverIp: string;
+  serverIps: string[];
   serverRunning: boolean;
   connectedDisplays: number;
 
@@ -132,6 +133,10 @@ interface LanContextValue {
   catalogVersion: number;
   bumpCatalogVersion: () => void;
 
+  /** Monotonic counter bumped after tickets are synced — screens watch this to reload */
+  ticketSyncVersion: number;
+  bumpTicketSyncVersion: () => void;
+
   /** Ref holding the paired worker's server name (e.g. "Vendedor-XXXX") after pair_accepted */
   pairedServerNameRef: React.MutableRefObject<string | null>;
   /** Ref holding the paired worker's full device ID after pair_accepted */
@@ -154,6 +159,7 @@ const LanContext = createContext<LanContextValue>({
   broadcastClear: () => {},
   pairingCode: "",
   serverIp: "",
+  serverIps: [],
   serverRunning: false,
   connectedDisplays: 0,
   startDiscovery: () => {},
@@ -182,6 +188,8 @@ const LanContext = createContext<LanContextValue>({
   syncPrepareAckRef: { current: null },
   catalogVersion: 0,
   bumpCatalogVersion: () => {},
+  ticketSyncVersion: 0,
+  bumpTicketSyncVersion: () => {},
   pairedServerNameRef: { current: null },
   pairedDeviceIdRef: { current: null },
   pairedDeviceInfoRef: { current: null },
@@ -223,14 +231,21 @@ export function LanProvider({ children }: { children: React.ReactNode }) {
   const serverRef = useRef<LanServer | null>(_serverSingleton);
   const [pairingCode, setPairingCode] = useState("");
   const [serverIp, setServerIp] = useState("");
+  const [serverIps, setServerIps] = useState<string[]>([]);
   const [serverRunning, setServerRunning] = useState(false);
   const [connectedDisplays, setConnectedDisplays] = useState(0);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>("idle");
   const [syncProgress, setSyncProgress] = useState<SyncProgress | null>(null);
   const [lastSyncAt, setLastSyncAt] = useState<string | null>(null);
   const [catalogVersion, setCatalogVersion] = useState(0);
+  const [ticketSyncVersion, setTicketSyncVersion] = useState(0);
   const bumpCatalogVersion = useCallback(
     () => setCatalogVersion((v) => v + 1),
+    [],
+  );
+
+  const bumpTicketSyncVersion = useCallback(
+    () => setTicketSyncVersion((v) => v + 1),
     [],
   );
 
@@ -307,7 +322,7 @@ export function LanProvider({ children }: { children: React.ReactNode }) {
     });
 
     const shortId = deviceId.slice(-4).toUpperCase();
-    const name = `Vendedor-${shortId}`;
+    const name = `Vendedor${shortId}`;
 
     try {
       await server.start(name);
@@ -319,6 +334,7 @@ export function LanProvider({ children }: { children: React.ReactNode }) {
       serverRef.current = server;
       setPairingCode(server.pairingCode);
       setServerIp(server.ipAddress);
+      setServerIps(server.ipAddresses);
       setServerRunning(true);
     } catch (err) {
       console.error("[LanCtx] Server start FAILED:", err);
@@ -334,6 +350,7 @@ export function LanProvider({ children }: { children: React.ReactNode }) {
     }
     setPairingCode("");
     setServerIp("");
+    setServerIps([]);
     setServerRunning(false);
     setConnectedDisplays(0);
   }, []);
@@ -649,6 +666,7 @@ export function LanProvider({ children }: { children: React.ReactNode }) {
       broadcastClear,
       pairingCode,
       serverIp,
+      serverIps,
       serverRunning,
       connectedDisplays,
       startDiscovery,
@@ -680,7 +698,10 @@ export function LanProvider({ children }: { children: React.ReactNode }) {
       pairedServerNameRef,
       pairedDeviceIdRef,
       pairedDeviceInfoRef,
+      ticketSyncVersion,
+      bumpTicketSyncVersion,
     }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [
       workerName,
       startServer,
@@ -690,6 +711,7 @@ export function LanProvider({ children }: { children: React.ReactNode }) {
       broadcastClear,
       pairingCode,
       serverIp,
+      serverIps,
       serverRunning,
       connectedDisplays,
       startDiscovery,
@@ -710,6 +732,7 @@ export function LanProvider({ children }: { children: React.ReactNode }) {
       sendSyncPrepareAck,
       sendTicketsAck,
       catalogVersion,
+      ticketSyncVersion,
     ],
   );
 

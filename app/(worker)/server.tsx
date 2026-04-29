@@ -1,11 +1,11 @@
 import { useLan } from "@/contexts/lan-context";
 import { LAN_PORT } from "@/services/lan/protocol";
 import {
-  Copy,
-  Monitor,
-  MonitorOff,
-  Wifi,
-  WifiOff,
+    Copy,
+    Monitor,
+    MonitorOff,
+    Wifi,
+    WifiOff,
 } from "@tamagui/lucide-icons";
 import * as Clipboard from "expo-clipboard";
 import { Alert, ScrollView } from "react-native";
@@ -19,6 +19,7 @@ export default function ServerScreen() {
     stopServer,
     pairingCode,
     serverIp,
+    serverIps,
     connectedDisplays,
   } = useLan();
 
@@ -75,10 +76,30 @@ export default function ServerScreen() {
               {serverRunning ? "Servidor activo" : "Servidor apagado"}
             </Text>
             {serverRunning && (
-              <Text fontSize="$3" color="$color10">
-                IP: {serverIp} · {connectedDisplays} pantalla
-                {connectedDisplays !== 1 ? "s" : ""}
-              </Text>
+              <YStack gap="$1">
+                <Text fontSize="$3" color="$color10">
+                  {connectedDisplays} pantalla
+                  {connectedDisplays !== 1 ? "s" : ""} conectada
+                  {connectedDisplays !== 1 ? "s" : ""}
+                </Text>
+                {serverIps.length > 1 ? (
+                  <YStack gap="$0.5">
+                    <Text fontSize="$2" fontWeight="600" color="$color10">
+                      IPs disponibles:
+                    </Text>
+                    {serverIps.map((ip, index) => (
+                      <Text key={ip} fontSize="$2" color="$color10">
+                        • {ip}
+                        {index === 0 ? " (principal)" : ""}
+                      </Text>
+                    ))}
+                  </YStack>
+                ) : (
+                  <Text fontSize="$3" color="$color10">
+                    IP: {serverIp}
+                  </Text>
+                )}
+              </YStack>
             )}
           </YStack>
         </XStack>
@@ -144,6 +165,44 @@ export default function ServerScreen() {
                 />
               </XStack>
             </YStack>
+
+            {/* Connection info for multiple IPs */}
+            {serverIps.length > 1 && (
+              <YStack
+                bg="$color2"
+                px="$4"
+                py="$3"
+                style={{ borderRadius: 12 }}
+                gap="$2"
+              >
+                <Text
+                  fontSize="$3"
+                  fontWeight="600"
+                  color="$color"
+                  style={{ textAlign: "center" }}
+                >
+                  Conexión manual
+                </Text>
+                <Text
+                  fontSize="$2"
+                  color="$color10"
+                  style={{ textAlign: "center" }}
+                >
+                  Utiliza cualquiera de estas IPs:
+                </Text>
+                {serverIps.map((ip, index) => (
+                  <Text
+                    key={ip}
+                    fontSize="$2"
+                    color="$color10"
+                    style={{ textAlign: "center" }}
+                  >
+                    {ip}:{LAN_PORT}
+                    {index === 0 ? " (principal)" : ""}
+                  </Text>
+                ))}
+              </YStack>
+            )}
           </YStack>
         )}
 

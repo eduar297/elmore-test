@@ -13,11 +13,12 @@ import type { Product } from "@/models/product";
 import type { PaymentMethod } from "@/models/ticket";
 import type { CartItemWire } from "@/services/lan/protocol";
 import {
-  AlertCircle,
-  Bluetooth,
-  Receipt,
-  ScanLine,
-  Search,
+    AlertCircle,
+    Bluetooth,
+    Receipt,
+    ScanLine,
+    Search,
+    X,
 } from "@tamagui/lucide-icons";
 
 import { useFocusEffect } from "expo-router";
@@ -302,8 +303,8 @@ export default function WorkerScreen() {
             style={{ borderRadius: 12, alignItems: "center" }}
             gap="$2"
           >
-            <AlertCircle size={20} color="$red10" />
-            <Text fontSize="$4" color="$red10" flex={1}>
+            <X size={16} color="$red10" />
+            <Text flex={1} fontSize="$3" color="$red10">
               {error}
             </Text>
           </XStack>
